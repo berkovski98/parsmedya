@@ -6,15 +6,18 @@ import type { BlogPost } from '@/lib/supabase/types'
 
 interface BlogCardProps {
   post: BlogPost
+  locale?: 'tr' | 'en'
 }
 
-export function BlogCard({ post }: BlogCardProps) {
+export function BlogCard({ post, locale = 'tr' }: BlogCardProps) {
+  const english = locale === 'en'
+  const href = english ? `/en/blog/${post.slug}` : `/blog/${post.slug}`
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg hover:shadow-primary/5">
       <Link
-        href={`/blog/${post.slug}`}
+        href={href}
         className="relative block aspect-[16/10] overflow-hidden bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-        aria-label={`${post.title} yazısını oku`}
+        aria-label={english ? `Read ${post.title}` : `${post.title} yazısını oku`}
       >
         <Image
           src={post.image_url || '/parsmedya-hero.png'}
@@ -36,13 +39,13 @@ export function BlogCard({ post }: BlogCardProps) {
             className="inline-flex items-center gap-1.5 text-muted-foreground"
           >
             <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-            {formatBlogDate(post.published_at)}
+            {formatBlogDate(post.published_at, locale)}
           </time>
         </div>
 
         <h3 className="mt-4 text-balance font-display text-lg font-semibold leading-snug text-foreground">
           <Link
-            href={`/blog/${post.slug}`}
+            href={href}
             className="transition-colors hover:text-accent focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {post.title}
@@ -52,11 +55,11 @@ export function BlogCard({ post }: BlogCardProps) {
           {post.excerpt}
         </p>
         <Link
-          href={`/blog/${post.slug}`}
-          aria-label={`${post.title}: Devamını Oku`}
+          href={href}
+          aria-label={english ? `${post.title}: Read more` : `${post.title}: Devamını Oku`}
           className="mt-5 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-accent transition-colors hover:text-accent/80 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Devamını Oku
+          {english ? 'Read More' : 'Devamını Oku'}
           <ArrowRight
             className="h-4 w-4 transition-transform group-hover:translate-x-1"
             aria-hidden="true"

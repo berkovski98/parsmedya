@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/supabase/auth'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { BlogPostInput, BlogStatus } from '@/lib/supabase/types'
 import { validateBlogImage } from '@/lib/blog-image'
+import { contactStatuses, type ContactStatus } from '@/lib/contact'
 
 const safeMessage = (message: string) => encodeURIComponent(message)
 
@@ -45,6 +46,8 @@ function toPostInput(formData: FormData, imageUrl: string): BlogPostInput {
     seo_description: String(formData.get('seo_description') || '').trim() || null,
     status: status === 'published' ? 'published' : 'draft',
     published_at: published ? new Date(published).toISOString() : null,
+    locale: String(formData.get('locale')) === 'en' ? 'en' : 'tr',
+    translation_group_id: String(formData.get('translation_group_id') || '').trim() || null,
   }
 }
 
@@ -62,12 +65,34 @@ async function uploadImage(file: File, currentUrl: string) {
 export async function savePost(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id') || '')
-  const returnPath = id ? `/admin/blog/${id}/edit` : '/admin/blog/new'
+  const translationSourceId = String(formData.get('translation_source_id') || '')
+  const newQuery = translationSourceId ? `?translateFrom=${encodeURIComponent(translationSourceId)}` : ''
+  const returnPath = id ? `/admin/blog/${id}/edit` : `/admin/blog/new${newQuery}`
+  let savedLocale: 'tr' | 'en' = 'tr'
   try {
     const imageUrl = await uploadImage(formData.get('image') as File, String(formData.get('current_image_url') || ''))
     const post = toPostInput(formData, imageUrl)
+    savedLocale = post.locale
     if (!post.title || !post.slug || !post.excerpt || !post.content || !post.category || !post.author) throw new Error('Zorunlu alanları doldurun.')
     const supabase = await createClient()
+    if (translationSourceId && !id) {
+      const { data: source, error: sourceError } = await supabase.from('blog_posts').select('id,locale,translation_group_id').eq('id', translationSourceId).maybeSingle()
+      if (sourceError || !source) throw new Error('Çeviri kaynağı bulunamadı.')
+      post.locale = source.locale === 'tr' ? 'en' : 'tr'
+      savedLocale = post.locale
+      post.translation_group_id = source.translation_group_id || crypto.randomUUID()
+      if (!source.translation_group_id) {
+        const { error: groupError } = await supabase.from('blog_posts').update({ translation_group_id: post.translation_group_id }).eq('id', source.id)
+        if (groupError) throw new Error('Çeviri bağlantısı oluşturulamadı.')
+      }
+      const { data: existingTranslation } = await supabase.from('blog_posts').select('id').eq('translation_group_id', post.translation_group_id).eq('locale', post.locale).maybeSingle()
+      if (existingTranslation) throw new Error('Bu yazının ilgili dilde bir çevirisi zaten var.')
+    }
+    let duplicateQuery = supabase.from('blog_posts').select('id').eq('slug', post.slug).limit(1)
+    if (id) duplicateQuery = duplicateQuery.neq('id', id)
+    const { data: duplicates, error: duplicateError } = await duplicateQuery
+    if (duplicateError) throw new Error('Slug benzersizliği doğrulanamadı.')
+    if (duplicates?.length) throw new Error('Bu slug başka bir yazıda kullanılıyor.')
     const result = id ? await supabase.from('blog_posts').update(post).eq('id', id) : await supabase.from('blog_posts').insert(post)
     if (result.error) throw new Error(result.error.code === '23505' ? 'Bu slug zaten kullanılıyor.' : 'Yazı kaydedilemedi.')
   } catch (error) {
@@ -76,15 +101,54 @@ export async function savePost(formData: FormData) {
   }
   revalidatePath('/')
   revalidatePath('/blog')
-  redirect('/admin/blog?success=' + safeMessage(id ? 'Yazı güncellendi.' : 'Yazı oluşturuldu.'))
+  revalidatePath('/en')
+  revalidatePath('/en/blog')
+  revalidatePath('/sitemap-tr.xml')
+  revalidatePath('/sitemap-en.xml')
+  const listPath = savedLocale === 'en' ? '/admin/blog/en' : '/admin/blog'
+  redirect(`${listPath}?success=${safeMessage(id ? 'Yazı güncellendi.' : 'Yazı oluşturuldu.')}`)
 }
 
 export async function deletePost(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id') || '')
+  const locale = String(formData.get('locale')) === 'en' ? 'en' : 'tr'
   const { error } = await (await createClient()).from('blog_posts').delete().eq('id', id)
-  if (error) redirect('/admin/blog?error=' + safeMessage('Yazı silinemedi.'))
+  if (error) redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?error=${safeMessage('Yazı silinemedi.')}`)
   revalidatePath('/')
   revalidatePath('/blog')
-  redirect('/admin/blog?success=' + safeMessage('Yazı silindi.'))
+  revalidatePath('/en')
+  revalidatePath('/en/blog')
+  revalidatePath('/sitemap-tr.xml')
+  revalidatePath('/sitemap-en.xml')
+  redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?success=${safeMessage('Yazı silindi.')}`)
+}
+
+export async function updateContact(formData: FormData) {
+  await requireAdmin()
+  const id = String(formData.get('id') || '')
+  const status = String(formData.get('status') || '') as ContactStatus
+  const adminNote = String(formData.get('admin_note') || '').trim()
+  if (!id || !contactStatuses.includes(status) || adminNote.length > 2000) {
+    redirect(`/admin/contact/${id}?error=${safeMessage('Geçersiz talep bilgisi.')}`)
+  }
+  const { error } = await (await createClient())
+    .from('contact_messages')
+    .update({ status, admin_note: adminNote || null })
+    .eq('id', id)
+  if (error) redirect(`/admin/contact/${id}?error=${safeMessage('Talep güncellenemedi.')}`)
+  revalidatePath('/admin')
+  revalidatePath('/admin/contact')
+  redirect(`/admin/contact/${id}?success=${safeMessage('Talep güncellendi.')}`)
+}
+
+export async function deleteContact(formData: FormData) {
+  await requireAdmin()
+  const id = String(formData.get('id') || '')
+  if (!id) redirect('/admin/contact?error=' + safeMessage('Geçersiz talep.'))
+  const { error } = await (await createClient()).from('contact_messages').delete().eq('id', id)
+  if (error) redirect(`/admin/contact/${id}?error=${safeMessage('Talep silinemedi.')}`)
+  revalidatePath('/admin')
+  revalidatePath('/admin/contact')
+  redirect('/admin/contact?success=' + safeMessage('Talep kalıcı olarak silindi.'))
 }

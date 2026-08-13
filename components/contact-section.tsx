@@ -32,10 +32,32 @@ const details = [
 
 export function ContactSection() {
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [startedAt, setStartedAt] = useState(() => Date.now())
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setSent(true)
+    setSubmitting(true)
+    setError('')
+    const form = e.currentTarget
+    const payload = Object.fromEntries(new FormData(form).entries())
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, startedAt }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error)
+      form.reset()
+      setSent(true)
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'Mesajınız gönderilemedi. Lütfen tekrar deneyin.')
+      setStartedAt(Date.now())
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -89,11 +111,15 @@ export function ContactSection() {
                 Teşekkürler!
               </h3>
               <p className="max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
-                Mesajınız alındı. Ekibimiz en kısa sürede sizinle iletişime geçecek.
+                Mesajınız başarıyla iletildi. En kısa sürede sizinle iletişime geçeceğiz.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <div className="absolute -left-[9999px]" aria-hidden="true">
+                <label htmlFor="website">Web sitesi</label>
+                <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+              </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label htmlFor="name" className="text-sm font-medium text-foreground">
@@ -104,6 +130,7 @@ export function ContactSection() {
                     name="name"
                     type="text"
                     required
+                    maxLength={120}
                     placeholder="Adınız Soyadınız"
                     className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
                   />
@@ -117,9 +144,21 @@ export function ContactSection() {
                     name="email"
                     type="email"
                     required
+                    maxLength={254}
                     placeholder="ornek@eposta.com"
                     className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
                   />
+                </div>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="phone" className="text-sm font-medium text-foreground">Telefon</label>
+                  <input id="phone" name="phone" type="tel" maxLength={40} placeholder="05xx xxx xx xx" className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="company" className="text-sm font-medium text-foreground">Firma</label>
+                  <input id="company" name="company" type="text" maxLength={150} placeholder="Firma adı" className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40" />
                 </div>
               </div>
 
@@ -131,6 +170,7 @@ export function ContactSection() {
                   id="subject"
                   name="subject"
                   type="text"
+                  maxLength={200}
                   placeholder="Örn. Web sitesi projesi"
                   className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
                 />
@@ -144,17 +184,20 @@ export function ContactSection() {
                   id="message"
                   name="message"
                   required
+                  maxLength={5000}
                   rows={5}
                   placeholder="Projenizden kısaca bahsedin..."
                   className="resize-none rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
                 />
               </div>
 
+              {error && <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
               <button
                 type="submit"
+                disabled={submitting}
                 className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
               >
-                Mesaj Gönder
+                {submitting ? 'Gönderiliyor…' : 'Mesaj Gönder'}
                 <Send className="h-4 w-4" />
               </button>
             </form>

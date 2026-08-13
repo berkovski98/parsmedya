@@ -3,11 +3,13 @@ import { PageHeader } from '@/components/page-header'
 import { Services } from '@/components/services'
 import { Process } from '@/components/process'
 import { ContactCta } from '@/components/contact-cta'
+import { localizedAlternates } from '@/lib/seo'
 
 export const metadata: Metadata = {
   title: 'Hizmetlerimiz | ParsMedya',
   description:
-    'Web sitesi geliştirme, mobil uygulama, e-ticaret, SEO, UI/UX tasarım ve yazılım danışmanlığı. Fikirden yayına uçtan uca dijital çözümler.',
+    'Web yazılım, özel yazılım, CRM, ERP, e-ticaret, SaaS, entegrasyon ve dijital büyüme hizmetleriyle işletmenize özel uçtan uca çözümler.',
+  alternates: localizedAlternates('/hizmetler', '/hizmetler', '/en/services'),
 }
 
 export default function HizmetlerPage() {
@@ -15,8 +17,8 @@ export default function HizmetlerPage() {
     <>
       <PageHeader
         eyebrow="Hizmetler"
-        title="Uçtan uca dijital çözümler"
-        description="Fikir aşamasından yayına kadar tüm süreçte yanınızdayız. İhtiyacınıza özel, ölçeklenebilir ve güvenilir çözümler sunuyoruz."
+        title="İşletmenizi büyüten yazılım ve dijital çözümler"
+        description="Web uygulamalarından CRM ve ERP sistemlerine, entegrasyondan dijital büyümeye kadar ihtiyaçlarınıza özel, güvenli ve ölçeklenebilir çözümler geliştiriyoruz."
       />
       <Services />
       <Process />

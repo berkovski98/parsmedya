@@ -1,41 +1,51 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
-export function SiteFooter() {
+import { localeHomePath, type Locale } from '@/lib/i18n'
+
+export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
+  const english = locale === 'en'
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-foreground font-display text-sm font-bold">
-            P
-          </span>
-          <span className="font-display text-base font-bold tracking-tight text-foreground">
-            Pars<span className="text-accent">Medya</span>
-          </span>
-        </div>
+        <Link
+          href={localeHomePath(locale)}
+          className="flex max-w-full items-center rounded-lg bg-primary px-3.5 py-2"
+          aria-label={english ? 'ParsMedya home' : 'ParsMedya ana sayfa'}
+        >
+          <Image
+            src="/parsmedya-logo.png"
+            alt="ParsMedya"
+            width={196}
+            height={40}
+            sizes="196px"
+            className="h-7 max-w-full w-auto"
+          />
+        </Link>
 
         <div className="flex flex-col items-center gap-3 sm:items-end">
           <nav aria-label="Alt menü" className="flex items-center gap-5 text-sm">
             <Link
-              href="/hizmetler"
+              href={english ? '/en/services' : '/hizmetler'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              Hizmetler
+              {english ? 'Services' : 'Hizmetler'}
             </Link>
             <Link
-              href="/blog"
+              href={english ? '/en/blog' : '/blog'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               Blog
             </Link>
             <Link
-              href="/iletisim"
+              href={english ? '/en/contact' : '/iletisim'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              İletişim
+              {english ? 'Contact' : 'İletişim'}
             </Link>
           </nav>
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ParsMedya. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} ParsMedya. {english ? 'All rights reserved.' : 'Tüm hakları saklıdır.'}
           </p>
         </div>
       </div>

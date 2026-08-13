@@ -3,12 +3,13 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, UserRound } from 'lucide-react'
-import { formatBlogDate, getPublishedPost, getPublishedPosts, parseContent } from '@/lib/blog'
+import { formatBlogDate, getPublishedPost, getPublishedPosts, getPublishedTranslation, parseContent } from '@/lib/blog'
 import { BlogCard } from '@/components/blog-card'
+import { localizedAlternates } from '@/lib/seo'
 
 interface Props { params: Promise<{ slug: string }> }
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
@@ -17,9 +18,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = post.seo_title || `${post.title} | ParsMedya`
   const description = post.seo_description || post.excerpt
   const image = post.image_url || '/parsmedya-hero.png'
+  const translation = await getPublishedTranslation(post.translation_group_id, 'en')
   return {
     title, description,
-    alternates: { canonical: `/blog/${post.slug}` },
+    alternates: localizedAlternates(`/blog/${post.slug}`, `/blog/${post.slug}`, translation ? `/en/blog/${translation.slug}` : '/en/blog'),
     openGraph: { type: 'article', locale: 'tr_TR', title, description, url: `/blog/${post.slug}`, publishedTime: post.published_at || undefined, authors: [post.author], images: [{ url: image, alt: post.title }] },
   }
 }

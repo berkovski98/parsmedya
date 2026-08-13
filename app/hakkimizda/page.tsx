@@ -3,11 +3,13 @@ import { PageHeader } from '@/components/page-header'
 import { About } from '@/components/about'
 import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
+import { localizedAlternates } from '@/lib/seo'
 
 export const metadata: Metadata = {
   title: 'Hakkımızda | ParsMedya',
   description:
     'ParsMedya; web, mobil ve kurumsal yazılım alanında uzmanlaşmış, güvenilir bir dijital çözüm ortağıdır. Misyonumuzu, vizyonumuzu ve yaklaşımımızı keşfedin.',
+  alternates: localizedAlternates('/hakkimizda', '/hakkimizda', '/en/about'),
 }
 
 export default function HakkimizdaPage() {

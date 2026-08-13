@@ -66,6 +66,8 @@ export function Hero() {
               alt="ParsMedya tarafından geliştirilen web ve mobil uygulama arayüzü"
               width={720}
               height={560}
+              sizes="(min-width: 1024px) 560px, calc(100vw - 2rem)"
+              quality={82}
               className="h-auto w-full"
               priority
             />

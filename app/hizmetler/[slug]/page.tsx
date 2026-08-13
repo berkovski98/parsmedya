@@ -6,6 +6,8 @@ import { services, getService } from '@/lib/services'
 import { PageHeader } from '@/components/page-header'
 import { ContactCta } from '@/components/contact-cta'
 import { buttonVariants } from '@/components/ui/button'
+import { localizedAlternates } from '@/lib/seo'
+import { toEnglishServiceSlug } from '@/lib/i18n'
 
 export function generateStaticParams() {
   return services.map((service) => ({ slug: service.slug }))
@@ -20,8 +22,9 @@ export async function generateMetadata({
   const service = getService(slug)
   if (!service) return { title: 'Hizmet Bulunamadı | ParsMedya' }
   return {
-    title: `${service.title} | ParsMedya`,
-    description: service.description,
+    title: service.seoTitle ?? `${service.title} | ParsMedya`,
+    description: service.seoDescription ?? service.description,
+    alternates: localizedAlternates(`/hizmetler/${service.slug}`, `/hizmetler/${service.slug}`, `/en/services/${toEnglishServiceSlug(service.slug)}`),
   }
 }
 
@@ -38,9 +41,12 @@ export default async function ServiceDetailPage({
   }
 
   const Icon = service.icon
-  const otherServices = services
-    .filter((s) => s.slug !== service.slug)
-    .slice(0, 3)
+  const otherServices = service.relatedSlugs?.length
+    ? service.relatedSlugs
+        .map((relatedSlug) => getService(relatedSlug))
+        .filter((related): related is NonNullable<typeof related> => Boolean(related))
+        .slice(0, 3)
+    : services.filter((candidate) => candidate.slug !== service.slug).slice(0, 3)
 
   return (
     <>
@@ -49,6 +55,35 @@ export default async function ServiceDetailPage({
         title={service.tagline}
         description={service.intro}
       />
+
+      {service.longDescription && (
+        <section className="border-b border-border bg-background">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-[1fr_auto] md:items-end md:py-16">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+                Hizmete genel bakış
+              </p>
+              <h2 className="mt-3 text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                {service.title} nedir?
+              </h2>
+              <div className="mt-6 space-y-4">
+                {service.longDescription.map((paragraph) => (
+                  <p
+                    key={paragraph}
+                    className="leading-relaxed text-muted-foreground"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <Link href="/iletisim" className={buttonVariants()}>
+              Ücretsiz Teklif Al
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Highlights + stats */}
       <section className="border-b border-border bg-background">
@@ -105,10 +140,12 @@ export default async function ServiceDetailPage({
       <section className="border-b border-border bg-secondary/40">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
           <p className="text-sm font-semibold uppercase tracking-widest text-accent">
-            Neler sunuyoruz?
+            {service.longDescription ? 'Neler geliştiriyoruz?' : 'Neler sunuyoruz?'}
           </p>
           <h2 className="mt-3 max-w-2xl text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Bu hizmet kapsamında öne çıkanlar
+            {service.longDescription
+              ? `${service.title} kapsamında geliştirdiğimiz çözümler`
+              : 'Bu hizmet kapsamında öne çıkanlar'}
           </h2>
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {service.features.map((feature) => (
@@ -137,13 +174,15 @@ export default async function ServiceDetailPage({
           <div className="grid gap-12 lg:grid-cols-2">
             <div>
               <h3 className="font-display text-xl font-bold tracking-tight text-foreground">
-                Teslimatlar
+                {service.benefits ? 'İşletmenize ne kazandırır?' : 'Teslimatlar'}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Proje sonunda elinize geçecek somut çıktılar.
+                {service.benefits
+                  ? 'İş süreçlerinizi güçlendiren ölçülebilir ve sürdürülebilir kazanımlar.'
+                  : 'Proje sonunda elinize geçecek somut çıktılar.'}
               </p>
               <ul className="mt-6 space-y-3">
-                {service.deliverables.map((item) => (
+                {(service.benefits ?? service.deliverables).map((item) => (
                   <li
                     key={item}
                     className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3"
@@ -202,7 +241,39 @@ export default async function ServiceDetailPage({
         </div>
       </section>
 
+      {service.useCases && (
+        <section className="border-b border-border bg-secondary/40">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+            <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+              Kullanım alanları
+            </p>
+            <h2 className="mt-3 max-w-2xl text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Hangi işletmeler ve süreçler için uygundur?
+            </h2>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {service.useCases.map((useCase) => (
+                <article
+                  key={useCase.title}
+                  className="rounded-xl border border-border bg-card p-5"
+                >
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 shrink-0 text-accent" />
+                    <h3 className="font-display font-semibold text-foreground">
+                      {useCase.title}
+                    </h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {useCase.description}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Packages */}
+      {service.packages.length > 0 && (
       <section className="border-b border-border bg-secondary/40">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
           <p className="text-sm font-semibold uppercase tracking-widest text-accent">
@@ -260,6 +331,25 @@ export default async function ServiceDetailPage({
           </div>
         </div>
       </section>
+      )}
+
+      {service.whyParsMedya && (
+        <section className="border-b border-border bg-background">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+            <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+              Neden ParsMedya?
+            </p>
+            <h2 className="mt-3 max-w-2xl text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Yazılım projenizde güvenilir teknoloji ortağı
+            </h2>
+            <div className="mt-8 max-w-4xl rounded-xl border border-border bg-card p-6 sm:p-8">
+              <p className="leading-relaxed text-muted-foreground">
+                {service.whyParsMedya}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section className="border-b border-border bg-background">
@@ -293,7 +383,7 @@ export default async function ServiceDetailPage({
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              Diğer hizmetler
+              {service.relatedSlugs ? 'İlgili hizmetler' : 'Diğer hizmetler'}
             </h2>
             <Link
               href="/hizmetler"

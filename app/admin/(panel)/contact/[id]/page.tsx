@@ -1,0 +1,26 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { ArrowLeft, Mail, Phone } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/supabase/auth'
+import { contactStatusLabels, contactStatuses, type ContactMessage } from '@/lib/contact'
+import { StatusBadge } from '@/components/admin/contact-list'
+import { DeleteContactButton } from '@/components/admin/delete-contact-button'
+import { deleteContact, updateContact } from '@/app/admin/actions'
+
+export default async function ContactDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ success?: string; error?: string }> }) {
+  await requireAdmin()
+  const { id } = await params
+  const notices = await searchParams
+  const supabase = await createClient()
+  const { data } = await supabase.from('contact_messages').select('*').eq('id', id).maybeSingle()
+  if (!data) notFound()
+  const message = data as ContactMessage
+  if (message.status === 'new') {
+    const { error } = await supabase.from('contact_messages').update({ status: 'read' }).eq('id', id).eq('status', 'new')
+    if (!error) message.status = 'read'
+  }
+  const phoneHref = message.phone ? `tel:${message.phone.replace(/[^\d+]/g, '')}` : null
+  const fields = [['İsim', message.name], ['E-posta', message.email], ['Telefon', message.phone || '—'], ['Firma', message.company || '—'], ['Konu', message.subject || 'Genel iletişim'], ['Gönderim tarihi', new Date(message.created_at).toLocaleString('tr-TR')]]
+  return <div className="mx-auto max-w-5xl"><Link href="/admin/contact" className="inline-flex items-center gap-2 text-sm font-medium text-accent"><ArrowLeft className="h-4 w-4" />İletişim taleplerine dön</Link><div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="font-display text-3xl font-bold">{message.subject || 'İletişim Talebi'}</h1><p className="mt-2 text-muted-foreground">{message.name} tarafından gönderildi.</p></div><StatusBadge status={message.status} /></div>{notices.success && <p className="mt-5 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">{notices.success}</p>}{notices.error && <p className="mt-5 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{notices.error}</p>}<div className="mt-8 grid gap-6 lg:grid-cols-[1fr_22rem]"><div className="space-y-6"><section className="rounded-xl border border-border bg-card p-6"><h2 className="font-display text-xl font-bold">Mesaj</h2><p className="mt-5 whitespace-pre-wrap break-words leading-relaxed text-foreground">{message.message}</p></section><section className="rounded-xl border border-border bg-card p-6"><h2 className="font-display text-xl font-bold">İletişim bilgileri</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2">{fields.map(([label, value]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-medium">{label === 'E-posta' ? <a className="text-accent hover:underline" href={`mailto:${message.email}`}>{value}</a> : label === 'Telefon' && phoneHref ? <a className="text-accent hover:underline" href={phoneHref}>{value}</a> : value}</dd></div>)}</dl><div className="mt-6 flex flex-wrap gap-3"><a href={`mailto:${message.email}`} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"><Mail className="h-4 w-4" />E-posta Gönder</a>{phoneHref && <a href={phoneHref} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium"><Phone className="h-4 w-4" />Telefon Ara</a>}</div></section></div><aside className="space-y-6"><form action={updateContact} className="rounded-xl border border-border bg-card p-6"><input type="hidden" name="id" value={message.id} /><h2 className="font-display text-lg font-bold">Takip bilgileri</h2><label htmlFor="status" className="mt-5 block text-sm font-medium">Durum</label><select id="status" name="status" defaultValue={message.status} className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm">{contactStatuses.map((status) => <option key={status} value={status}>{contactStatusLabels[status]}</option>)}</select><label htmlFor="admin_note" className="mt-5 block text-sm font-medium">Dahili admin notu</label><textarea id="admin_note" name="admin_note" maxLength={2000} rows={7} defaultValue={message.admin_note || ''} placeholder="Takip notunuzu yazın…" className="mt-2 w-full resize-y rounded-lg border border-input bg-background px-3 py-2.5 text-sm" /><p className="mt-2 text-xs text-muted-foreground">Bu not yalnız admin panelinde görünür.</p><button className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">Değişiklikleri Kaydet</button></form><form action={deleteContact} className="rounded-xl border border-destructive/20 bg-card p-6"><input type="hidden" name="id" value={message.id} /><h2 className="font-display font-bold">Talebi sil</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Kalıcı silme yerine durum alanından arşivlemeyi tercih edin.</p><div className="mt-4"><DeleteContactButton /></div></form></aside></div></div>
+}

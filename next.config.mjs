@@ -1,12 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
   experimental: {
     serverActions: {
       bodySizeLimit: '6mb',
     },
   },
   images: {
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
+    qualities: [75, 82],
   },
 }
 

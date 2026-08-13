@@ -7,6 +7,14 @@ import {
   ServerCog,
   type LucideIcon,
 } from 'lucide-react'
+import { softwareServices } from '@/lib/software-services'
+
+export type ServiceCategory =
+  | 'Web ve Dijital'
+  | 'Kurumsal Yazılımlar'
+  | 'Platform ve Entegrasyon'
+  | 'Yeni Teknolojiler'
+  | 'Dijital Büyüme'
 
 export interface Service {
   slug: string
@@ -29,9 +37,18 @@ export interface Service {
   }[]
   faqs: { question: string; answer: string }[]
   technologies: string[]
+  category?: ServiceCategory
+  featuredOnHome?: boolean
+  longDescription?: string[]
+  benefits?: string[]
+  useCases?: { title: string; description: string }[]
+  whyParsMedya?: string
+  relatedSlugs?: string[]
+  seoTitle?: string
+  seoDescription?: string
 }
 
-export const services: Service[] = [
+const legacyServices: Service[] = [
   {
     slug: 'web-sitesi-gelistirme',
     icon: Code2,
@@ -794,6 +811,29 @@ export const services: Service[] = [
     technologies: ['AWS', 'Vercel', 'Docker', 'PostgreSQL', 'CI/CD'],
   },
 ]
+
+export const services: Service[] = [...legacyServices, ...softwareServices]
+
+export const serviceCategoryOrder: ServiceCategory[] = [
+  'Web ve Dijital',
+  'Kurumsal Yazılımlar',
+  'Platform ve Entegrasyon',
+  'Yeni Teknolojiler',
+  'Dijital Büyüme',
+]
+
+const legacyCategories: Record<string, ServiceCategory> = {
+  'web-sitesi-gelistirme': 'Web ve Dijital',
+  'mobil-uygulama': 'Web ve Dijital',
+  'e-ticaret-cozumleri': 'Web ve Dijital',
+  'seo-dijital-pazarlama': 'Dijital Büyüme',
+  'ui-ux-tasarim': 'Web ve Dijital',
+  'yazilim-danismanligi': 'Yeni Teknolojiler',
+}
+
+export function getServiceCategory(service: Service): ServiceCategory {
+  return service.category || legacyCategories[service.slug] || 'Kurumsal Yazılımlar'
+}
 
 export function getService(slug: string): Service | undefined {
   return services.find((service) => service.slug === slug)

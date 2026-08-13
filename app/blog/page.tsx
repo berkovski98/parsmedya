@@ -2,17 +2,16 @@ import type { Metadata } from 'next'
 import { BlogCard } from '@/components/blog-card'
 import { PageHeader } from '@/components/page-header'
 import { getPublishedPosts } from '@/lib/blog'
+import { localizedAlternates } from '@/lib/seo'
 
 export const metadata: Metadata = {
   title: 'Blog | ParsMedya',
   description:
     'Dijital pazarlama, web teknolojileri, SEO, sosyal medya ve marka yönetimi hakkında güncel Pars Medya içeriklerini keşfedin.',
-  alternates: {
-    canonical: '/blog',
-  },
+  alternates: localizedAlternates('/blog', '/blog', '/en/blog'),
 }
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export default async function BlogPage() {
   const posts = await getPublishedPosts()

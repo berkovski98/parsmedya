@@ -1,4 +1,5 @@
 import { Target, Eye, Gauge } from 'lucide-react'
+import Image from 'next/image'
 
 const values = [
   {
@@ -66,9 +67,12 @@ export function About() {
 
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-center rounded-2xl bg-primary px-8 py-12">
-              <img
+              <Image
                 src="/parsmedya-logo.png"
                 alt="ParsMedya logosu"
+                width={384}
+                height={77}
+                sizes="(min-width: 640px) 384px, 280px"
                 className="h-14 w-auto sm:h-16"
               />
             </div>

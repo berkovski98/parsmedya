@@ -15,6 +15,8 @@ export interface BlogPost {
   published_at: string | null
   created_at: string
   updated_at: string
+  locale: 'tr' | 'en'
+  translation_group_id: string | null
 }
 
 export type BlogPostInput = Omit<BlogPost, 'id' | 'created_at' | 'updated_at'>
