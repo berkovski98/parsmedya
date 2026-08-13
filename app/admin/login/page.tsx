@@ -1,0 +1,10 @@
+import { redirect } from 'next/navigation'
+import { login } from '@/app/admin/actions'
+import { getAdmin } from '@/lib/supabase/auth'
+import { hasSupabaseConfig } from '@/lib/supabase/config'
+
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  if (hasSupabaseConfig() && await getAdmin()) redirect('/admin')
+  const { error } = await searchParams
+  return <main className="flex min-h-screen items-center justify-center bg-secondary/40 px-4"><div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"><div className="mb-8"><p className="font-display text-2xl font-bold text-foreground">Pars<span className="text-accent">Medya</span></p><h1 className="mt-6 font-display text-2xl font-bold text-foreground">Admin Girişi</h1><p className="mt-2 text-sm text-muted-foreground">Blog içeriklerini yönetmek için hesabınızla giriş yapın.</p></div>{error && <p role="alert" className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}{!hasSupabaseConfig() && <p className="mb-5 rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm text-foreground">Supabase environment değişkenleri tanımlandıktan sonra giriş kullanılabilir.</p>}<form action={login} className="space-y-5"><label className="block text-sm font-medium">E-posta<input required type="email" name="email" autoComplete="email" className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-ring/30" /></label><label className="block text-sm font-medium">Şifre<input required type="password" name="password" autoComplete="current-password" className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-ring/30" /></label><button className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">Giriş Yap</button></form></div></main>
+}

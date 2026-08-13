@@ -1,8 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Manrope } from 'next/font/google'
-import { SiteHeader } from '@/components/site-header'
-import { SiteFooter } from '@/components/site-footer'
+import { SiteFrame } from '@/components/site-frame'
 import './globals.css'
 
 const inter = Inter({
@@ -18,6 +17,7 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://parsmedya.net'),
   title: 'ParsMedya | Web ve Yazılım Ajansı',
   description:
     'ParsMedya; web sitesi, mobil uygulama, e-ticaret ve dijital pazarlama çözümleriyle işinizi büyüten kurumsal yazılım ajansıdır.',
@@ -40,11 +40,7 @@ export default function RootLayout({
       className={`light ${inter.variable} ${manrope.variable} bg-background`}
     >
       <body className="font-sans antialiased">
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </div>
+        <SiteFrame>{children}</SiteFrame>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

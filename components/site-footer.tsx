@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-background">
@@ -11,9 +13,31 @@ export function SiteFooter() {
           </span>
         </div>
 
-        <p className="text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} ParsMedya. Tüm hakları saklıdır.
-        </p>
+        <div className="flex flex-col items-center gap-3 sm:items-end">
+          <nav aria-label="Alt menü" className="flex items-center gap-5 text-sm">
+            <Link
+              href="/hizmetler"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Hizmetler
+            </Link>
+            <Link
+              href="/blog"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Blog
+            </Link>
+            <Link
+              href="/iletisim"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              İletişim
+            </Link>
+          </nav>
+          <p className="text-center text-sm text-muted-foreground">
+            © {new Date().getFullYear()} ParsMedya. Tüm hakları saklıdır.
+          </p>
+        </div>
       </div>
     </footer>
   )
