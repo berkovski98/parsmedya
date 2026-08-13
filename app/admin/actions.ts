@@ -6,9 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/supabase/auth'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { BlogPostInput, BlogStatus } from '@/lib/supabase/types'
+import { validateBlogImage } from '@/lib/blog-image'
 
-const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const maxSize = 5 * 1024 * 1024
 const safeMessage = (message: string) => encodeURIComponent(message)
 
 export async function login(formData: FormData) {
@@ -51,8 +50,7 @@ function toPostInput(formData: FormData, imageUrl: string): BlogPostInput {
 
 async function uploadImage(file: File, currentUrl: string) {
   if (!file.size) return currentUrl
-  if (!allowedTypes.includes(file.type)) throw new Error('Yalnız JPG, PNG, WebP veya GIF yükleyebilirsiniz.')
-  if (file.size > maxSize) throw new Error('Görsel boyutu en fazla 5 MB olabilir.')
+  validateBlogImage(file)
   const supabase = await createClient()
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const path = `${crypto.randomUUID()}.${extension}`
