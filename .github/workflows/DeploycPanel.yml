@@ -6,8 +6,7 @@ on:
       - main
 
 jobs:
-  FTP-Deploy-Action:
-    name: FTP Deploy
+  FTP-Deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,3 +19,5 @@ jobs:
           server: ${{ secrets.SERVER }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
+          protocol: ftp
+          port: 21
