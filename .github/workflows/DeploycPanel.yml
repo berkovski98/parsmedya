@@ -5,15 +5,18 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+
 jobs:
-  FTP-Deploy:
+  deploy:
+    name: FTP Deploy
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: FTP Deploy
+      - name: Deploy files to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
