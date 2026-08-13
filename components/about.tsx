@@ -40,6 +40,13 @@ export function About() {
               işinizi gerçekten ileri taşıyan, sürdürülebilir ve bakımı kolay ürünler ortaya
               koymak oldu. Uzun vadeli iş birliklerine inanır, teslimden sonra da yanınızda kalırız.
             </p>
+            <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
+              İstanbul&apos;dan başlayan hizmet ağımızı; Dubai, Moskova ve
+              İsviçre&apos;deki iş bağlantılarımız, farklı pazarlardaki proje
+              deneyimimiz ve global hizmet yaklaşımımızla uluslararası ölçekte
+              genişletiyoruz. Markaların farklı ülkelerdeki dijital ihtiyaçlarına,
+              yerel dinamikleri gözeten sürdürülebilir çözümler üretiyoruz.
+            </p>
 
             <dl className="mt-8 grid grid-cols-3 gap-6 border-t border-border pt-8">
               <div>

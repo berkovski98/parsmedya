@@ -15,8 +15,8 @@ const details = [
   {
     icon: Phone,
     label: 'Telefon',
-    value: '+90 (000) 000 00 00',
-    href: 'tel:+900000000000',
+    value: '0212 963 77 77',
+    href: 'tel:+902129637777',
   },
   {
     icon: MapPin,
@@ -160,6 +160,38 @@ export function ContactSection() {
             </form>
           )}
         </div>
+      </div>
+
+      <div className="mx-auto mt-16 max-w-6xl border-t border-border px-4 pt-16 sm:px-6 sm:pt-20">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+            Uluslararası Hizmet Ağı
+          </p>
+          <h2 className="mt-3 text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Faaliyet Noktalarımız
+          </h2>
+          <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
+            Pars Medya, İstanbul merkezli yapısıyla birlikte Dubai, Moskova ve
+            İsviçre&apos;deki iş ağlarıyla markalara uluslararası ölçekte dijital
+            çözümler sunmaktadır.
+          </p>
+        </div>
+
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {['İstanbul', 'Dubai', 'Moskova', 'İsviçre'].map((location) => (
+            <li
+              key={location}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <MapPin className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="font-display font-semibold text-foreground">
+                {location}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )

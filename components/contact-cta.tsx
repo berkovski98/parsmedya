@@ -23,11 +23,11 @@ export function ContactCta() {
               info@parsmedya.net
             </a>
             <a
-              href="tel:+900000000000"
+              href="tel:+902129637777"
               className="inline-flex items-center gap-2 text-primary-foreground/90 transition-colors hover:text-primary-foreground"
             >
               <Phone className="h-4 w-4" />
-              +90 (000) 000 00 00
+              0212 963 77 77
             </a>
           </div>
         </div>
