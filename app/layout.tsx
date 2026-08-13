@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Manrope } from 'next/font/google'
 import { headers } from 'next/headers'
 import { SiteFrame } from '@/components/site-frame'
+import { getSiteUrl } from '@/lib/site-url'
 import './globals.css'
 
 const inter = Inter({
@@ -18,7 +19,7 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://parsmedya.net'),
+  metadataBase: new URL(getSiteUrl()),
   title: 'ParsMedya | Web ve Yazılım Ajansı',
   description:
     'ParsMedya; web sitesi, mobil uygulama, e-ticaret ve dijital pazarlama çözümleriyle işinizi büyüten kurumsal yazılım ajansıdır.',

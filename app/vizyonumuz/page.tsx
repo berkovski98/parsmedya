@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { CorporateDetail } from '@/components/corporate-detail'
-import { localizedAlternates } from '@/lib/seo'
+import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = { title: 'Vizyonumuz | Pars Medya', description: "Pars Medya'nın yazılım, dijital dönüşüm ve global teknoloji çözümlerine yönelik uzun vadeli vizyonunu keşfedin.", alternates: localizedAlternates('/vizyonumuz', '/vizyonumuz', '/en/vision') }
+export const metadata: Metadata = createPageMetadata({ title: 'Vizyonumuz | Pars Medya', description: "Pars Medya'nın yazılım, dijital dönüşüm ve global teknoloji çözümlerine yönelik uzun vadeli vizyonunu keşfedin.", canonical: '/vizyonumuz', tr: '/vizyonumuz', en: '/en/vision', locale: 'tr' })
 
 const paragraphs = [
   'Pars Medya olarak vizyonumuz, Türkiye’den global pazarlara değer üreten; teknoloji, tasarım ve iş stratejisini aynı zeminde buluşturan güvenilir bir teknoloji markası olmaktır. Kurumların yalnızca bugünkü ihtiyaçlarını karşılayan değil, değişen pazar koşullarına uyum sağlayabilen dijital altyapılar geliştirmeyi hedefliyoruz.',

@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/page-header'
 import { EnglishContactCta } from '@/components/english-sections'
 import { buttonVariants } from '@/components/ui/button'
 import { englishServices, getEnglishService } from '@/lib/services-en'
-import { localizedAlternates } from '@/lib/seo'
+import { createPageMetadata } from '@/lib/seo'
 
 type Props = { params: Promise<{ slug: string }> }
 export function generateStaticParams() { return englishServices.map(({ slug }) => ({ slug })) }
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!service) return { title: 'Service Not Found | Pars Medya' }
   const canonical = `/en/services/${service.slug}`
   const tr = `/hizmetler/${service.trSlug}`
-  return { title: service.seoTitle, description: service.seoDescription, alternates: localizedAlternates(canonical, tr, canonical), openGraph: { locale: 'en_US', title: service.seoTitle, description: service.seoDescription, url: canonical } }
+  return createPageMetadata({ title: service.seoTitle || `${service.title} | Pars Medya`, description: service.seoDescription || service.description, canonical, tr, en: canonical, locale: 'en' })
 }
 export default async function EnglishServiceDetail({ params }: Props) {
   const service = getEnglishService((await params).slug); if (!service) notFound()

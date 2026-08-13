@@ -6,7 +6,7 @@ import { services, getService } from '@/lib/services'
 import { PageHeader } from '@/components/page-header'
 import { ContactCta } from '@/components/contact-cta'
 import { buttonVariants } from '@/components/ui/button'
-import { localizedAlternates } from '@/lib/seo'
+import { createPageMetadata } from '@/lib/seo'
 import { toEnglishServiceSlug } from '@/lib/i18n'
 
 export function generateStaticParams() {
@@ -21,11 +21,10 @@ export async function generateMetadata({
   const { slug } = await params
   const service = getService(slug)
   if (!service) return { title: 'Hizmet Bulunamadı | ParsMedya' }
-  return {
-    title: service.seoTitle ?? `${service.title} | ParsMedya`,
-    description: service.seoDescription ?? service.description,
-    alternates: localizedAlternates(`/hizmetler/${service.slug}`, `/hizmetler/${service.slug}`, `/en/services/${toEnglishServiceSlug(service.slug)}`),
-  }
+  const title = service.seoTitle ?? `${service.title} | Pars Medya`
+  const description = service.seoDescription ?? service.description
+  const canonical = `/hizmetler/${service.slug}`
+  return createPageMetadata({ title, description, canonical, tr: canonical, en: `/en/services/${toEnglishServiceSlug(service.slug)}`, locale: 'tr' })
 }
 
 export default async function ServiceDetailPage({

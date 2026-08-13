@@ -5,7 +5,8 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, UserRound } from 'lucide-react'
 import { formatBlogDate, getPublishedPost, getPublishedPosts, getPublishedTranslation, parseContent } from '@/lib/blog'
 import { BlogCard } from '@/components/blog-card'
-import { localizedAlternates } from '@/lib/seo'
+import { createPageMetadata, safeJsonLd } from '@/lib/seo'
+import { getSiteUrl } from '@/lib/site-url'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -19,10 +20,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.seo_description || post.excerpt
   const image = post.image_url || '/parsmedya-hero.png'
   const translation = await getPublishedTranslation(post.translation_group_id, 'en')
+  const canonical = `/blog/${post.slug}`
+  const metadata = createPageMetadata({ title, description, canonical, tr: canonical, en: translation ? `/en/blog/${translation.slug}` : canonical, locale: 'tr', image, type: 'article' })
   return {
-    title, description,
-    alternates: localizedAlternates(`/blog/${post.slug}`, `/blog/${post.slug}`, translation ? `/en/blog/${translation.slug}` : '/en/blog'),
-    openGraph: { type: 'article', locale: 'tr_TR', title, description, url: `/blog/${post.slug}`, publishedTime: post.published_at || undefined, authors: [post.author], images: [{ url: image, alt: post.title }] },
+    ...metadata,
+    alternates: { canonical, languages: translation ? { tr: canonical, en: `/en/blog/${translation.slug}`, 'x-default': canonical } : { tr: canonical, 'x-default': canonical } },
+    openGraph: { type: 'article', locale: 'tr_TR', title, description, url: canonical, images: [{ url: image, alt: post.title }], publishedTime: post.published_at || undefined, modifiedTime: post.updated_at, authors: [post.author] },
   }
 }
 
@@ -32,9 +35,12 @@ export default async function BlogDetailPage({ params }: Props) {
   if (!post) notFound()
   const related = (await getPublishedPosts()).filter((item) => item.slug !== slug).slice(0, 3)
   const image = post.image_url || '/parsmedya-hero.png'
+  const canonical = `${getSiteUrl()}/blog/${post.slug}`
+  const jsonLd = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: post.title, description: post.seo_description || post.excerpt, image: [new URL(image, getSiteUrl()).toString()], datePublished: post.published_at || post.created_at, dateModified: post.updated_at, author: { '@type': 'Person', name: post.author }, publisher: { '@type': 'Organization', name: 'Pars Medya', url: getSiteUrl() }, mainEntityOfPage: { '@type': 'WebPage', '@id': canonical }, inLanguage: 'tr-TR' }
 
   return (
     <article className="bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <header className="border-b border-border bg-secondary/40">
         <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
           <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Bloga Dön</Link>

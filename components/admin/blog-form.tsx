@@ -12,6 +12,8 @@ export function BlogForm({ post, error, initialLocale = 'tr', translationSource 
   const [locale, setLocale] = useState<BlogPost['locale']>(startingLocale)
   const [slug, setSlug] = useState(post?.slug || '')
   const [edited, setEdited] = useState(Boolean(post))
+  const [seoTitle, setSeoTitle] = useState(post?.seo_title || '')
+  const [seoDescription, setSeoDescription] = useState(post?.seo_description || '')
   return <form action={savePost} className="space-y-6">
     <input type="hidden" name="id" value={post?.id || ''} /><input type="hidden" name="current_image_url" value={post?.image_url || translationSource?.image_url || ''} />
     {translationSource && <input type="hidden" name="translation_source_id" value={translationSource.id} />}
@@ -33,8 +35,8 @@ export function BlogForm({ post, error, initialLocale = 'tr', translationSource 
     <div className="grid gap-5 lg:grid-cols-2">
       <label className="text-sm font-medium">Kapak görseli<input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className={input} /><span className="mt-1 block text-xs font-normal text-muted-foreground">JPG, PNG, WebP veya GIF — en fazla 5 MB</span></label>
       <label className="text-sm font-medium">Yayın tarihi<input name="published_at" type="datetime-local" defaultValue={post?.published_at?.slice(0, 16)} className={input} /></label>
-      <label className="text-sm font-medium">SEO title<input name="seo_title" defaultValue={post?.seo_title || ''} className={input} /></label>
-      <label className="text-sm font-medium">SEO description<textarea name="seo_description" defaultValue={post?.seo_description || ''} rows={2} className={input} /></label>
+      <label className="text-sm font-medium">SEO Başlığı<input name="seo_title" value={seoTitle} onChange={(event) => setSeoTitle(event.target.value)} className={input} /><span className="mt-1 block text-right text-xs font-normal text-muted-foreground">{seoTitle.length} karakter</span></label>
+      <label className="text-sm font-medium">Meta Açıklaması<textarea name="seo_description" value={seoDescription} onChange={(event) => setSeoDescription(event.target.value)} rows={2} className={input} /><span className="mt-1 block text-right text-xs font-normal text-muted-foreground">{seoDescription.length} karakter · önerilen yaklaşık 150–160</span></label>
       <label className="text-sm font-medium">Durum<select name="status" defaultValue={post?.status || 'draft'} className={input}><option value="draft">Taslak</option><option value="published">Yayında</option></select></label>
     </div>
     <button className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">{post ? 'Değişiklikleri Kaydet' : 'Yazıyı Oluştur'}</button>

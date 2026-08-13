@@ -1,14 +1,9 @@
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/page-header'
 import { ContactSection } from '@/components/contact-section'
-import { localizedAlternates } from '@/lib/seo'
+import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: 'İletişim | ParsMedya',
-  description:
-    'ParsMedya ile iletişime geçin. Projeniz için ücretsiz teklif alın; ekibimiz 24 saat içinde geri dönüş yapar.',
-  alternates: localizedAlternates('/iletisim', '/iletisim', '/en/contact'),
-}
+export const metadata: Metadata = createPageMetadata({ title: 'İletişim | Pars Medya', description: 'Web, özel yazılım ve dijital dönüşüm projenizi görüşmek için Pars Medya ile iletişime geçin; ihtiyaçlarınızı birlikte değerlendirelim.', canonical: '/iletisim', tr: '/iletisim', en: '/en/contact', locale: 'tr' })
 
 export default function IletisimPage() {
   return (
