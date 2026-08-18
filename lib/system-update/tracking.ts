@@ -87,7 +87,7 @@ export function waitingDispatchStatus() {
     status: 'queued' as const,
     conclusion: null,
     phase: 'queued' as DeployPhase,
-    phaseLabel: 'GitHub Actions başlatılıyor',
+    phaseLabel: 'Kurulum başlatılıyor',
     progress: 0,
     overallProgress: 0,
     stepProgress: 0,
@@ -162,7 +162,7 @@ export function deploymentPanelState(input: {
       ? 0
       : input.progress
   const phaseLabel = !input.runId && (input.installing || input.isTrackedDeployment)
-    ? (input.phaseLabel || 'GitHub Actions başlatılıyor')
+    ? (input.phaseLabel || 'Kurulum başlatılıyor')
     : outcome === 'success'
       ? 'Güncelleme başarıyla tamamlandı'
       : input.phaseLabel

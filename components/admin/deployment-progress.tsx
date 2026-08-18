@@ -15,7 +15,7 @@ export type DeploymentProgressPanelProps = {
   failed: boolean
   succeeded: boolean
   errorMessage?: string | null
-  url?: string | null
+  installingVersion?: string | null
 }
 
 export function DeploymentProgressPanel({
@@ -27,7 +27,7 @@ export function DeploymentProgressPanel({
   failed,
   succeeded,
   errorMessage,
-  url,
+  installingVersion,
 }: DeploymentProgressPanelProps) {
   const progress = Math.max(0, Math.min(overallProgress, 100))
   const inner = Math.max(0, Math.min(stepProgress, 100))
@@ -47,6 +47,9 @@ export function DeploymentProgressPanel({
           style={{ width: `${progress}%` }}
         />
       </div>
+      {installingVersion && !failed && !succeeded && (
+        <p className="mt-3 max-w-2xl text-sm font-medium">Kurulan sürüm: {installingVersion}</p>
+      )}
       <p className="mt-3 max-w-2xl text-sm font-medium">
         {failed ? `İşlem %${progress} aşamasında durdu.` : succeeded ? '✓ Güncelleme başarıyla tamamlandı' : stepLabel}
       </p>
@@ -103,13 +106,6 @@ export function DeploymentProgressPanel({
           )
         })}
       </ol>
-      {url && (
-        <p className="mt-4 text-sm">
-          <a href={url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
-            GitHub Actions kaydı
-          </a>
-        </p>
-      )}
     </section>
   )
 }

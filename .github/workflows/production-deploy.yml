@@ -64,9 +64,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Write version.json
-        env:
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      - name: Write version candidate
         run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/write-version.mjs
 
       - name: Run tests
@@ -113,7 +111,7 @@ jobs:
             IN="/home/parsmedya/deployments/incoming"
             test -f "$IN/server.js"
             test -f "$IN/package.json"
-            test -f "$IN/version.json"
+            test -f "$IN/version.candidate.json"
             test -d "$IN/.next"
             mkdir -p "$APP/tmp"
             python3 - <<'PY'
@@ -122,7 +120,7 @@ jobs:
 
             src = Path("/home/parsmedya/deployments/incoming")
             dst = Path("/home/parsmedya/parsmedya-app")
-            protected = {".env", "tmp", "logs", ".git", ".htaccess"}
+            protected = {".env", "tmp", "logs", ".git", ".htaccess", "version.json"}
 
             def protected_name(name: str) -> bool:
                 return name in protected or name.startswith(".env.")
@@ -180,3 +178,49 @@ jobs:
 
       - name: Verify production sitemaps
         run: node scripts/verify-sitemaps.mjs https://parsmedya.net
+
+      - name: Confirm production version
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.CPANEL_SFTP_HOST }}
+          username: ${{ secrets.CPANEL_SFTP_USERNAME }}
+          key: ${{ secrets.CPANEL_SFTP_PRIVATE_KEY }}
+          port: ${{ secrets.CPANEL_SFTP_PORT }}
+          script: |
+            set -euo pipefail
+            APP="/home/parsmedya/parsmedya-app"
+            IN="/home/parsmedya/deployments/incoming"
+            test -f "$IN/version.candidate.json"
+            python3 - <<'PY'
+            import json
+            from datetime import datetime, timezone
+            from pathlib import Path
+
+            app = Path("/home/parsmedya/parsmedya-app")
+            incoming = Path("/home/parsmedya/deployments/incoming")
+            candidate = json.loads((incoming / "version.candidate.json").read_text())
+            installed_path = app / "version.json"
+            try:
+                installed = json.loads(installed_path.read_text())
+            except Exception:
+                installed = {}
+
+            try:
+                build = int(str(installed.get("build") or "0").strip() or "0")
+            except ValueError:
+                build = 0
+            if build < 0:
+                build = 0
+
+            confirmed = {
+                "version": candidate.get("version") or installed.get("version") or "0.0.0",
+                "build": str(build + 1),
+                "commit": candidate.get("commit") or "",
+                "releasedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "releaseTitle": candidate.get("releaseTitle") or "",
+                "releaseNotes": candidate.get("releaseNotes") or [],
+            }
+            confirmed["createdAt"] = confirmed["releasedAt"]
+            installed_path.write_text(json.dumps(confirmed, indent=2) + "\n")
+            print(f"Confirmed production version {confirmed['version']} build {confirmed['build']}")
+            PY

@@ -38,7 +38,7 @@ export const WORKFLOW_SUBSTEPS: WorkflowSubstep[] = [
   { phase: 'dependencies', name: 'Setup Node.js', label: 'Node.js hazırlanıyor', test: /setup node/i },
   { phase: 'dependencies', name: 'Enable pnpm', label: 'pnpm hazırlanıyor', test: /enable pnpm|corepack/i },
   { phase: 'dependencies', name: 'Install dependencies', label: 'Paketler yükleniyor', test: /install dependenc|frozen-lockfile/i },
-  { phase: 'dependencies', name: 'Write version.json', label: 'Sürüm dosyası yazılıyor', test: /write version/i },
+  { phase: 'dependencies', name: 'Write version candidate', label: 'Aday sürüm hazırlanıyor', test: /write version/i },
   { phase: 'tests', name: 'Run tests', label: 'Testler çalıştırılıyor', test: /run tests|pnpm test/i },
   { phase: 'tests', name: 'Run lint', label: 'Lint çalıştırılıyor', test: /run lint|pnpm lint/i },
   { phase: 'build', name: 'Production build', label: 'Next.js production build çalışıyor', test: /production build|pnpm build/i },
@@ -183,7 +183,7 @@ export function inferPhaseFromSteps(steps: JobStepLike[]): DeploymentStepKey {
     const index = DEPLOYMENT_STEPS.findIndex((item) => item.key === mapped.phase)
     return DEPLOYMENT_STEPS[Math.min(index + 1, DEPLOYMENT_STEPS.length - 2)]?.key || mapped.phase
   }
-  if (/^health check$/i.test(current.name) || /verify production sitemaps/i.test(current.name)) return 'health'
+  if (/^health check$/i.test(current.name) || /verify production sitemaps/i.test(current.name) || /confirm production version/i.test(current.name)) return 'health'
   if (/promote, restart passenger/i.test(current.name)) return 'restart'
   return matchSubstep(current.name)?.phase || 'preparing'
 }

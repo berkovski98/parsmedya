@@ -10,7 +10,7 @@ import { countDispatches } from '../lib/system-update/intent'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { DeploymentProgressPanel } from '../components/admin/deployment-progress'
-import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress, measurePhase } from '../lib/system-update/progress-steps'
+import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress, inferPhaseFromSteps, measurePhase } from '../lib/system-update/progress-steps'
 import { deploymentPanelState } from '../lib/system-update/tracking'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -61,7 +61,7 @@ function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
     },
     async latestSuccessful() {
       const row = [...rows].reverse().find((item) => item.status === 'success')
-      return row ? { commit_sha: row.commit_sha } : null
+      return row ? { commit_sha: row.commit_sha, completed_at: row.completed_at } : null
     },
     async hasSuccessfulCommit(sha) {
       return rows.some((item) => item.status === 'success' && item.commit_sha.toLowerCase() === sha.toLowerCase())
@@ -71,6 +71,7 @@ function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
 
 function clientFor(options: {
   latest?: string
+  candidateVersion?: string
   runs?: GithubWorkflowRun[] | (() => GithubWorkflowRun[])
   existing?: string[]
   onDispatch?: (sha?: string) => void
@@ -82,6 +83,9 @@ function clientFor(options: {
     async latestMainCommit() {
       const sha = options.latest || LATEST
       return { sha, message: 'feat: production deploy', date: '2026-08-18T12:00:00Z', author: 'Berk' }
+    },
+    async releaseCandidate() {
+      return { version: options.candidateVersion || '1.1.0', releaseTitle: 'Güncelleme', releaseNotes: [] }
     },
     async commitExists(sha) {
       return existing.has(sha.toLowerCase())
@@ -101,12 +105,20 @@ function clientFor(options: {
   }
 }
 
-function serviceFor(github: GithubActionsClient, commit = CURRENT, configured = true) {
+function serviceFor(
+  github: GithubActionsClient,
+  commit = CURRENT,
+  configured = true,
+  extras: { version?: string; build?: string; releasedAt?: string } = {},
+) {
   const version: VersionInfo = {
-    version: '1.1.0',
-    build: '12',
+    version: extras.version || '1.1.0',
+    build: extras.build || '12',
     commit,
-    createdAt: '2026-08-18T00:00:00.000Z',
+    createdAt: extras.releasedAt || '2026-08-18T00:00:00.000Z',
+    releasedAt: extras.releasedAt || '2026-08-18T00:00:00.000Z',
+    releaseTitle: '',
+    releaseNotes: [],
   }
   return new SystemUpdateService({
     github,
@@ -509,6 +521,9 @@ test('status in_progress', async () => {
   assert.equal(status.status, 'in_progress')
   assert.equal(status.phase, 'build')
   assert.equal(status.progress, 50)
+  assert.equal(status.version, '1.1.0')
+  assert.equal(status.commit, CURRENT)
+  assert.equal(status.currentCommit, CURRENT)
 })
 
 test('idle status does not treat previous successful run as live deployment', async () => {
@@ -587,7 +602,7 @@ test('install does not report previous successful run as 100 percent', async () 
   assert.notEqual(status.progress, 100)
   assert.equal(status.runId, null)
   assert.equal(status.phase, 'queued')
-  assert.equal(status.phaseLabel, 'GitHub Actions başlatılıyor')
+  assert.equal(status.phaseLabel, 'Kurulum başlatılıyor')
   assert.equal(status.isTrackedDeployment, true)
   assert.equal(status.status, 'queued')
 })
@@ -732,7 +747,7 @@ test('install stays locked until tracked run is terminal', async () => {
     status: 'queued',
     conclusion: null,
     progress: 0,
-    phaseLabel: 'GitHub Actions başlatılıyor',
+    phaseLabel: 'Kurulum başlatılıyor',
     persistedOutcome: null,
   })
   assert.equal(waiting.installDisabled, true)
@@ -843,6 +858,15 @@ test('GET update routes are read-only and install GET is rejected', () => {
   assert.match(panel, /setInterval\(tick, 2000\)/)
   assert.match(panel, /DeploymentProgressPanel/)
   assert.doesNotMatch(panel, /Math\.random/)
+  assert.match(panel, /Mevcut Sürüm/)
+  assert.match(panel, /Yeni Güncelleme/)
+  assert.match(panel, /Son başarılı kurulum/)
+  assert.match(panel, /Kurulan sürüm/)
+  assert.doesNotMatch(panel, /GitHub main/)
+  assert.doesNotMatch(panel, /shortSha/)
+  assert.doesNotMatch(panel, /Row label="Yazar"/)
+  assert.doesNotMatch(panel, /Row label="Commit"/)
+  assert.doesNotMatch(panel, /GitHub Actions kaydı/)
 })
 
 test('production-deploy.yml is workflow_dispatch only', () => {
@@ -852,6 +876,14 @@ test('production-deploy.yml is workflow_dispatch only', () => {
   assert.doesNotMatch(yml, /^\s+push:\s*$/m)
   assert.doesNotMatch(yml, /^\s+pull_request:\s*$/m)
   assert.match(yml, /Auto-deploy is disabled/)
+  assert.match(yml, /Write version candidate/)
+  assert.match(yml, /Confirm production version/)
+  assert.match(yml, /protected = \{.*version\.json/)
+  assert.match(yml, /test -f "\$IN\/version\.candidate\.json"/)
+  const writeVersion = readFileSync('scripts/write-version.mjs', 'utf8')
+  assert.match(writeVersion, /version\.candidate\.json/)
+  assert.doesNotMatch(writeVersion, /GITHUB_RUN_NUMBER/)
+  assert.doesNotMatch(writeVersion, /path\.join\(root, 'version\.json'\)/)
 })
 
 test('deployment steps expose right-aligned percentages', () => {
@@ -1017,4 +1049,189 @@ test('failure freezes progress below 100', () => {
   }))
   assert.match(html, /Güncelleme başarısız/)
   assert.doesNotMatch(html, /Güncelleme başarıyla tamamlandı/)
+})
+
+const INSTALLED_113 = {
+  version: '1.1.3',
+  build: '12',
+  releasedAt: '2026-08-18T00:00:00.000Z',
+}
+
+test('A production current stays 1.1.3 while GitHub candidate is 1.1.4', async () => {
+  const service = serviceFor(
+    clientFor({ latest: LATEST, candidateVersion: '1.1.4' }),
+    CURRENT,
+    true,
+    INSTALLED_113,
+  )
+  const check = await service.check()
+  const status = await service.status()
+  assert.equal(check.currentVersion, '1.1.3')
+  assert.equal(check.candidateVersion, '1.1.4')
+  assert.equal(check.updateAvailable, true)
+  assert.equal(status.version, '1.1.3')
+  assert.equal(status.build, '12')
+  assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.lastSuccessfulDeployment.version, '1.1.3')
+  assert.notEqual(status.version, '1.1.4')
+})
+
+test('B in-progress install does not change current version', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(
+    clientFor({
+      latest: LATEST,
+      candidateVersion: '1.1.4',
+      runs: () => runs,
+      steps: [{ name: 'Upload to staging', status: 'in_progress', conclusion: null }],
+    }),
+    CURRENT,
+    true,
+    INSTALLED_113,
+  )
+  const installed = await service.install('admin', true)
+  runs.unshift(run({
+    id: 101,
+    status: 'in_progress',
+    conclusion: null,
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+    runId: 101,
+  })
+  assert.equal(status.version, '1.1.3')
+  assert.equal(status.build, '12')
+  assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.commit, CURRENT)
+  assert.equal(status.installingVersion, '1.1.4')
+  assert.equal(status.installingCommit, LATEST)
+  assert.equal(status.status, 'in_progress')
+  assert.equal(status.lastSuccessfulDeployment.version, '1.1.3')
+  assert.equal(status.lastSuccessfulDeployment.build, '12')
+})
+
+test('C failed deploy does not change current version', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(
+    clientFor({
+      latest: LATEST,
+      candidateVersion: '1.1.4',
+      runs: () => runs,
+      steps: [{ name: 'Upload to staging', status: 'completed', conclusion: 'failure' }],
+    }),
+    CURRENT,
+    true,
+    INSTALLED_113,
+  )
+  const installed = await service.install('admin', true)
+  runs.unshift(run({
+    id: 101,
+    status: 'completed',
+    conclusion: 'failure',
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+    runId: 101,
+  })
+  const check = await service.check()
+  assert.equal(status.version, '1.1.3')
+  assert.equal(status.build, '12')
+  assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.conclusion, 'failure')
+  assert.equal(status.installingVersion, '1.1.4')
+  assert.equal(check.currentVersion, '1.1.3')
+  assert.equal(check.candidateVersion, '1.1.4')
+  assert.equal(check.updateAvailable, true)
+})
+
+test('D success with health promotes current version only after confirm', async () => {
+  const installed = {
+    version: '1.1.3',
+    build: '12',
+    commit: CURRENT,
+    createdAt: '2026-08-18T00:00:00.000Z',
+    releasedAt: '2026-08-18T00:00:00.000Z',
+    releaseTitle: '',
+    releaseNotes: [] as string[],
+  }
+  const runs = [OLD_SUCCESS]
+  const service = new SystemUpdateService({
+    github: clientFor({ latest: LATEST, candidateVersion: '1.1.4', runs: () => runs }),
+    history: memoryHistory(),
+    readVersion: async () => ({ ...installed }),
+    isConfigured: () => true,
+  })
+  const queued = await service.install('admin', true)
+  runs.unshift(run({
+    id: 101,
+    status: 'in_progress',
+    conclusion: null,
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const installing = await service.status({
+    previousRunId: queued.previousRunId,
+    requestedAt: queued.requestedAt,
+    targetCommit: queued.targetCommit,
+    runId: 101,
+  })
+  assert.equal(installing.version, '1.1.3')
+
+  runs[0] = run({
+    id: 101,
+    status: 'completed',
+    conclusion: 'success',
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  })
+  installed.version = '1.1.4'
+  installed.build = '13'
+  installed.commit = LATEST
+  installed.releasedAt = '2026-08-18T13:00:00.000Z'
+  const status = await service.status({
+    previousRunId: queued.previousRunId,
+    requestedAt: queued.requestedAt,
+    targetCommit: queued.targetCommit,
+    runId: 101,
+  })
+  const check = await service.check()
+  assert.equal(status.version, '1.1.4')
+  assert.equal(status.build, '13')
+  assert.equal(status.currentCommit, LATEST)
+  assert.equal(check.currentVersion, '1.1.4')
+  assert.equal(check.updateAvailable, false)
+})
+
+test('E new GitHub commit without deploy does not change current version', async () => {
+  const service = serviceFor(
+    clientFor({ latest: LATEST, candidateVersion: '1.1.4' }),
+    CURRENT,
+    true,
+    INSTALLED_113,
+  )
+  const before = await service.status()
+  const check = await service.check()
+  const after = await service.status()
+  assert.equal(before.version, '1.1.3')
+  assert.equal(before.build, '12')
+  assert.equal(after.version, '1.1.3')
+  assert.equal(after.build, '12')
+  assert.equal(after.currentCommit, CURRENT)
+  assert.equal(check.updateAvailable, true)
+  assert.equal(check.candidateVersion, '1.1.4')
+})
+
+test('confirm production version stays in the health phase', () => {
+  assert.equal(inferPhaseFromSteps([
+    { name: 'Health check /admin/login', status: 'completed', conclusion: 'success' },
+    { name: 'Confirm production version', status: 'in_progress', conclusion: null },
+  ]), 'health')
 })

@@ -11,6 +11,7 @@ __v0_jsx-dev-runtime.ts
 supabase/.temp/
 
 # Common ignores
+version.candidate.json
 node_modules
 .next/
 .deploy/

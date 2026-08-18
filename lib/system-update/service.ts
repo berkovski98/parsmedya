@@ -15,6 +15,7 @@ import {
   type DeploymentTrack,
   type StatusQuery,
 } from './tracking'
+import { isUpdateAvailable } from './release'
 import { readVersionFile, type VersionInfo } from './version-file'
 
 export interface SystemUpdateDeps {
@@ -44,14 +45,23 @@ export class SystemUpdateService {
     const capabilities = this.capabilities()
     try {
       const latest = await this.github.latestMainCommit()
+      const candidate = await this.github.releaseCandidate()
+      const candidateVersion = candidate.version || current.version
       return {
         currentCommit: current.commit,
         latestCommit: latest.sha,
-        updateAvailable: !sameCommit(current.commit, latest.sha),
+        updateAvailable: isUpdateAvailable(
+          { version: current.version, commit: current.commit },
+          { version: candidateVersion, commit: latest.sha },
+        ),
         latestMessage: latest.message,
         latestDate: latest.date,
         latestAuthor: latest.author,
         currentVersion: current.version,
+        currentBuild: current.build,
+        candidateVersion,
+        candidateTitle: candidate.releaseTitle || '',
+        installedReleasedAt: current.releasedAt || current.createdAt,
         githubError: null as string | null,
         ...capabilities,
       }
@@ -65,6 +75,10 @@ export class SystemUpdateService {
           latestDate: '',
           latestAuthor: '',
           currentVersion: current.version,
+          currentBuild: current.build,
+          candidateVersion: '',
+          candidateTitle: '',
+          installedReleasedAt: current.releasedAt || current.createdAt,
           githubError: error.message,
           ...capabilities,
         }
@@ -106,9 +120,28 @@ export class SystemUpdateService {
       previousRunId: query.previousRunId ?? this.track?.previousRunId ?? null,
       requestedAt: query.requestedAt || this.track?.requestedAt || null,
       targetCommit: query.targetCommit || this.track?.targetCommit || null,
+      installingVersion: null as string | null,
+      installingCommit: null as string | null,
+      lastSuccessfulDeployment: {
+        version: current.version,
+        build: current.build,
+        commit: current.commit,
+        runId: null as number | null,
+        deployedAt: current.releasedAt || current.createdAt || null,
+      },
     }
     try {
       const runs = await this.github.listWorkflowRuns()
+      const candidate = await this.github.releaseCandidate().catch(() => ({ version: '', releaseTitle: '', releaseNotes: [] as string[] }))
+      const candidateVersion = candidate.version || ''
+      const successful = [...runs]
+        .filter((item) => item.conclusion === 'success' && sameCommit(item.head_sha, current.commit))
+        .sort((left, right) => right.id - left.id)[0] || null
+      idle.lastSuccessfulDeployment.runId = successful?.id ?? null
+      if (!idle.lastSuccessfulDeployment.deployedAt && successful?.updated_at) {
+        idle.lastSuccessfulDeployment.deployedAt = successful.updated_at
+      }
+
       const merged = mergeStatusQuery(this.track, query)
       let selected = selectDeploymentRun(runs, merged)
       if (merged.runId && !selected.run) {
@@ -116,13 +149,19 @@ export class SystemUpdateService {
         if (pinned) selected = { run: pinned, waitingForRun: false, isTrackedDeployment: true }
       }
       this.syncTrack(selected.run, merged)
+      const installingCommit = merged.targetCommit || selected.run?.head_sha || null
 
       if (selected.waitingForRun) {
         const waiting = waitingDispatchStatus()
         return {
           ...idle,
           ...waiting,
-          commit: merged.targetCommit || current.commit,
+          commit: current.commit,
+          version: current.version,
+          build: current.build,
+          currentCommit: current.commit,
+          installingVersion: candidateVersion || null,
+          installingCommit,
           previousRunId: merged.previousRunId ?? null,
           requestedAt: merged.requestedAt || null,
           targetCommit: merged.targetCommit || null,
@@ -130,16 +169,18 @@ export class SystemUpdateService {
       }
 
       if (!selected.run) {
-        const history = await this.history.latest()
+        const history = await this.history.latestSuccessful()
         return {
           ...idle,
-          completedAt: history?.completed_at || null,
+          completedAt: current.releasedAt || current.createdAt || history?.completed_at || successful?.updated_at || null,
         }
       }
 
       const steps = await this.github.listJobSteps(selected.run.id)
       const tracked = trackedRunStatus(selected.run, steps)
-      const history = await this.history.latest()
+      const history = await this.history.latestSuccessful()
+      const trackedActive = tracked.status === 'queued' || tracked.status === 'in_progress'
+      const trackedFailed = tracked.status === 'completed' && tracked.conclusion !== 'success'
       return {
         ...idle,
         status: tracked.status,
@@ -155,20 +196,32 @@ export class SystemUpdateService {
         totalSubsteps: tracked.totalSubsteps,
         substeps: tracked.substeps,
         runId: tracked.runId,
-        commit: selected.run.head_sha || current.commit,
+        commit: current.commit,
+        version: current.version,
+        build: current.build,
+        currentCommit: current.commit,
         startedAt: selected.run.created_at,
         updatedAt: selected.run.updated_at,
-        completedAt: tracked.status === 'completed' ? (selected.run.updated_at || history?.completed_at || null) : null,
+        completedAt: current.releasedAt || current.createdAt || history?.completed_at || successful?.updated_at || null,
         url: selected.run.html_url,
         errorMessage: tracked.errorMessage,
         isTrackedDeployment: selected.isTrackedDeployment,
         previousRunId: merged.previousRunId ?? this.track?.previousRunId ?? null,
         requestedAt: merged.requestedAt || this.track?.requestedAt || null,
         targetCommit: merged.targetCommit || this.track?.targetCommit || selected.run.head_sha,
+        installingVersion: selected.isTrackedDeployment && (trackedActive || trackedFailed) ? (candidateVersion || null) : null,
+        installingCommit: selected.isTrackedDeployment && (trackedActive || trackedFailed) ? installingCommit : null,
       }
     } catch {
       if (mergeStatusQuery(this.track, query).requestedAt || mergeStatusQuery(this.track, query).previousRunId != null) {
-        return { ...idle, ...waitingDispatchStatus(), commit: query.targetCommit || this.track?.targetCommit || current.commit }
+        return {
+          ...idle,
+          ...waitingDispatchStatus(),
+          commit: current.commit,
+          version: current.version,
+          build: current.build,
+          currentCommit: current.commit,
+        }
       }
       return idle
     }
@@ -211,7 +264,7 @@ export class SystemUpdateService {
       targetCommit: check.latestCommit,
       runId: null as number | null,
       phase: 'queued' as const,
-      phaseLabel: 'GitHub Actions başlatılıyor',
+      phaseLabel: 'Kurulum başlatılıyor',
       progress: 0,
       overallProgress: 0,
       stepProgress: 0,
@@ -267,7 +320,7 @@ export class SystemUpdateService {
       targetCommit: sha,
       runId: null as number | null,
       phase: 'queued' as const,
-      phaseLabel: 'GitHub Actions başlatılıyor',
+      phaseLabel: 'Kurulum başlatılıyor',
       progress: 0,
       overallProgress: 0,
       stepProgress: 0,

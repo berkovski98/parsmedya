@@ -23,5 +23,10 @@ await cp(path.join(root, 'public'), path.join(standaloneDir, 'public'), {
   force: true,
 })
 await cp(path.join(root, 'version.json'), path.join(standaloneDir, 'version.json'), { force: true })
+try {
+  await cp(path.join(root, 'version.candidate.json'), path.join(standaloneDir, 'version.candidate.json'), { force: true })
+} catch {
+  // Candidate file is written by CI before the production workflow packages the deploy.
+}
 
 console.log('Standalone runtime assets prepared.')

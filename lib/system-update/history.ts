@@ -16,7 +16,7 @@ export interface HistoryStore {
   start(record: HistoryRecord): Promise<string | null>
   finish(id: string | null, patch: Partial<HistoryRecord>): Promise<void>
   latest(): Promise<{ completed_at: string | null; status: string | null; commit_sha?: string | null } | null>
-  latestSuccessful(): Promise<{ commit_sha: string | null } | null>
+  latestSuccessful(): Promise<{ commit_sha: string | null; version?: string | null; build?: string | null; completed_at?: string | null } | null>
   hasSuccessfulCommit(sha: string): Promise<boolean>
 }
 
@@ -75,7 +75,7 @@ export const supabaseHistory: HistoryStore = {
       const supabase = await createClient()
       const { data } = await supabase
         .from('deployment_history')
-        .select('commit_sha')
+        .select('commit_sha,version,build,completed_at')
         .eq('status', 'success')
         .order('started_at', { ascending: false })
         .limit(1)

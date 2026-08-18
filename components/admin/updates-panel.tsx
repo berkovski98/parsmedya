@@ -14,6 +14,10 @@ type CheckData = {
   latestDate: string
   latestAuthor: string
   currentVersion: string
+  currentBuild?: string
+  candidateVersion?: string
+  candidateTitle?: string
+  installedReleasedAt?: string
   githubReadAvailable: boolean
   githubDeployConfigured: boolean
   githubConfigured: boolean
@@ -52,6 +56,15 @@ type StatusData = {
   previousRunId: number | null
   requestedAt: string | null
   targetCommit: string | null
+  installingVersion?: string | null
+  installingCommit?: string | null
+  lastSuccessfulDeployment?: {
+    version: string
+    build: string
+    commit: string
+    runId: number | null
+    deployedAt: string | null
+  }
 }
 
 type TrackState = {
@@ -262,7 +275,7 @@ export function UpdatesPanel({
       const next = await loadCheck()
       if (next?.latestCommit) {
         setError('')
-        setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
+        setMessage('Güncelleme bilgisi kontrol edildi. Kurulum başlatılmadı.')
       } else {
         setError(next?.githubError || 'Güncelleme bilgisi alınamadı.')
       }
@@ -304,7 +317,7 @@ export function UpdatesPanel({
         status: 'queued',
         conclusion: null,
         phase: 'preparing',
-        phaseLabel: json.data.phaseLabel || 'GitHub Actions başlatılıyor',
+        phaseLabel: json.data.phaseLabel || 'Kurulum başlatılıyor',
         progress: 0,
         runId: null,
         isTrackedDeployment: true,
@@ -312,7 +325,7 @@ export function UpdatesPanel({
         requestedAt: json.data.requestedAt,
         targetCommit: json.data.targetCommit,
       } : current)
-      setMessage('GitHub Actions başlatılıyor...')
+      setMessage('Kurulum başlatılıyor...')
       await loadStatus()
     } catch {
       setError('Güncelleme başlatılamadı.')
@@ -347,7 +360,7 @@ export function UpdatesPanel({
         targetCommit: json.data.targetCommit,
         trackedRunId: null,
       })
-      setMessage('GitHub Actions başlatılıyor...')
+      setMessage('Kurulum başlatılıyor...')
       await loadStatus()
     } catch {
       setError('Geri alma başlatılamadı.')
@@ -363,17 +376,17 @@ export function UpdatesPanel({
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Güncellemeler</h1>
-      <p className="mt-2 text-muted-foreground">Kontrol yalnızca GitHub’ı okur. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
+      <p className="mt-2 text-muted-foreground">Mevcut sürüm, production’a kurulmuş son başarılı sürümdür. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
       {!deployConfigured && (
         <div role="status" className="mt-6 rounded-lg border border-border bg-secondary/60 p-4 text-sm">
           <p className="font-medium">Otomatik kurulum yapılandırılmadı.</p>
           {readAvailable && (
             <p className="mt-2 text-muted-foreground">
-              GitHub sürüm kontrolü aktif. Otomatik kurulum bağlantısı yapılandırılmadığı için güncelleme kurulamaz.
+              Sürüm kontrolü aktif. Otomatik kurulum bağlantısı yapılandırılmadığı için güncelleme kurulamaz.
             </p>
           )}
           <p className="mt-2 text-muted-foreground">
-            Yeni sürümleri kontrol edebilirsiniz. Otomatik kurulum için GitHub deploy yetkilendirmesi gereklidir.
+            Yeni sürümleri kontrol edebilirsiniz. Otomatik kurulum için yetkilendirme gereklidir.
           </p>
         </div>
       )}
@@ -381,29 +394,25 @@ export function UpdatesPanel({
       {message && <p className="mt-6 rounded-lg border border-green-600/30 bg-green-600/10 p-3 text-sm text-green-800">{message}</p>}
       <section className="mt-8 grid gap-5 md:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-display text-xl font-bold">Mevcut sürüm</h2>
+          <h2 className="font-display text-xl font-bold">Mevcut Sürüm</h2>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Sürüm" value={status?.version || check?.currentVersion || '—'} />
-            <Row label="Build" value={status?.build || '—'} />
-            <Row label="Commit" value={shortSha(status?.currentCommit || check?.currentCommit)} />
-            <Row label="Son dağıtım" value={formatDate(status?.completedAt || status?.startedAt)} />
+            <Row label="Build" value={status?.build || check?.currentBuild || '—'} />
+            <Row label="Son başarılı kurulum" value={formatDate(status?.lastSuccessfulDeployment?.deployedAt || status?.completedAt || check?.installedReleasedAt)} />
           </dl>
           {succeeded && (
             <p className="mt-4 inline-flex rounded-full border border-green-600/30 bg-green-600/10 px-3 py-1 text-xs font-semibold text-green-800">Yeni sürüm aktif</p>
           )}
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-display text-xl font-bold">GitHub main</h2>
+          <h2 className="font-display text-xl font-bold">Yeni Güncelleme</h2>
           <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Son commit" value={shortSha(check?.latestCommit)} />
-            <Row label="Yazar" value={check?.latestAuthor || '—'} />
-            <Row label="Tarih" value={formatDate(check?.latestDate)} />
-            <Row label="Mesaj" value={check?.latestMessage || '—'} />
-            <Row label="Güncelleme" value={!check ? '—' : check.updateAvailable ? 'Yeni güncelleme mevcut' : check.latestCommit ? 'Güncel' : '—'} />
+            <Row label="Aday sürüm" value={check?.candidateVersion || (check?.updateAvailable ? 'Yeni güncelleme mevcut' : '—')} />
+            <Row label="Durum" value={!check ? '—' : check.updateAvailable ? 'Kurulmayı bekliyor' : check.latestCommit ? 'Sistem güncel' : '—'} />
           </dl>
-          {check?.updateAvailable && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {shortSha(check.currentCommit)} → {shortSha(check.latestCommit)}
+          {panel.show && (status?.installingVersion || check?.candidateVersion) && (installing || panel.waitingForGithub || isActiveStatus(status)) && (
+            <p className="mt-4 text-sm font-medium text-accent">
+              Kurulan sürüm: {status?.installingVersion || check?.candidateVersion}
             </p>
           )}
           <div className="mt-5 flex flex-wrap gap-3">
@@ -429,20 +438,20 @@ export function UpdatesPanel({
         <DeploymentProgressPanel
           overallProgress={progress}
           stepProgress={status?.stepProgress ?? 0}
-          stepLabel={panel.phaseLabel || status?.stepLabel || 'GitHub Actions başlatılıyor'}
+          stepLabel={panel.phaseLabel || status?.stepLabel || 'Güncelleme kuruluyor'}
           stepDetail={status?.stepDetail || ''}
           substeps={status?.substeps || []}
           failed={failed}
           succeeded={succeeded}
           errorMessage={status?.errorMessage}
-          url={status?.url}
+          installingVersion={status?.installingVersion || check?.candidateVersion || null}
         />
       )}
 
       <section className="mt-8 rounded-xl border border-border bg-card p-6">
         <h2 className="font-display text-xl font-bold">Önceki sürüme dön</h2>
-        <p className="mt-2 text-sm text-muted-foreground">ZIP yedek kullanılmaz. Son başarılı commit GitHub Actions ile yeniden derlenir ve dağıtılır.</p>
-        <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
+        <p className="mt-2 text-sm text-muted-foreground">Son başarılı sürüme geri dönülür. Kurulum yine sizin onayınızla başlar.</p>
+        <p className="mt-3 text-sm font-medium">{status?.previousCommit ? 'Önceki başarılı sürüm hazır.' : 'Önceki başarılı sürüm yok.'}</p>
         <button
           disabled={!deployConfigured || checking || panel.installDisabled || !status?.previousCommit}
           onClick={requestRollback}
@@ -485,11 +494,6 @@ export function UpdatesPanel({
       )}
     </div>
   )
-}
-
-function shortSha(value?: string) {
-  if (!value) return '—'
-  return value.slice(0, 7)
 }
 
 function formatDate(value?: string | null) {

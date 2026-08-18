@@ -63,6 +63,12 @@ await assertDirectory(path.join(deployDir, '.next'))
 await stat(path.join(deployDir, 'server.js'))
 await stat(path.join(deployDir, 'package.json'))
 await stat(path.join(deployDir, 'version.json'))
+const candidateSrc = path.join(root, 'version.candidate.json')
+const candidateDest = path.join(deployDir, 'version.candidate.json')
+if (existsSync(candidateSrc) && !existsSync(candidateDest)) {
+  await cp(candidateSrc, candidateDest)
+}
+await stat(candidateDest)
 await assertDirectory(path.join(deployDir, 'node_modules', '@swc', 'helpers'))
 await assertDirectory(path.join(deployDir, 'node_modules', '@next', 'env'))
 
