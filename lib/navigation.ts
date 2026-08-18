@@ -28,6 +28,11 @@ export function getCorporateLinks(locale: Locale) {
   return corporate[locale]
 }
 
+export function getServiceCategoryLabel(category: string | undefined, locale: Locale) {
+  const key = category || 'Dijital Büyüme'
+  return categoryLabels[locale][key] || key
+}
+
 export function getServiceGroups(locale: Locale): NavigationGroup[] {
   const source = locale === 'en' ? englishServices : services
   const prefix = locale === 'en' ? '/en/services' : '/hizmetler'

@@ -1,24 +1,32 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowRight, Check } from 'lucide-react'
-import { PageHeader } from '@/components/page-header'
-import { EnglishContactCta } from '@/components/english-sections'
-import { buttonVariants } from '@/components/ui/button'
-import { englishServices, getEnglishService } from '@/lib/services-en'
+import { ServicePage } from '@/components/service-page/service-page'
 import { createPageMetadata } from '@/lib/seo'
+import { englishServices, getEnglishService } from '@/lib/services-en'
 
 type Props = { params: Promise<{ slug: string }> }
-export function generateStaticParams() { return englishServices.map(({ slug }) => ({ slug })) }
+
+export function generateStaticParams() {
+  return englishServices.map(({ slug }) => ({ slug }))
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const service = getEnglishService((await params).slug)
   if (!service) return { title: 'Service Not Found | Pars Medya' }
   const canonical = `/en/services/${service.slug}`
   const tr = `/hizmetler/${service.trSlug}`
-  return createPageMetadata({ title: service.seoTitle || `${service.title} | Pars Medya`, description: service.seoDescription || service.description, canonical, tr, en: canonical, locale: 'en' })
+  return createPageMetadata({
+    title: service.seoTitle || `${service.title} | Pars Medya`,
+    description: service.seoDescription || service.description,
+    canonical,
+    tr,
+    en: canonical,
+    locale: 'en',
+  })
 }
+
 export default async function EnglishServiceDetail({ params }: Props) {
-  const service = getEnglishService((await params).slug); if (!service) notFound()
-  const related = englishServices.filter((item) => item.slug !== service.slug && item.category === service.category).slice(0, 3)
-  return <><PageHeader locale="en" eyebrow={service.title} title={service.tagline} description={service.intro} /><section className="border-b border-border"><div className="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-[1fr_auto] md:items-end"><div className="max-w-3xl"><p className="text-sm font-semibold uppercase tracking-widest text-accent">Service Overview</p><h2 className="mt-3 font-display text-3xl font-bold">What is {service.title.toLowerCase()}?</h2><div className="mt-6 space-y-4">{service.longDescription?.map((paragraph) => <p key={paragraph} className="leading-relaxed text-muted-foreground">{paragraph}</p>)}</div></div><Link href="/en/contact" className={buttonVariants({ size: 'lg' })}>Get a Free Proposal<ArrowRight className="h-4 w-4" /></Link></div></section><section className="border-b border-border bg-secondary/40"><div className="mx-auto max-w-6xl px-4 py-16 sm:px-6"><p className="text-sm font-semibold uppercase tracking-widest text-accent">What We Develop</p><h2 className="mt-3 font-display text-3xl font-bold">Capabilities designed around your operations</h2><div className="mt-10 grid gap-5 sm:grid-cols-2">{service.features.map((feature) => <article key={feature.title} className="rounded-xl border border-border bg-card p-6"><Check className="h-5 w-5 text-accent" /><h3 className="mt-4 font-display text-lg font-semibold">{feature.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.description}</p></article>)}</div></div></section><section className="border-b border-border"><div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2"><div><h2 className="font-display text-2xl font-bold">Business Benefits</h2><ul className="mt-6 space-y-3">{service.benefits?.map((benefit) => <li key={benefit} className="flex gap-3 rounded-lg border border-border p-4"><Check className="h-5 w-5 shrink-0 text-accent" />{benefit}</li>)}</ul></div><div><h2 className="font-display text-2xl font-bold">Development Process</h2><ol className="mt-6 space-y-5">{service.process.map((step,index) => <li key={step.title} className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{index + 1}</span><div><h3 className="font-display font-semibold">{step.title}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p></div></li>)}</ol></div></div></section><section className="border-b border-border bg-secondary/40"><div className="mx-auto max-w-6xl px-4 py-16 sm:px-6"><h2 className="font-display text-3xl font-bold">Use Cases</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{service.useCases?.map((item) => <article key={item.title} className="rounded-xl border border-border bg-card p-6"><h3 className="font-display font-semibold">{item.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p></article>)}</div><div className="mt-12 max-w-4xl rounded-xl border border-border bg-card p-7"><h2 className="font-display text-2xl font-bold">Why Pars Medya?</h2><p className="mt-4 leading-relaxed text-muted-foreground">{service.whyParsMedya}</p></div></div></section><section className="border-b border-border"><div className="mx-auto max-w-3xl px-4 py-16 sm:px-6"><h2 className="font-display text-3xl font-bold">Frequently Asked Questions</h2><div className="mt-8 divide-y divide-border rounded-xl border border-border">{service.faqs.map((faq) => <details key={faq.question} className="p-5"><summary className="cursor-pointer font-display font-semibold">{faq.question}</summary><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p></details>)}</div></div></section><aside className="border-b border-border bg-secondary/40"><div className="mx-auto max-w-6xl px-4 py-16 sm:px-6"><h2 className="font-display text-2xl font-bold">Related Services</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{related.map((item) => <Link key={item.slug} href={`/en/services/${item.slug}`} className="rounded-xl border border-border bg-card p-6 hover:border-accent"><h3 className="font-display font-semibold">{item.title}</h3><p className="mt-2 text-sm text-muted-foreground">{item.description}</p></Link>)}</div></div></aside><EnglishContactCta /></>
+  const service = getEnglishService((await params).slug)
+  if (!service) notFound()
+  return <ServicePage service={service} locale="en" />
 }
