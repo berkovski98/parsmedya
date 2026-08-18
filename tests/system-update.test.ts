@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { requireAdminApi } from '../lib/system-update/auth'
 import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
-import { githubActions, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
+import { githubActions, githubApiHeaders, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, resetGithubCache, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
 import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
 import { countDispatches } from '../lib/system-update/intent'
@@ -131,30 +131,38 @@ test('unauthorized install', async () => {
 
 test('token missing page loads', async () => {
   let dispatched = 0
-  const service = serviceFor({
-    ...clientFor({
-      latest: LATEST,
-      onDispatch: () => { dispatched += 1 },
-    }),
-    async latestMainCommit() {
-      throw new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
-    },
-  }, CURRENT, false)
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT, false)
   const status = await service.status()
   const check = await service.check()
   assert.equal(status.version, '1.1.0')
   assert.equal(status.build, '12')
   assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.githubReadAvailable, true)
+  assert.equal(status.githubDeployConfigured, false)
   assert.equal(status.githubConfigured, false)
+  assert.equal(check.githubReadAvailable, true)
+  assert.equal(check.githubDeployConfigured, false)
   assert.equal(check.githubConfigured, false)
-  assert.equal(check.updateAvailable, false)
+  assert.equal(check.latestCommit, LATEST)
+  assert.equal(check.latestAuthor, 'Berk')
+  assert.equal(check.latestDate, '2026-08-18T12:00:00Z')
+  assert.equal(check.latestMessage, 'feat: production deploy')
+  assert.equal(check.updateAvailable, true)
   assert.equal(dispatched, 0)
 })
 
 test('install disabled when token missing', async () => {
   const check = await serviceFor(clientFor({ latest: LATEST }), CURRENT, false).check()
   assert.equal(check.updateAvailable, true)
+  assert.equal(check.githubDeployConfigured, false)
   assert.equal(check.githubConfigured, false)
+  const panel = readFileSync('components/admin/updates-panel.tsx', 'utf8')
+  assert.match(panel, /disabled=\{!deployConfigured \|\| checking \|\| panel\.installDisabled \|\| !check\?\.updateAvailable\}/)
+  assert.doesNotMatch(panel, /GitHub bağlantısı yapılandırılmadı/)
+  assert.match(panel, /Otomatik kurulum yapılandırılmadı/)
 })
 
 test('install API token missing -> controlled error', async () => {
@@ -167,6 +175,7 @@ test('install API token missing -> controlled error', async () => {
     error instanceof UpdateError
     && error.status === 503
     && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
+    && error.message === 'Otomatik kurulum için GitHub deploy bağlantısı yapılandırılmamış.'
   ))
   assert.equal(dispatched, 0)
 })
@@ -188,7 +197,10 @@ test('token configured keeps normal install behavior', async () => {
   const service = serviceFor(clientFor({ latest: LATEST }), CURRENT, true)
   const check = await service.check()
   const status = await service.status()
+  assert.equal(check.githubReadAvailable, true)
+  assert.equal(check.githubDeployConfigured, true)
   assert.equal(check.githubConfigured, true)
+  assert.equal(status.githubDeployConfigured, true)
   assert.equal(status.githubConfigured, true)
   const result = await service.install('admin', true)
   assert.equal(result.status, 'queued')
@@ -208,6 +220,11 @@ test('no page crash when github check fails', async () => {
   const check = await service.check()
   assert.equal(status.version, '1.1.0')
   assert.equal(check.currentVersion, '1.1.0')
+  assert.equal(check.currentCommit, CURRENT)
+  assert.equal(check.latestCommit, '')
+  assert.equal(check.githubError, 'GitHub bilgisi alınamadı.')
+  assert.equal(check.githubReadAvailable, true)
+  assert.equal(check.githubDeployConfigured, false)
 })
 
 test('workflow dispatch is blocked without token', async () => {
@@ -218,9 +235,89 @@ test('workflow dispatch is blocked without token', async () => {
     error instanceof UpdateError
     && error.status === 503
     && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
+    && error.message === 'Otomatik kurulum için GitHub deploy bağlantısı yapılandırılmamış.'
   ))
   if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
   else process.env.GITHUB_DEPLOY_TOKEN = previous
+})
+
+test('public github check does not send authorization without token', async () => {
+  const previous = process.env.GITHUB_DEPLOY_TOKEN
+  delete process.env.GITHUB_DEPLOY_TOKEN
+  resetGithubCache()
+  const original = globalThis.fetch
+  let authorization: string | null = 'sent'
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    authorization = new Headers(init?.headers).get('Authorization')
+    return new Response(JSON.stringify({
+      sha: LATEST,
+      commit: { message: 'feat: public read\nmore', author: { name: 'berkovski98', date: '2026-08-18T12:00:00Z' } },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+  }) as typeof fetch
+  try {
+    assert.equal(githubApiHeaders().Authorization, undefined)
+    const commit = await githubActions.latestMainCommit()
+    assert.equal(authorization, null)
+    assert.equal(commit.sha, LATEST)
+    assert.equal(commit.author, 'berkovski98')
+    assert.equal(commit.date, '2026-08-18T12:00:00Z')
+    assert.equal(commit.message, 'feat: public read')
+  } finally {
+    globalThis.fetch = original
+    resetGithubCache()
+    if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
+    else process.env.GITHUB_DEPLOY_TOKEN = previous
+  }
+})
+
+test('github 403 and 429 keep version check from crashing', async () => {
+  const previous = process.env.GITHUB_DEPLOY_TOKEN
+  delete process.env.GITHUB_DEPLOY_TOKEN
+  const original = globalThis.fetch
+  try {
+    for (const status of [403, 429]) {
+      resetGithubCache()
+      globalThis.fetch = (async () => new Response('blocked', { status })) as typeof fetch
+      await assert.rejects(() => githubActions.latestMainCommit(), (error: unknown) => (
+        error instanceof UpdateError && error.code === UPDATE_CODES.GITHUB_UNAVAILABLE
+      ))
+    }
+  } finally {
+    globalThis.fetch = original
+    resetGithubCache()
+    if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
+    else process.env.GITHUB_DEPLOY_TOKEN = previous
+  }
+})
+
+test('actions run list degrades without blocking public commit reads', async () => {
+  const previous = process.env.GITHUB_DEPLOY_TOKEN
+  delete process.env.GITHUB_DEPLOY_TOKEN
+  resetGithubCache()
+  const original = globalThis.fetch
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    if (String(url).includes('/actions/')) return new Response('{}', { status: 403 })
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+  try {
+    assert.deepEqual(await githubActions.listWorkflowRuns(), [])
+  } finally {
+    globalThis.fetch = original
+    resetGithubCache()
+    if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
+    else process.env.GITHUB_DEPLOY_TOKEN = previous
+  }
+})
+
+test('token adds authorization header for deploy requests', () => {
+  const previous = process.env.GITHUB_DEPLOY_TOKEN
+  process.env.GITHUB_DEPLOY_TOKEN = 'ghs_test_token'
+  try {
+    assert.equal(githubApiHeaders().Authorization, 'Bearer ghs_test_token')
+  } finally {
+    if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
+    else process.env.GITHUB_DEPLOY_TOKEN = previous
+  }
 })
 
 test('no update', async () => {
@@ -726,16 +823,20 @@ test('explicit confirm dispatches once and double confirm stays at one', () => {
 test('GET update routes are read-only and install GET is rejected', () => {
   const check = readFileSync('app/api/system/update/check/route.ts', 'utf8')
   const status = readFileSync('app/api/system/update/status/route.ts', 'utf8')
+  const page = readFileSync('app/admin/(panel)/updates/page.tsx', 'utf8')
   const panel = readFileSync('components/admin/updates-panel.tsx', 'utf8')
   const install = readFileSync('app/api/system/update/install/route.ts', 'utf8')
   assert.doesNotMatch(check, /\.dispatch\(/)
   assert.doesNotMatch(status, /\.dispatch\(/)
+  assert.doesNotMatch(check, /hasGithubDeployToken|githubDeployConfigured/)
   assert.match(check, /Never dispatches/)
   assert.match(status, /Never dispatches/)
+  assert.match(page, /service\.check\(\)/)
   assert.match(install, /methodNotAllowed/)
   const effect = panel.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[polling, loadStatus\]\)/)
   assert.ok(effect)
   assert.doesNotMatch(effect[0], /installConfirmed|rollbackConfirmed|\/install|\/rollback/)
+  assert.match(effect[0], /if \(!polling\) return/)
 })
 
 test('production-deploy.yml is workflow_dispatch only', () => {

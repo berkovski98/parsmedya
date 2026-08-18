@@ -5,12 +5,18 @@ export const WORKFLOW_FILE = 'production-deploy.yml'
 export const HEALTH_ORIGIN = 'https://parsmedya.net'
 export const HEALTH_PATHS = ['/', '/en', '/sitemap.xml', '/sitemap-en.xml', '/robots.txt', '/admin/login'] as const
 
+export const GITHUB_READ_AVAILABLE = true
+
 export function getGithubDeployToken() {
   return process.env.GITHUB_DEPLOY_TOKEN?.trim() || ''
 }
 
 export function hasGithubDeployToken() {
   return Boolean(getGithubDeployToken())
+}
+
+export function githubDeployConfigured() {
+  return hasGithubDeployToken()
 }
 
 export function isCommitSha(value: string) {

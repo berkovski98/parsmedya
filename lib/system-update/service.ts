@@ -1,4 +1,4 @@
-import { hasGithubDeployToken, isCommitSha, sameCommit } from './config'
+import { GITHUB_READ_AVAILABLE, hasGithubDeployToken, isCommitSha, sameCommit } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
 import { isExplicitConfirmation } from './intent'
 import {
@@ -41,7 +41,7 @@ export class SystemUpdateService {
 
   async check() {
     const current = await this.readVersion()
-    const githubConfigured = this.isConfigured()
+    const capabilities = this.capabilities()
     try {
       const latest = await this.github.latestMainCommit()
       return {
@@ -52,10 +52,11 @@ export class SystemUpdateService {
         latestDate: latest.date,
         latestAuthor: latest.author,
         currentVersion: current.version,
-        githubConfigured,
+        githubError: null as string | null,
+        ...capabilities,
       }
     } catch (error) {
-      if (error instanceof UpdateError && (error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED || error.code === UPDATE_CODES.GITHUB_UNAVAILABLE)) {
+      if (error instanceof UpdateError && error.code === UPDATE_CODES.GITHUB_UNAVAILABLE) {
         return {
           currentCommit: current.commit,
           latestCommit: '',
@@ -64,7 +65,8 @@ export class SystemUpdateService {
           latestDate: '',
           latestAuthor: '',
           currentVersion: current.version,
-          githubConfigured: githubConfigured && error.code !== UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED,
+          githubError: error.message,
+          ...capabilities,
         }
       }
       throw error
@@ -92,7 +94,7 @@ export class SystemUpdateService {
       previousCommit: previous,
       nodeVersion: process.versions.node,
       errorMessage: null as string | null,
-      githubConfigured: this.isConfigured(),
+      ...this.capabilities(),
       isTrackedDeployment: false,
       previousRunId: query.previousRunId ?? this.track?.previousRunId ?? null,
       requestedAt: query.requestedAt || this.track?.requestedAt || null,
@@ -264,9 +266,22 @@ export class SystemUpdateService {
     if (this.track && run) this.track.trackedRunId = run.id
   }
 
+  private capabilities() {
+    const githubDeployConfigured = this.isConfigured()
+    return {
+      githubReadAvailable: GITHUB_READ_AVAILABLE,
+      githubDeployConfigured,
+      githubConfigured: githubDeployConfigured,
+    }
+  }
+
   private assertDeployConfigured() {
     if (!this.isConfigured()) {
-      throw new UpdateError(UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED, 'GitHub bağlantısı yapılandırılmadı.', 503)
+      throw new UpdateError(
+        UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED,
+        'Otomatik kurulum için GitHub deploy bağlantısı yapılandırılmamış.',
+        503,
+      )
     }
   }
 

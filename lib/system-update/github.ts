@@ -57,7 +57,19 @@ export interface GithubActionsClient {
   dispatch(deploySha?: string): Promise<void>
 }
 
-function headers() {
+const COMMIT_CACHE_MS = 45_000
+const RUNS_CACHE_MS = 10_000
+
+type CacheEntry<T> = { expires: number; value: T }
+let commitCache: CacheEntry<GithubCommit> | null = null
+let runsCache: CacheEntry<GithubWorkflowRun[]> | null = null
+
+export function resetGithubCache() {
+  commitCache = null
+  runsCache = null
+}
+
+export function githubApiHeaders() {
   const token = getGithubDeployToken()
   const result: Record<string, string> = {
     Accept: 'application/vnd.github+json',
@@ -71,7 +83,7 @@ function headers() {
 async function githubFetch(url: string, init: RequestInit = {}) {
   const response = await fetch(url, {
     ...init,
-    headers: { ...headers(), ...(init.headers as Record<string, string> | undefined) },
+    headers: { ...githubApiHeaders(), ...(init.headers as Record<string, string> | undefined) },
     cache: 'no-store',
   })
   return response
@@ -86,28 +98,35 @@ function failUnavailable() {
 }
 
 function failNotConfigured() {
-  return new UpdateError(UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED, 'GitHub bağlantısı yapılandırılmadı.', 503)
+  return new UpdateError(
+    UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED,
+    'Otomatik kurulum için GitHub deploy bağlantısı yapılandırılmamış.',
+    503,
+  )
 }
 
-function throwIfAuthFailed(response: Response) {
-  if (response.status === 401 || response.status === 403) throw failNotConfigured()
+function throwIfReadFailed(response: Response) {
+  if (response.ok) return
+  throw failUnavailable()
 }
 
 export const githubActions: GithubActionsClient = {
   async latestMainCommit() {
+    if (commitCache && commitCache.expires > Date.now()) return commitCache.value
     const response = await githubFetch(`${API}/commits/${encodeURIComponent(GITHUB_BRANCH)}`)
-    throwIfAuthFailed(response)
-    if (!response.ok) throw failUnavailable()
+    throwIfReadFailed(response)
     const payload = await readJson<{
       sha: string
       commit?: { message?: string; author?: { name?: string; date?: string } }
     }>(response)
-    return {
+    const value: GithubCommit = {
       sha: payload.sha,
       message: (payload.commit?.message || '').split('\n')[0] || '',
       date: payload.commit?.author?.date || '',
       author: payload.commit?.author?.name || '',
     }
+    commitCache = { expires: Date.now() + COMMIT_CACHE_MS, value }
+    return value
   },
 
   async commitExists(sha: string) {
@@ -118,12 +137,15 @@ export const githubActions: GithubActionsClient = {
 
   async listWorkflowRuns() {
     try {
+      if (runsCache && runsCache.expires > Date.now()) return runsCache.value
       const response = await githubFetch(
         `${API}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/runs?per_page=10&branch=${GITHUB_BRANCH}`,
       )
       if (!response.ok) return []
       const payload = await readJson<{ workflow_runs?: GithubWorkflowRun[] }>(response)
-      return payload.workflow_runs || []
+      const value = payload.workflow_runs || []
+      runsCache = { expires: Date.now() + RUNS_CACHE_MS, value }
+      return value
     } catch {
       return []
     }
@@ -165,7 +187,7 @@ export const githubActions: GithubActionsClient = {
       body: JSON.stringify(body),
     })
     if (response.status === 204 || response.ok) return
-    throwIfAuthFailed(response)
+    if (response.status === 401 || response.status === 403) throw failNotConfigured()
     if (response.status === 404) {
       throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Production Deploy workflow bulunamadı.', 502)
     }

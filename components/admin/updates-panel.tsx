@@ -13,7 +13,10 @@ type CheckData = {
   latestDate: string
   latestAuthor: string
   currentVersion: string
+  githubReadAvailable: boolean
+  githubDeployConfigured: boolean
   githubConfigured: boolean
+  githubError: string | null
 }
 
 type StatusData = {
@@ -34,6 +37,8 @@ type StatusData = {
   previousCommit: string
   nodeVersion: string
   errorMessage: string | null
+  githubReadAvailable: boolean
+  githubDeployConfigured: boolean
   githubConfigured: boolean
   isTrackedDeployment: boolean
   previousRunId: number | null
@@ -104,16 +109,19 @@ export function UpdatesPanel({
   initialCheck,
   initialStatus,
   initialError = '',
-  githubConfigured: initialGithubConfigured,
+  githubReadAvailable: initialReadAvailable,
+  githubDeployConfigured: initialDeployConfigured,
 }: {
   initialCheck: CheckData | null
   initialStatus: StatusData | null
   initialError?: string
-  githubConfigured: boolean
+  githubReadAvailable: boolean
+  githubDeployConfigured: boolean
 }) {
   const [check, setCheck] = useState<CheckData | null>(initialCheck)
   const [status, setStatus] = useState<StatusData | null>(initialStatus)
-  const [githubConfigured, setGithubConfigured] = useState(initialGithubConfigured)
+  const [readAvailable, setReadAvailable] = useState(initialReadAvailable)
+  const [deployConfigured, setDeployConfigured] = useState(initialDeployConfigured)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(initialError)
   const [checking, setChecking] = useState(false)
@@ -133,14 +141,15 @@ export function UpdatesPanel({
   const loadCheck = useCallback(async () => {
     const checkRes = await fetch('/api/system/update/check', { cache: 'no-store' })
     const checkJson = await checkRes.json() as ApiResponse<CheckData>
-    if (checkJson.ok) {
-      setCheck(checkJson.data)
-      setGithubConfigured(checkJson.data.githubConfigured)
-    } else if (checkJson.error.code === 'GITHUB_DEPLOY_NOT_CONFIGURED') {
-      setGithubConfigured(false)
-    } else {
+    if (!checkJson.ok) {
       setError(checkJson.error.message)
+      return null
     }
+    setCheck(checkJson.data)
+    setReadAvailable(checkJson.data.githubReadAvailable)
+    setDeployConfigured(checkJson.data.githubDeployConfigured)
+    if (checkJson.data.githubError) setError(checkJson.data.githubError)
+    return checkJson.data
   }, [])
 
   const loadStatus = useCallback(async () => {
@@ -155,12 +164,12 @@ export function UpdatesPanel({
     const statusJson = await statusRes.json() as ApiResponse<StatusData>
     if (!statusJson.ok) {
       if (statusJson.error.code !== 'GITHUB_DEPLOY_NOT_CONFIGURED') setError(statusJson.error.message)
-      else setGithubConfigured(false)
       return null
     }
     const next = statusJson.data
     setStatus(next)
-    setGithubConfigured(next.githubConfigured)
+    setReadAvailable(next.githubReadAvailable)
+    setDeployConfigured(next.githubDeployConfigured)
 
     if (next.isTrackedDeployment && next.runId && current) {
       persistTrack({ ...current, trackedRunId: next.runId })
@@ -201,18 +210,18 @@ export function UpdatesPanel({
   const polling = installing || panel.waitingForGithub || (status?.isTrackedDeployment && isActiveStatus(status))
   useEffect(() => {
     if (!polling) return
-    const timer = window.setInterval(() => { void loadStatus() }, 4000)
+    const timer = window.setInterval(() => { void loadStatus() }, 5000)
     return () => window.clearInterval(timer)
   }, [polling, loadStatus])
 
   function requestInstall() {
-    if (!githubConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
+    if (!deployConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
     setError('')
     setDialog(openDeployDialog('install').dialog)
   }
 
   function requestRollback() {
-    if (!githubConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
+    if (!deployConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
     setError('')
     setDialog(openDeployDialog('rollback').dialog)
   }
@@ -236,17 +245,22 @@ export function UpdatesPanel({
     setOutcome(null)
     persistTrack(null)
     try {
-      await loadCheck()
-      if (githubConfigured) setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
+      const next = await loadCheck()
+      if (next?.latestCommit) {
+        setError('')
+        setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
+      } else {
+        setError(next?.githubError || 'Güncelleme bilgisi alınamadı.')
+      }
     } catch {
-      setError(githubConfigured ? 'Güncelleme bilgisi alınamadı.' : 'GitHub bağlantısı yapılandırılmadı.')
+      setError('Güncelleme bilgisi alınamadı.')
     } finally {
       setChecking(false)
     }
   }
 
   async function installConfirmed() {
-    if (!githubConfigured || installLock.current || !check?.updateAvailable) return
+    if (!deployConfigured || installLock.current || !check?.updateAvailable) return
     installLock.current = true
     setInstalling(true)
     setOutcome(null)
@@ -294,7 +308,7 @@ export function UpdatesPanel({
   }
 
   async function rollbackConfirmed() {
-    if (!githubConfigured || !status?.previousCommit || installLock.current) return
+    if (!deployConfigured || !status?.previousCommit || installLock.current) return
     installLock.current = true
     setInstalling(true)
     setOutcome(null)
@@ -336,10 +350,17 @@ export function UpdatesPanel({
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Güncellemeler</h1>
       <p className="mt-2 text-muted-foreground">Kontrol yalnızca GitHub’ı okur. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
-      {!githubConfigured && (
+      {!deployConfigured && (
         <div role="status" className="mt-6 rounded-lg border border-border bg-secondary/60 p-4 text-sm">
-          <p className="font-medium">GitHub bağlantısı yapılandırılmadı.</p>
-          <p className="mt-2 text-muted-foreground">Otomatik güncelleme şu anda kullanılamıyor. GitHub deploy bağlantısı yapılandırıldığında bu özellik aktif olacaktır.</p>
+          <p className="font-medium">Otomatik kurulum yapılandırılmadı.</p>
+          {readAvailable && (
+            <p className="mt-2 text-muted-foreground">
+              GitHub sürüm kontrolü aktif. Otomatik kurulum bağlantısı yapılandırılmadığı için güncelleme kurulamaz.
+            </p>
+          )}
+          <p className="mt-2 text-muted-foreground">
+            Yeni sürümleri kontrol edebilirsiniz. Otomatik kurulum için GitHub deploy yetkilendirmesi gereklidir.
+          </p>
         </div>
       )}
       {error && <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
@@ -364,7 +385,7 @@ export function UpdatesPanel({
             <Row label="Yazar" value={check?.latestAuthor || '—'} />
             <Row label="Tarih" value={formatDate(check?.latestDate)} />
             <Row label="Mesaj" value={check?.latestMessage || '—'} />
-            <Row label="Güncelleme" value={!check ? '—' : check.updateAvailable ? 'Yeni güncelleme mevcut' : githubConfigured ? 'Güncel' : '—'} />
+            <Row label="Güncelleme" value={!check ? '—' : check.updateAvailable ? 'Yeni güncelleme mevcut' : check.latestCommit ? 'Güncel' : '—'} />
           </dl>
           {check?.updateAvailable && (
             <p className="mt-3 text-sm text-muted-foreground">
@@ -380,7 +401,7 @@ export function UpdatesPanel({
               {checking ? 'Kontrol ediliyor...' : 'Güncellemeleri Kontrol Et'}
             </button>
             <button
-              disabled={!githubConfigured || checking || panel.installDisabled || !check?.updateAvailable}
+              disabled={!deployConfigured || checking || panel.installDisabled || !check?.updateAvailable}
               onClick={requestInstall}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
@@ -448,7 +469,7 @@ export function UpdatesPanel({
         <p className="mt-2 text-sm text-muted-foreground">ZIP yedek kullanılmaz. Son başarılı commit GitHub Actions ile yeniden derlenir ve dağıtılır.</p>
         <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
         <button
-          disabled={!githubConfigured || checking || panel.installDisabled || !status?.previousCommit}
+          disabled={!deployConfigured || checking || panel.installDisabled || !status?.previousCommit}
           onClick={requestRollback}
           className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
         >
