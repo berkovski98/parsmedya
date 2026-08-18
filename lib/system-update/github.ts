@@ -106,20 +106,27 @@ export const githubActions: GithubActionsClient = {
   },
 
   async listWorkflowRuns() {
-    const response = await githubFetch(
-      `${API}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/runs?per_page=10&branch=${GITHUB_BRANCH}`,
-    )
-    if (response.status === 404) return []
-    if (!response.ok) throw failUnavailable()
-    const payload = await readJson<{ workflow_runs?: GithubWorkflowRun[] }>(response)
-    return payload.workflow_runs || []
+    try {
+      const response = await githubFetch(
+        `${API}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/runs?per_page=10&branch=${GITHUB_BRANCH}`,
+      )
+      if (!response.ok) return []
+      const payload = await readJson<{ workflow_runs?: GithubWorkflowRun[] }>(response)
+      return payload.workflow_runs || []
+    } catch {
+      return []
+    }
   },
 
   async listJobSteps(runId: number) {
-    const response = await githubFetch(`${API}/actions/runs/${runId}/jobs?per_page=20`)
-    if (!response.ok) return []
-    const payload = await readJson<{ jobs?: { steps?: GithubJobStep[] }[] }>(response)
-    return (payload.jobs || []).flatMap((job) => job.steps || [])
+    try {
+      const response = await githubFetch(`${API}/actions/runs/${runId}/jobs?per_page=20`)
+      if (!response.ok) return []
+      const payload = await readJson<{ jobs?: { steps?: GithubJobStep[] }[] }>(response)
+      return (payload.jobs || []).flatMap((job) => job.steps || [])
+    } catch {
+      return []
+    }
   },
 
   async dispatch(deploySha?: string) {

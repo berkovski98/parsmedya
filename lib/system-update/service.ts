@@ -46,34 +46,53 @@ export class SystemUpdateService {
 
   async status() {
     const current = await this.readVersion()
-    const runs = await this.github.listWorkflowRuns()
-    this.releaseDispatchGuard(runs)
-    const latestRun = runs[0] || null
-    const activeRun = runs.find(isActiveRun) || (latestRun && isActiveRun(latestRun) ? latestRun : null)
-    const run = activeRun || latestRun
-    const steps = run ? await this.github.listJobSteps(run.id) : []
     const previous = await this.previousCommit(current.commit)
-    const state = mapWorkflowState(run)
-    const progress = mapDeployProgress(run, steps)
-    const history = await this.history.latest()
-    return {
-      status: state.status,
-      conclusion: state.conclusion,
-      phase: progress.phase,
-      phaseLabel: progress.phaseLabel,
-      progress: progress.progress,
-      runId: run?.id || null,
-      commit: run?.head_sha || current.commit,
-      startedAt: run?.created_at || null,
-      updatedAt: run?.updated_at || null,
-      completedAt: state.status === 'completed' ? (run?.updated_at || history?.completed_at || null) : null,
-      url: run?.html_url || null,
+    const idle = {
+      status: 'completed' as const,
+      conclusion: null,
+      phase: 'idle' as const,
+      phaseLabel: '',
+      progress: 0,
+      runId: null,
+      commit: current.commit,
+      startedAt: null,
+      updatedAt: null,
+      completedAt: null,
+      url: null,
       version: current.version,
       build: current.build,
       currentCommit: current.commit,
       previousCommit: previous,
       nodeVersion: process.versions.node,
-      errorMessage: progress.errorMessage,
+      errorMessage: null as string | null,
+    }
+    try {
+      const runs = await this.github.listWorkflowRuns()
+      this.releaseDispatchGuard(runs)
+      const latestRun = runs[0] || null
+      const activeRun = runs.find(isActiveRun) || (latestRun && isActiveRun(latestRun) ? latestRun : null)
+      const run = activeRun || latestRun
+      const steps = run ? await this.github.listJobSteps(run.id) : []
+      const state = mapWorkflowState(run)
+      const progress = mapDeployProgress(run, steps)
+      const history = await this.history.latest()
+      return {
+        ...idle,
+        status: state.status,
+        conclusion: state.conclusion,
+        phase: progress.phase,
+        phaseLabel: progress.phaseLabel,
+        progress: progress.progress,
+        runId: run?.id || null,
+        commit: run?.head_sha || current.commit,
+        startedAt: run?.created_at || null,
+        updatedAt: run?.updated_at || null,
+        completedAt: state.status === 'completed' ? (run?.updated_at || history?.completed_at || null) : null,
+        url: run?.html_url || null,
+        errorMessage: progress.errorMessage,
+      }
+    } catch {
+      return idle
     }
   }
 

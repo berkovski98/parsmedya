@@ -157,6 +157,20 @@ test('status does not dispatch', async () => {
   assert.equal(dispatched, 0)
 })
 
+test('status survives github failure', async () => {
+  const service = serviceFor({
+    ...clientFor({ latest: LATEST }),
+    async listWorkflowRuns() {
+      throw new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
+    },
+  }, CURRENT)
+  const status = await service.status()
+  assert.equal(status.phase, 'idle')
+  assert.equal(status.progress, 0)
+  assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.runId, null)
+})
+
 test('install dispatches once', async () => {
   let dispatched: string | undefined = 'not-called'
   const service = serviceFor(clientFor({
