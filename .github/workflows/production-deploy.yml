@@ -120,7 +120,7 @@ jobs:
 
             src = Path("/home/parsmedya/deployments/incoming")
             dst = Path("/home/parsmedya/parsmedya-app")
-            protected = {".env", "tmp", "logs", ".git", ".htaccess", "version.json"}
+            protected = {".env", "tmp", "logs", ".git", ".htaccess", "version.json", "updates-log.json"}
 
             def protected_name(name: str) -> bool:
                 return name in protected or name.startswith(".env.")
@@ -217,10 +217,52 @@ jobs:
                 "build": str(build + 1),
                 "commit": candidate.get("commit") or "",
                 "releasedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "releaseTitle": candidate.get("releaseTitle") or "",
+                "releaseTitle": candidate.get("releaseTitle") or candidate.get("title") or "",
+                "summary": candidate.get("summary") or "",
                 "releaseNotes": candidate.get("releaseNotes") or [],
             }
             confirmed["createdAt"] = confirmed["releasedAt"]
             installed_path.write_text(json.dumps(confirmed, indent=2) + "\n")
+
+            def log_entry(source):
+                notes = source.get("releaseNotes") or []
+                if not isinstance(notes, list):
+                    notes = []
+                return {
+                    "version": source.get("version") or "",
+                    "build": str(source.get("build") or ""),
+                    "releasedAt": source.get("releasedAt") or source.get("createdAt") or "",
+                    "releaseTitle": source.get("releaseTitle") or source.get("title") or "",
+                    "summary": source.get("summary") or "",
+                    "releaseNotes": [item for item in notes if isinstance(item, str) and item.strip()],
+                }
+
+            log_path = app / "updates-log.json"
+            try:
+                existing = json.loads(log_path.read_text())
+                if not isinstance(existing, list):
+                    existing = []
+            except Exception:
+                existing = []
+
+            previous = log_entry(installed)
+            if previous["version"] and previous["version"] != "0.0.0":
+                if not any(
+                    str(item.get("version") or "") == previous["version"]
+                    and str(item.get("build") or "") == previous["build"]
+                    for item in existing
+                ):
+                    existing.append(previous)
+
+            new_entry = log_entry(confirmed)
+            existing = [
+                item for item in existing
+                if not (
+                    str(item.get("version") or "") == new_entry["version"]
+                    and str(item.get("build") or "") == new_entry["build"]
+                )
+            ]
+            existing.insert(0, new_entry)
+            log_path.write_text(json.dumps(existing, indent=2, ensure_ascii=False) + "\n")
             print(f"Confirmed production version {confirmed['version']} build {confirmed['build']}")
             PY

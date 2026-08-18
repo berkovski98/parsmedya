@@ -1,13 +1,10 @@
 {
-  "version": "1.1.1",
-  "title": "Yönetim Paneli ve Hizmet Sayfaları Güncellemesi",
-  "releaseTitle": "Yönetim Paneli ve Hizmet Sayfaları Güncellemesi",
-  "summary": "Yönetim paneli, hizmet sayfaları ve sistem güncellemelerinde çeşitli iyileştirmeler yapıldı.",
+  "version": "1.1.2",
+  "title": "Güncelleme Ekranı Sadeleştirmesi",
+  "releaseTitle": "Güncelleme Ekranı Sadeleştirmesi",
+  "summary": "Güncelleme ekranı sadeleştirildi; yapılan kurulumların kaydı tutulur.",
   "releaseNotes": [
-    "Hizmet sayfalarının görsel yapısı yenilendi.",
-    "Güncelleme ilerleme ekranı iyileştirildi.",
-    "Kurulu sürüm, yalnızca başarılı kurulumdan sonra güncellenecek şekilde ayrıldı.",
-    "Güncelleme ekranı müşteriler için sadeleştirildi.",
-    "Sürüm kontrol sistemi iyileştirildi."
+    "Önceki sürüme dön alanı güncelleme ekranından kaldırıldı.",
+    "Yapılan güncellemelerin sürüm, tarih ve özet kaydı tutulur."
   ]
 }

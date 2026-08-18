@@ -19,3 +19,4 @@ Before committing shippable work to `main`:
    - Good: `Güncelleme ilerleme durumu daha doğru takip edilecek şekilde iyileştirildi.`
 5. Never put commit SHA, GitHub usernames, or raw commit messages in the customer Updates UI.
 6. Do not start a production deploy unless the user asks.
+7. After shippable work, commit and push `main` without waiting to be asked.

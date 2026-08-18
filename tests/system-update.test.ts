@@ -117,7 +117,15 @@ function serviceFor(
   github: GithubActionsClient,
   commit = CURRENT,
   configured = true,
-  extras: { version?: string; build?: string; releasedAt?: string } = {},
+  extras: {
+    version?: string
+    build?: string
+    releasedAt?: string
+    releaseTitle?: string
+    summary?: string
+    releaseNotes?: string[]
+    updateLog?: import('../lib/system-update/updates-log').UpdateLogEntry[]
+  } = {},
 ) {
   const version: VersionInfo = {
     version: extras.version || '1.1.0',
@@ -125,13 +133,15 @@ function serviceFor(
     commit,
     createdAt: extras.releasedAt || '2026-08-18T00:00:00.000Z',
     releasedAt: extras.releasedAt || '2026-08-18T00:00:00.000Z',
-    releaseTitle: '',
-    releaseNotes: [],
+    releaseTitle: extras.releaseTitle || '',
+    releaseNotes: extras.releaseNotes || [],
+    summary: extras.summary || '',
   }
   return new SystemUpdateService({
     github,
     history: memoryHistory(),
     readVersion: async () => version,
+    readUpdatesLog: async () => extras.updateLog || [],
     isConfigured: () => configured,
   })
 }
@@ -882,6 +892,9 @@ test('GET update routes are read-only and install GET is rejected', () => {
   assert.doesNotMatch(panel, /GitHub Actions kaydı/)
   assert.doesNotMatch(panel, /berkovski98/)
   assert.doesNotMatch(panel, /latestMessage/)
+  assert.match(panel, /Yapılan güncellemeler/)
+  assert.doesNotMatch(panel, /Önceki sürüme dön/)
+  assert.doesNotMatch(panel, /rollbackConfirmed/)
   const progress = readFileSync('components/admin/deployment-progress.tsx', 'utf8')
   assert.doesNotMatch(progress, /GitHub/)
   assert.match(progress, /başarıyla kuruldu/)
@@ -897,6 +910,7 @@ test('production-deploy.yml is workflow_dispatch only', () => {
   assert.match(yml, /Write version candidate/)
   assert.match(yml, /Confirm production version/)
   assert.match(yml, /protected = \{.*version\.json/)
+  assert.match(yml, /updates-log\.json/)
   assert.match(yml, /test -f "\$IN\/version\.candidate\.json"/)
   const writeVersion = readFileSync('scripts/write-version.mjs', 'utf8')
   assert.match(writeVersion, /version\.candidate\.json/)
@@ -1189,6 +1203,7 @@ test('D success with health promotes current version only after confirm', async 
     releasedAt: '2026-08-18T00:00:00.000Z',
     releaseTitle: '',
     releaseNotes: [] as string[],
+    summary: '',
   }
   const runs = [OLD_SUCCESS]
   const service = new SystemUpdateService({
@@ -1283,4 +1298,22 @@ test('success panel shows version and Turkish notes without GitHub jargon', () =
   assert.doesNotMatch(html, /GitHub/)
   assert.doesNotMatch(html, /berkovski/)
   assert.doesNotMatch(html, /fix:/)
+})
+
+test('installed version appears in the customer update log without commit SHA', async () => {
+  const service = serviceFor(clientFor({ latest: CURRENT }), CURRENT, true, {
+    version: '1.1.1',
+    build: '13',
+    releasedAt: '2026-08-18T22:08:42.000Z',
+    releaseTitle: 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi',
+    summary: 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.',
+    releaseNotes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+  })
+  const check = await service.check()
+  const status = await service.status()
+  assert.equal(check.updateLog[0].version, '1.1.1')
+  assert.equal(check.updateLog[0].releaseTitle, 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi')
+  assert.deepEqual(check.updateLog[0].releaseNotes, ['Hizmet sayfalarının görsel yapısı yenilendi.'])
+  assert.equal(status.updateLog[0].version, '1.1.1')
+  assert.equal(JSON.stringify(check.updateLog).includes(CURRENT), false)
 })

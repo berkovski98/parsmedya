@@ -12,6 +12,7 @@ supabase/.temp/
 
 # Common ignores
 version.candidate.json
+updates-log.json
 node_modules
 .next/
 .deploy/

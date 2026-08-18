@@ -21,6 +21,14 @@ type CheckData = {
   installedTitle?: string
   installedNotes?: string[]
   installedReleasedAt?: string
+  updateLog?: {
+    version: string
+    build: string
+    releasedAt: string
+    releaseTitle: string
+    summary: string
+    releaseNotes: string[]
+  }[]
   githubReadAvailable: boolean
   githubDeployConfigured: boolean
   githubConfigured: boolean
@@ -65,6 +73,14 @@ type StatusData = {
   installingNotes?: string[]
   releaseTitle?: string
   releaseNotes?: string[]
+  updateLog?: {
+    version: string
+    build: string
+    releasedAt: string
+    releaseTitle: string
+    summary: string
+    releaseNotes: string[]
+  }[]
   lastSuccessfulDeployment?: {
     version: string
     build: string
@@ -263,12 +279,6 @@ export function UpdatesPanel({
     setDialog(openDeployDialog('install').dialog)
   }
 
-  function requestRollback() {
-    if (!deployConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
-    setError('')
-    setDialog(openDeployDialog('rollback').dialog)
-  }
-
   function closeDialog() {
     setShowChanges(false)
     setDialog(cancelDeployDialog().dialog)
@@ -279,7 +289,6 @@ export function UpdatesPanel({
     if (!next.dispatch || installLock.current) return
     setDialog(next.dialog)
     if (dialog === 'install') await installConfirmed()
-    if (dialog === 'rollback') await rollbackConfirmed()
   }
 
   async function checkUpdates() {
@@ -351,41 +360,6 @@ export function UpdatesPanel({
     }
   }
 
-  async function rollbackConfirmed() {
-    if (!deployConfigured || !status?.previousCommit || installLock.current) return
-    installLock.current = true
-    setInstalling(true)
-    setOutcome(null)
-    setError('')
-    setMessage('')
-    try {
-      const response = await fetch('/api/system/update/rollback', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ commitSha: status.previousCommit, confirmed: true }),
-      })
-      const json = await response.json() as ApiResponse<InstallData>
-      if (!json.ok) {
-        setError(publicError(json.error.message))
-        setInstalling(false)
-        installLock.current = false
-        return
-      }
-      persistTrack({
-        previousRunId: json.data.previousRunId,
-        requestedAt: json.data.requestedAt,
-        targetCommit: json.data.targetCommit,
-        trackedRunId: null,
-      })
-      setMessage('Kurulum başlatılıyor...')
-      await loadStatus()
-    } catch {
-      setError('Geri alma başlatılamadı.')
-      setInstalling(false)
-      installLock.current = false
-    }
-  }
-
   const failed = panel.outcome === 'failure' || panel.outcome === 'cancelled'
   const succeeded = panel.outcome === 'success'
   const progress = displayProgress(panel.progress, succeeded)
@@ -395,6 +369,8 @@ export function UpdatesPanel({
   const candidateTitle = check?.releaseTitle || check?.candidateTitle || status?.installingTitle || ''
   const candidateSummary = check?.releaseSummary || ''
   const candidateNotes = check?.releaseNotes?.length ? check.releaseNotes : (status?.installingNotes || [])
+  const updateLog = status?.updateLog?.length ? status.updateLog : (check?.updateLog || [])
+  const showPendingNotes = Boolean(updateAvailable || installing || panel.waitingForGithub || isActiveStatus(status))
   const installedStatus = !check ? '—' : updateAvailable ? 'Yeni sürüm mevcut' : 'Güncel'
   const updateCardTitle = updateAvailable || installing || panel.waitingForGithub ? 'Yeni Güncelleme' : 'Güncel Sürüm'
   const successVersion = succeeded
@@ -437,13 +413,13 @@ export function UpdatesPanel({
             <Row label="Yayın tarihi" value={formatDate(check?.releasedAt || check?.latestDate)} />
             <Row label="Güncelleme" value={!check ? '—' : updateAvailable ? 'Yeni sürüm mevcut' : 'Sistem güncel'} />
           </dl>
-          {(candidateTitle || candidateSummary) && (
+          {showPendingNotes && (candidateTitle || candidateSummary) && (
             <div className="mt-4">
               <p className="text-sm text-muted-foreground">Güncelleme özeti</p>
               <p className="mt-1 text-sm font-medium">{candidateSummary || candidateTitle}</p>
             </div>
           )}
-          {candidateNotes.length > 0 && (
+          {showPendingNotes && candidateNotes.length > 0 && (
             <div className="mt-4">
               <p className="text-sm font-medium">Neler değişti?</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
@@ -493,18 +469,32 @@ export function UpdatesPanel({
         />
       )}
 
-      <section className="mt-8 rounded-xl border border-border bg-card p-6">
-        <h2 className="font-display text-xl font-bold">Önceki sürüme dön</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Son başarılı sürüme geri dönülür. Kurulum yine sizin onayınızla başlar.</p>
-        <p className="mt-3 text-sm font-medium">{status?.previousCommit ? 'Önceki başarılı sürüm hazır.' : 'Önceki başarılı sürüm yok.'}</p>
-        <button
-          disabled={!deployConfigured || checking || panel.installDisabled || !status?.previousCommit}
-          onClick={requestRollback}
-          className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
-        >
-          Önceki Sürüme Dön
-        </button>
-      </section>
+      {updateLog.length > 0 && (
+        <section className="mt-8 rounded-xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold">Yapılan güncellemeler</h2>
+          <ol className="mt-5 space-y-6">
+            {updateLog.map((entry) => (
+              <li key={`${entry.version}-${entry.build}-${entry.releasedAt}`} className="border-b border-border pb-6 last:border-b-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-medium">Sürüm {entry.version}</p>
+                  <p className="text-sm text-muted-foreground">{formatDateTime(entry.releasedAt)}</p>
+                </div>
+                {(entry.summary || entry.releaseTitle) && (
+                  <p className="mt-2 text-sm">{entry.summary || entry.releaseTitle}</p>
+                )}
+                {entry.releaseNotes.length > 0 && (
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {entry.releaseNotes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       {dialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onClick={closeDialog}>
           <div
@@ -515,40 +505,34 @@ export function UpdatesPanel({
             onClick={(event) => event.stopPropagation()}
           >
             <h2 id="deploy-confirm-title" className="font-display text-xl font-bold">
-              {dialog === 'rollback' ? 'Önceki sürüme dönülsün mü?' : 'Güncelleme kurulsun mu?'}
+              Güncelleme kurulsun mu?
             </h2>
-            {dialog === 'rollback' ? (
-              <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
-                Önceki başarılı sürüme dönülecek.{'\n'}Devam etmek istiyor musunuz?
-              </p>
-            ) : (
-              <div className="mt-3 space-y-3 text-sm">
-                <p className="font-medium">{latestVersion ? `${latestVersion} sürümü kurulacak.` : 'Yeni sürüm kurulacak.'}</p>
-                {candidateSummary || candidateTitle ? (
-                  <p className="text-muted-foreground">{candidateSummary || candidateTitle}</p>
-                ) : (
-                  <p className="text-muted-foreground">Yeni sürüm canlı ortama kurulacak. Devam etmek istiyor musunuz?</p>
-                )}
-                {candidateNotes.length > 0 && (
-                  <div>
-                    <button
-                      type="button"
-                      className="font-medium text-accent hover:underline"
-                      onClick={() => setShowChanges((open) => !open)}
-                    >
-                      {showChanges ? 'Değişiklikleri gizle' : 'Değişiklikleri göster'}
-                    </button>
-                    {showChanges && (
-                      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-                        {candidateNotes.map((note) => (
-                          <li key={note}>{note}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="mt-3 space-y-3 text-sm">
+              <p className="font-medium">{latestVersion ? `${latestVersion} sürümü kurulacak.` : 'Yeni sürüm kurulacak.'}</p>
+              {candidateSummary || candidateTitle ? (
+                <p className="text-muted-foreground">{candidateSummary || candidateTitle}</p>
+              ) : (
+                <p className="text-muted-foreground">Yeni sürüm canlı ortama kurulacak. Devam etmek istiyor musunuz?</p>
+              )}
+              {candidateNotes.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    className="font-medium text-accent hover:underline"
+                    onClick={() => setShowChanges((open) => !open)}
+                  >
+                    {showChanges ? 'Değişiklikleri gizle' : 'Değişiklikleri göster'}
+                  </button>
+                  {showChanges && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+                      {candidateNotes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={closeDialog} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium">
                 Vazgeç
@@ -558,7 +542,7 @@ export function UpdatesPanel({
                 onClick={() => void confirmDialog()}
                 className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
               >
-                {dialog === 'rollback' ? 'Önceki Sürüme Dön' : 'Güncellemeyi Kur'}
+                Güncellemeyi Kur
               </button>
             </div>
           </div>

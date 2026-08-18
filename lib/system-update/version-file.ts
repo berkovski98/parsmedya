@@ -9,6 +9,7 @@ export interface VersionInfo {
   releasedAt: string
   releaseTitle: string
   releaseNotes: string[]
+  summary: string
 }
 
 export function emptyVersionInfo(): VersionInfo {
@@ -20,6 +21,7 @@ export function emptyVersionInfo(): VersionInfo {
     releasedAt: '',
     releaseTitle: '',
     releaseNotes: [],
+    summary: '',
   }
 }
 
@@ -41,6 +43,7 @@ export function parseVersionInfo(value: unknown): VersionInfo {
     releasedAt,
     releaseTitle: typeof record.releaseTitle === 'string' ? record.releaseTitle : '',
     releaseNotes: notes,
+    summary: typeof record.summary === 'string' ? record.summary : '',
   }
 }
 

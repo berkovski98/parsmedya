@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { appendSuccessfulUpdate, mergeUpdateLog } from '../lib/system-update/updates-log'
 import { confirmInstalledVersion, isUpdateAvailable, nextBuildNumber, parseBuildNumber, parseReleaseCandidate } from '../lib/system-update/release'
 
 test('F build number increments only on successful production confirm', () => {
@@ -65,4 +66,42 @@ test('release manifest accepts title, summary and changes aliases', () => {
   assert.equal(parsed.releaseTitle, 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi')
   assert.equal(parsed.summary, 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.')
   assert.deepEqual(parsed.releaseNotes, ['Hizmet sayfalarının görsel yapısı yenilendi.'])
+})
+
+test('successful production confirm prepends a customer update log entry', () => {
+  const previous = {
+    version: '1.1.1',
+    build: '13',
+    releasedAt: '2026-08-18T22:08:42.000Z',
+    releaseTitle: 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi',
+    summary: 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.',
+    releaseNotes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+  }
+  const confirmed = {
+    version: '1.1.2',
+    build: '14',
+    releasedAt: '2026-08-19T01:20:00.000Z',
+    releaseTitle: 'Güncelleme Ekranı Sadeleştirmesi',
+    summary: 'Güncelleme ekranı sadeleştirildi.',
+    releaseNotes: ['Yapılan güncellemelerin kaydı tutulur.'],
+  }
+  const log = appendSuccessfulUpdate([], previous, confirmed)
+  assert.equal(log[0].version, '1.1.2')
+  assert.equal(log[1].version, '1.1.1')
+  assert.equal(JSON.stringify(log).includes('commit'), false)
+  const again = appendSuccessfulUpdate(log, previous, confirmed)
+  assert.equal(again.filter((item) => item.version === '1.1.2').length, 1)
+})
+
+test('empty log still shows the currently installed version', () => {
+  const merged = mergeUpdateLog([], {
+    version: '1.1.1',
+    build: '13',
+    releasedAt: '2026-08-18T22:08:42.000Z',
+    releaseTitle: 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi',
+    summary: 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.',
+    releaseNotes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+  })
+  assert.equal(merged.length, 1)
+  assert.equal(merged[0].version, '1.1.1')
 })

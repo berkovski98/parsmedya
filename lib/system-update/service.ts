@@ -16,12 +16,14 @@ import {
   type StatusQuery,
 } from './tracking'
 import { emptyReleaseCandidate, isUpdateAvailable } from './release'
+import { mergeUpdateLog, readUpdatesLogFile, type UpdateLogEntry } from './updates-log'
 import { readVersionFile, type VersionInfo } from './version-file'
 
 export interface SystemUpdateDeps {
   github?: GithubActionsClient
   history?: HistoryStore
   readVersion?: () => Promise<VersionInfo>
+  readUpdatesLog?: () => Promise<UpdateLogEntry[]>
   appRoot?: string
   isConfigured?: () => boolean
 }
@@ -30,6 +32,7 @@ export class SystemUpdateService {
   private readonly github: GithubActionsClient
   private readonly history: HistoryStore
   private readonly readVersion: () => Promise<VersionInfo>
+  private readonly readUpdatesLog: () => Promise<UpdateLogEntry[]>
   private readonly isConfigured: () => boolean
   private track: DeploymentTrack | null = null
 
@@ -37,11 +40,17 @@ export class SystemUpdateService {
     this.github = deps.github || githubActions
     this.history = deps.history || supabaseHistory
     this.readVersion = deps.readVersion || (() => readVersionFile(deps.appRoot || process.cwd()))
+    this.readUpdatesLog = deps.readUpdatesLog || (() => readUpdatesLogFile(deps.appRoot || process.cwd()))
     this.isConfigured = deps.isConfigured || hasGithubDeployToken
+  }
+
+  private async customerUpdateLog(current: VersionInfo) {
+    return mergeUpdateLog(await this.readUpdatesLog(), current)
   }
 
   async check() {
     const current = await this.readVersion()
+    const updateLog = await this.customerUpdateLog(current)
     const capabilities = this.capabilities()
     try {
       const latest = await this.github.latestMainCommit()
@@ -69,6 +78,7 @@ export class SystemUpdateService {
         installedTitle: current.releaseTitle || '',
         installedNotes: current.releaseNotes || [],
         installedReleasedAt: current.releasedAt || current.createdAt,
+        updateLog,
         githubError: null as string | null,
         ...capabilities,
       }
@@ -93,6 +103,7 @@ export class SystemUpdateService {
           installedTitle: current.releaseTitle || '',
           installedNotes: current.releaseNotes || [],
           installedReleasedAt: current.releasedAt || current.createdAt,
+          updateLog,
           githubError: error.message,
           ...capabilities,
         }
@@ -103,6 +114,7 @@ export class SystemUpdateService {
 
   async status(query: StatusQuery = {}) {
     const current = await this.readVersion()
+    const updateLog = await this.customerUpdateLog(current)
     const previous = await this.previousCommit(current.commit)
     const idle = {
       status: 'completed' as const,
@@ -140,6 +152,7 @@ export class SystemUpdateService {
       installingNotes: [] as string[],
       releaseTitle: current.releaseTitle || '',
       releaseNotes: current.releaseNotes || [],
+      updateLog,
       lastSuccessfulDeployment: {
         version: current.version,
         build: current.build,
