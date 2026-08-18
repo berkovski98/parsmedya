@@ -1,5 +1,5 @@
-const excludedPrefixes = ['/admin', '/api']
-const excludedPaths = ['/sitemap.xml', '/robots.txt', '/favicon.ico', '/icon.svg']
+const excludedPrefixes = ['/admin', '/api', '/sitemaps']
+const excludedPaths = ['/sitemap.xml', '/sitemap-en.xml', '/sitemap-tr.xml', '/robots.txt', '/favicon.ico', '/icon.svg']
 const assetPattern = /\.(?:css|js|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|xml|txt)$/i
 const botPattern = /bot|crawler|spider|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|discordbot|google-inspectiontool|lighthouse|pagespeed/i
 const idPattern = /^[a-zA-Z0-9_-]{8,100}$/

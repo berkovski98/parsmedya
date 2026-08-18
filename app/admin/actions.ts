@@ -109,6 +109,10 @@ export async function savePost(formData: FormData) {
   revalidatePath('/sitemap.xml')
   revalidatePath('/sitemap-tr.xml')
   revalidatePath('/sitemap-en.xml')
+  revalidatePath('/sitemaps/tr-pages.xml')
+  revalidatePath('/sitemaps/tr-blog.xml')
+  revalidatePath('/sitemaps/en-pages.xml')
+  revalidatePath('/sitemaps/en-blog.xml')
   const listPath = savedLocale === 'en' ? '/admin/blog/en' : '/admin/blog'
   redirect(`${listPath}?success=${safeMessage(id ? 'Yazı güncellendi.' : 'Yazı oluşturuldu.')}`)
 }
@@ -126,6 +130,10 @@ export async function deletePost(formData: FormData) {
   revalidatePath('/sitemap.xml')
   revalidatePath('/sitemap-tr.xml')
   revalidatePath('/sitemap-en.xml')
+  revalidatePath('/sitemaps/tr-pages.xml')
+  revalidatePath('/sitemaps/tr-blog.xml')
+  revalidatePath('/sitemaps/en-pages.xml')
+  revalidatePath('/sitemaps/en-blog.xml')
   redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?success=${safeMessage('Yazı silindi.')}`)
 }
 
@@ -156,4 +164,62 @@ export async function deleteContact(formData: FormData) {
   revalidatePath('/admin')
   revalidatePath('/admin/contact')
   redirect('/admin/contact?success=' + safeMessage('Talep kalıcı olarak silindi.'))
+}
+
+function parseFaqJson(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = JSON.parse(trimmed) as unknown
+  if (!Array.isArray(parsed)) throw new Error('SSS JSON bir dizi olmalıdır.')
+  return parsed.map((item) => {
+    if (!item || typeof item !== 'object') throw new Error('Geçersiz SSS kaydı.')
+    const question = String((item as { question?: string }).question || '').trim()
+    const answer = String((item as { answer?: string }).answer || '').trim()
+    if (!question || !answer) throw new Error('Her SSS maddesinde question ve answer olmalıdır.')
+    return { question, answer }
+  })
+}
+
+export async function saveLocalSeoOverride(formData: FormData) {
+  await requireAdmin()
+  const city = String(formData.get('city_slug') || '').trim()
+  const districtRaw = String(formData.get('district_slug') || '').trim()
+  const service = String(formData.get('service_slug') || '').trim()
+  const district = districtRaw || null
+  if (!city || !service) {
+    redirect('/admin/local-seo?error=' + safeMessage('Şehir ve hizmet seçilmelidir.'))
+  }
+  let faqJson = null
+  try {
+    faqJson = parseFaqJson(String(formData.get('faq_json') || ''))
+  } catch (error) {
+    redirect(`/admin/local-seo?error=${safeMessage(error instanceof Error ? error.message : 'SSS JSON geçersiz.')}`)
+  }
+  const payload = {
+    locale: 'tr',
+    city_slug: city,
+    district_slug: district || '',
+    service_slug: service,
+    seo_title: String(formData.get('seo_title') || '').trim() || null,
+    meta_description: String(formData.get('meta_description') || '').trim() || null,
+    hero_title: String(formData.get('hero_title') || '').trim() || null,
+    hero_description: String(formData.get('hero_description') || '').trim() || null,
+    content_json: {
+      intro: String(formData.get('intro') || '').trim() || undefined,
+      locationIntro: String(formData.get('location_intro') || '').trim() || undefined,
+    },
+    faq_json: faqJson,
+    is_indexable: !formData.get('noindex'),
+  }
+  const supabase = await createClient()
+  const { error } = await supabase.from('local_seo_overrides').upsert(payload, {
+    onConflict: 'locale,city_slug,district_slug,service_slug',
+  })
+  if (error) redirect(`/admin/local-seo?error=${safeMessage('Override kaydedilemedi.')}`)
+  revalidatePath('/tr')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/sitemaps/local-cities.xml')
+  revalidatePath('/sitemaps/local-services-1.xml')
+  revalidatePath('/admin/local-seo')
+  redirect('/admin/local-seo?success=' + safeMessage('Local SEO içeriği kaydedildi.'))
 }

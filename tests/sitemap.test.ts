@@ -62,6 +62,7 @@ test('Turkish sitemap contains only Turkish loc URLs', () => {
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/vizyonumuz`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/misyonumuz`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmet-bolgeleri`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/seo-nedir`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler/web-sitesi-gelistirme`))

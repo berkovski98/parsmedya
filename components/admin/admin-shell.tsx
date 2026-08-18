@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowUpCircle, BarChart3, FileText, Languages, LayoutDashboard, LogOut, Menu, MessageSquare, PlusCircle, X } from 'lucide-react'
+import { ArrowUpCircle, BarChart3, FileText, Languages, LayoutDashboard, LogOut, MapPin, Menu, MessageSquare, PlusCircle, X } from 'lucide-react'
 import { logout } from '@/app/admin/actions'
 import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/analytics', label: 'İstatistikler', icon: BarChart3 },
+  { href: '/admin/local-seo', label: 'Local SEO', icon: MapPin },
   { href: '/admin/contact', label: 'İletişim Talepleri', icon: MessageSquare },
   { href: '/admin/updates', label: 'Güncellemeler', icon: ArrowUpCircle, system: true },
   { href: '/admin/blog', label: 'Türkçe Yazılar', icon: FileText, blog: true },

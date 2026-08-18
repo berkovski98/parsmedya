@@ -74,19 +74,18 @@ async function fetchText(url) {
 function sample(urls, extra = []) {
   const blogs = urls.filter((url) => url.includes('/blog/'))
   const services = urls.filter((url) => url.includes('/tr/hizmetler/') || url.includes('/en/services/'))
+  const local = urls.filter((url) => /\/tr\/[a-z0-9-]+\/[a-z0-9-]+/.test(pathnameOf(url)))
   return [...new Set([
     ...extra,
     ...urls.slice(0, 8),
     ...blogs.slice(0, 3),
     ...services.slice(0, 3),
+    ...local.slice(0, 3),
     urls.at(-1),
   ].filter(Boolean))]
 }
 
-async function verifySitemap(path, locale) {
-  const url = `${base}${path}`
-  const { status, text, contentType } = await fetchText(url)
-  console.log(`${path}: HTTP ${status}`)
+function assertUrlset(path, text, contentType) {
   if (!contentType.includes('xml') && !contentType.includes('text')) {
     fail(`${path} content-type is ${contentType || 'missing'}`)
   }
@@ -94,6 +93,13 @@ async function verifySitemap(path, locale) {
     fail(`${path} is not valid sitemap XML`)
   }
   if (containsForbiddenHost(text)) fail(`${path} contains localhost`)
+}
+
+async function verifySitemap(path, locale) {
+  const url = `${base}${path}`
+  const { status, text, contentType } = await fetchText(url)
+  console.log(`${path}: HTTP ${status}`)
+  assertUrlset(path, text, contentType)
 
   const locs = locUrls(text)
   const localhostCount = (text.match(/localhost|127\.0\.0\.1/gi) || []).length
@@ -144,7 +150,46 @@ async function verifySitemap(path, locale) {
   return { locs, blogCount, localhostCount, enCount, trCount, unprefixedCount, status }
 }
 
-const tr = await verifySitemap('/sitemap.xml', 'tr')
+async function verifyIndex() {
+  const path = '/sitemap.xml'
+  const { status, text, contentType } = await fetchText(`${base}${path}`)
+  console.log(`${path}: HTTP ${status}`)
+  if (!contentType.includes('xml') && !contentType.includes('text')) {
+    fail(`${path} content-type is ${contentType || 'missing'}`)
+  }
+  if (!text.includes('<sitemapindex') || !text.includes('</sitemapindex>')) {
+    fail(`${path} is not a sitemap index`)
+  }
+  if (containsForbiddenHost(text)) fail(`${path} contains localhost`)
+  const children = locUrls(text)
+  if (!children.length) fail(`${path} has no child sitemaps`)
+  if (children.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/sitemaps/`))) {
+    fail(`${path} has a child loc outside /sitemaps/`)
+  }
+  const required = [
+    `${PRODUCTION_SITE_URL}/sitemaps/tr-pages.xml`,
+    `${PRODUCTION_SITE_URL}/sitemaps/en-pages.xml`,
+    `${PRODUCTION_SITE_URL}/sitemaps/local-cities.xml`,
+  ]
+  for (const loc of required) {
+    if (!children.includes(loc)) fail(`${path} missing ${loc}`)
+  }
+  const sampleChildren = children.filter((loc) => (
+    loc.includes('tr-pages') || loc.includes('en-pages') || loc.includes('local-cities') || loc.includes('local-services-1')
+  ))
+  let trCount = 0
+  let enCount = 0
+  for (const child of sampleChildren) {
+    const childPath = pathnameOf(child)
+    const locale = child.includes('/sitemaps/en-') ? 'en' : 'tr'
+    const result = await verifySitemap(childPath, locale)
+    if (locale === 'tr') trCount += result.trCount
+    else enCount += result.enCount
+  }
+  return { children, trCount, enCount }
+}
+
+const index = await verifyIndex()
 const en = await verifySitemap('/sitemap-en.xml', 'en')
 const robots = await fetchText(`${base}/robots.txt`)
 console.log(`/robots.txt: HTTP ${robots.status}`)
@@ -152,11 +197,10 @@ if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap.xml')) fail('r
 if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap-en.xml')) fail('robots.txt missing English sitemap')
 
 console.log('\n--- sitemap verification ---')
-console.log(`Turkish URL count: ${tr.trCount}`)
+console.log(`Index child count: ${index.children.length}`)
+console.log(`Sampled Turkish URL count: ${index.trCount}`)
 console.log(`English URL count: ${en.enCount}`)
-console.log(`Unprefixed TR URL count: ${tr.unprefixedCount + en.unprefixedCount}`)
-console.log(`localhost URL: ${tr.localhostCount + en.localhostCount}`)
-console.log(`Blog TR URL count: ${tr.blogCount}`)
+console.log(`localhost URL: ${en.localhostCount}`)
 console.log(`Blog EN URL count: ${en.blogCount}`)
 
 if (process.exitCode) process.exit(process.exitCode)
