@@ -103,6 +103,7 @@ export async function savePost(formData: FormData) {
   revalidatePath('/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
+  revalidatePath('/sitemap.xml')
   revalidatePath('/sitemap-tr.xml')
   revalidatePath('/sitemap-en.xml')
   const listPath = savedLocale === 'en' ? '/admin/blog/en' : '/admin/blog'
@@ -119,6 +120,7 @@ export async function deletePost(formData: FormData) {
   revalidatePath('/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
+  revalidatePath('/sitemap.xml')
   revalidatePath('/sitemap-tr.xml')
   revalidatePath('/sitemap-en.xml')
   redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?success=${safeMessage('Yazı silindi.')}`)
