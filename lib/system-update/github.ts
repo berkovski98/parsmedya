@@ -40,6 +40,13 @@ export type DeployPhase =
   | 'success'
   | 'failed'
 
+export interface DeployProgress {
+  phase: DeployPhase
+  phaseLabel: string
+  progress: number
+  errorMessage: string | null
+}
+
 export interface GithubActionsClient {
   latestMainCommit(): Promise<GithubCommit>
   commitExists(sha: string): Promise<boolean>
@@ -158,21 +165,81 @@ export function mapRunStatus(run: GithubWorkflowRun | null) {
   return mapWorkflowState(run).status
 }
 
-export function mapDeployPhase(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployPhase {
-  if (!run) return 'idle'
-  const state = mapWorkflowState(run)
-  if (state.status === 'completed' && state.conclusion === 'success') return 'success'
-  if (state.status === 'completed') return 'failed'
-  if (state.status === 'queued') return 'preparing'
+const STEP_PROGRESS: Array<{
+  test: RegExp
+  progress: number
+  phase: DeployPhase
+  label: string
+}> = [
+  { test: /health|curl|doğrula|verify/, progress: 95, phase: 'health', label: 'Health check yapılıyor' },
+  { test: /promote.*restart|restart passenger/, progress: 90, phase: 'restart', label: 'Passenger restart ediliyor' },
+  { test: /promote|rsync/, progress: 85, phase: 'deploy', label: 'Dosyalar production\'a alınıyor' },
+  { test: /restart|passenger/, progress: 90, phase: 'restart', label: 'Passenger restart ediliyor' },
+  { test: /upload|scp|sftp|staging/, progress: 75, phase: 'deploy', label: 'Sunucuya aktarılıyor' },
+  { test: /prepare standalone|prepare-deploy|standalone deploy/, progress: 60, phase: 'deploy', label: 'Deployment hazırlanıyor' },
+  { test: /production build|pnpm build/, progress: 40, phase: 'build', label: 'Production build alınıyor' },
+  { test: /run tests|pnpm test/, progress: 30, phase: 'build', label: 'Testler çalıştırılıyor' },
+  { test: /install dependenc|frozen-lockfile|enable pnpm|setup node|write version/, progress: 15, phase: 'preparing', label: 'Bağımlılıklar hazırlanıyor' },
+  { test: /checkout|validate deploy|set up job|setup job/, progress: 5, phase: 'preparing', label: 'Hazırlanıyor' },
+]
 
-  const current = [...steps].reverse().find((step) => step.status === 'in_progress')
+function mapStep(name: string) {
+  const lower = name.toLowerCase()
+  return STEP_PROGRESS.find((rule) => rule.test.test(lower))
+    || { progress: 5, phase: 'preparing' as DeployPhase, label: 'Hazırlanıyor' }
+}
+
+function publicStepError(stepName?: string) {
+  if (!stepName) return 'GitHub Actions adımı başarısız oldu.'
+  const safe = stepName.replace(/https?:\/\/\S+/g, '').trim().slice(0, 80)
+  if (/token|secret|password|private key|ghp_|github_pat_|BEGIN /i.test(safe)) {
+    return 'GitHub Actions adımı başarısız oldu.'
+  }
+  return `Adım başarısız: ${safe}`
+}
+
+function currentStep(steps: GithubJobStep[]) {
+  return [...steps].reverse().find((step) => step.status === 'in_progress')
     || steps.find((step) => step.status === 'queued' && step.conclusion == null)
-  const name = (current?.name || '').toLowerCase()
-  if (/health|curl|doğrula|verify/.test(name)) return 'health'
-  if (/restart|passenger/.test(name)) return 'restart'
-  if (/sftp|deploy|rsync|upload|promote/.test(name)) return 'deploy'
-  if (/build|test|install|pnpm|standalone|version/.test(name)) return 'build'
-  return 'preparing'
+    || [...steps].reverse().find((step) => step.conclusion === 'failure' || step.conclusion === 'cancelled')
+    || null
+}
+
+export function mapDeployProgress(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployProgress {
+  if (!run) {
+    return { phase: 'idle', phaseLabel: '', progress: 0, errorMessage: null }
+  }
+  const state = mapWorkflowState(run)
+  if (state.status === 'queued') {
+    return { phase: 'preparing', phaseLabel: 'İşlem sıraya alındı', progress: 0, errorMessage: null }
+  }
+  if (state.status === 'completed' && state.conclusion === 'success') {
+    return { phase: 'success', phaseLabel: 'Güncelleme başarıyla tamamlandı', progress: 100, errorMessage: null }
+  }
+
+  const step = currentStep(steps)
+  const mapped = mapStep(step?.name || '')
+  if (state.status === 'completed') {
+    return {
+      phase: 'failed',
+      phaseLabel: mapped.label,
+      progress: Math.min(mapped.progress, 95),
+      errorMessage: publicStepError(step?.name),
+    }
+  }
+  if (!step) {
+    return { phase: 'preparing', phaseLabel: 'Hazırlanıyor', progress: 5, errorMessage: null }
+  }
+  return {
+    phase: mapped.phase,
+    phaseLabel: mapped.label,
+    progress: mapped.progress,
+    errorMessage: null,
+  }
+}
+
+export function mapDeployPhase(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployPhase {
+  return mapDeployProgress(run, steps).phase
 }
 
 export function workflowFilePath() {

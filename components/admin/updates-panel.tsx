@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type CheckData = {
   currentCommit: string
@@ -16,9 +16,12 @@ type StatusData = {
   status: 'queued' | 'in_progress' | 'completed'
   conclusion: 'success' | 'failure' | 'cancelled' | null
   phase: 'idle' | 'preparing' | 'build' | 'deploy' | 'restart' | 'health' | 'success' | 'failed'
+  phaseLabel: string
+  progress: number
   runId: number | null
   commit: string
   startedAt: string | null
+  updatedAt: string | null
   completedAt: string | null
   url: string | null
   version: string
@@ -26,31 +29,25 @@ type StatusData = {
   currentCommit: string
   previousCommit: string
   nodeVersion: string
+  errorMessage: string | null
 }
 
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
 
-const PHASES = [
-  { id: 'preparing', label: 'Hazırlanıyor' },
-  { id: 'build', label: 'Build alınıyor' },
-  { id: 'deploy', label: 'Sunucuya aktarılıyor' },
-  { id: 'restart', label: 'Restart ediliyor' },
-  { id: 'health', label: 'Health check' },
-  { id: 'success', label: 'Başarılı' },
+const PROGRESS_STEPS = [
+  { min: 0, label: 'Sıraya alındı' },
+  { min: 5, label: 'Hazırlanıyor' },
+  { min: 15, label: 'Bağımlılıklar hazırlanıyor' },
+  { min: 30, label: 'Testler çalıştırılıyor' },
+  { min: 40, label: 'Build alınıyor' },
+  { min: 75, label: 'Sunucuya aktarılıyor' },
+  { min: 90, label: 'Restart ediliyor' },
+  { min: 95, label: 'Health check' },
+  { min: 100, label: 'Tamamlandı' },
 ] as const
 
-const STATUS_LABEL: Record<StatusData['status'], string> = {
-  queued: 'Hazırlanıyor',
-  in_progress: 'İşlem sürüyor',
-  completed: 'Tamamlandı',
-}
-
-function resultLabel(status: StatusData) {
-  if (status.status !== 'completed') return STATUS_LABEL[status.status]
-  if (status.conclusion === 'success') return 'Başarılı'
-  if (status.conclusion === 'cancelled') return 'İptal'
-  if (status.conclusion === 'failure') return 'Başarısız'
-  return 'Tamamlandı'
+function isActiveStatus(status?: StatusData | null) {
+  return status?.status === 'queued' || status?.status === 'in_progress'
 }
 
 export function UpdatesPanel({
@@ -66,61 +63,96 @@ export function UpdatesPanel({
   const [status, setStatus] = useState<StatusData | null>(initialStatus)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(initialError)
-  const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [installing, setInstalling] = useState(false)
+  const [trackedRunId, setTrackedRunId] = useState<number | null>(
+    isActiveStatus(initialStatus) ? initialStatus?.runId || null : null,
+  )
+  const installLock = useRef(false)
+  const awaitingRun = useRef(false)
 
-  const load = useCallback(async () => {
-    const [checkRes, statusRes] = await Promise.all([
-      fetch('/api/system/update/check', { cache: 'no-store' }),
-      fetch('/api/system/update/status', { cache: 'no-store' }),
-    ])
+  const loadCheck = useCallback(async () => {
+    const checkRes = await fetch('/api/system/update/check', { cache: 'no-store' })
     const checkJson = await checkRes.json() as ApiResponse<CheckData>
-    const statusJson = await statusRes.json() as ApiResponse<StatusData>
     if (checkJson.ok) setCheck(checkJson.data)
     else setError(checkJson.error.message)
-    if (statusJson.ok) setStatus(statusJson.data)
   }, [])
 
+  const loadStatus = useCallback(async () => {
+    const statusRes = await fetch('/api/system/update/status', { cache: 'no-store' })
+    const statusJson = await statusRes.json() as ApiResponse<StatusData>
+    if (!statusJson.ok) {
+      setError(statusJson.error.message)
+      return null
+    }
+    const next = statusJson.data
+    setStatus(next)
+    if (isActiveStatus(next) && next.runId) {
+      setTrackedRunId(next.runId)
+      awaitingRun.current = false
+    }
+    if (next.status === 'completed' && next.conclusion === 'success' && next.runId && next.runId === trackedRunId) {
+      void loadCheck()
+    }
+    if (!isActiveStatus(next) && !awaitingRun.current) {
+      setInstalling(false)
+      installLock.current = false
+    }
+    return next
+  }, [loadCheck, trackedRunId])
+
+  const polling = isActiveStatus(status) || installing
   useEffect(() => {
-    const active = status?.status === 'queued' || status?.status === 'in_progress'
-    if (!active) return
-    const timer = window.setInterval(() => { void load() }, 5000)
+    if (!polling) return
+    const timer = window.setInterval(() => { void loadStatus() }, 4000)
     return () => window.clearInterval(timer)
-  }, [status?.status, load])
+  }, [polling, loadStatus])
 
   async function checkUpdates() {
-    setBusy(true)
+    setChecking(true)
     setError('')
     setMessage('')
     try {
-      await load()
-      setMessage('GitHub main kontrol edildi.')
+      await loadCheck()
+      setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
     } catch {
       setError('Güncelleme bilgisi alınamadı.')
     } finally {
-      setBusy(false)
+      setChecking(false)
     }
   }
 
   async function install() {
-    setBusy(true)
+    if (installLock.current || installing || isActiveStatus(status) || !check?.updateAvailable) return
+    if (!window.confirm('Yeni sürüm production ortamına kurulacak. Devam etmek istiyor musunuz?')) return
+    installLock.current = true
+    setInstalling(true)
     setError('')
     setMessage('')
     try {
       const response = await fetch('/api/system/update/install', { method: 'POST' })
       const json = await response.json() as ApiResponse<{ status: string }>
-      if (!json.ok) setError(json.error.message)
-      else setMessage('GitHub deployment başlatıldı.')
-      await load()
+      if (!json.ok) {
+        setError(json.error.message)
+        setInstalling(false)
+        installLock.current = false
+        return
+      }
+      setMessage('GitHub deployment başlatıldı.')
+      awaitingRun.current = true
+      await loadStatus()
     } catch {
       setError('Güncelleme başlatılamadı.')
-    } finally {
-      setBusy(false)
+      setInstalling(false)
+      installLock.current = false
     }
   }
 
   async function rollback() {
-    if (!status?.previousCommit) return
-    setBusy(true)
+    if (!status?.previousCommit || installLock.current || isActiveStatus(status)) return
+    if (!window.confirm('Önceki başarılı sürüme dönülecek. Devam etmek istiyor musunuz?')) return
+    installLock.current = true
+    setInstalling(true)
     setError('')
     setMessage('')
     try {
@@ -130,23 +162,32 @@ export function UpdatesPanel({
         body: JSON.stringify({ commitSha: status.previousCommit }),
       })
       const json = await response.json() as ApiResponse<{ status: string }>
-      if (!json.ok) setError(json.error.message)
-      else setMessage('Önceki sürüme dönüş başlatıldı.')
-      await load()
+      if (!json.ok) {
+        setError(json.error.message)
+        setInstalling(false)
+        installLock.current = false
+        return
+      }
+      setMessage('Önceki sürüme dönüş başlatıldı.')
+      awaitingRun.current = true
+      await loadStatus()
     } catch {
       setError('Geri alma başlatılamadı.')
-    } finally {
-      setBusy(false)
+      setInstalling(false)
+      installLock.current = false
     }
   }
 
-  const active = status?.status === 'queued' || status?.status === 'in_progress'
-  const phase = status?.phase || 'idle'
+  const active = polling
+  const showProgress = Boolean(active || (trackedRunId && status && status.runId === trackedRunId))
+  const progress = status?.progress ?? 0
+  const failed = Boolean(trackedRunId && status?.status === 'completed' && status.conclusion !== 'success' && status.runId === trackedRunId)
+  const succeeded = Boolean(trackedRunId && status?.status === 'completed' && status.conclusion === 'success' && status.runId === trackedRunId)
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Güncellemeler</h1>
-      <p className="mt-2 text-muted-foreground">GitHub Actions üzerinden production build, SFTP dağıtım ve Passenger restart yönetilir. Sunucuda build alınmaz.</p>
+      <p className="mt-2 text-muted-foreground">Kontrol yalnızca GitHub’ı okur. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
       {error && <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       {message && <p className="mt-6 rounded-lg border border-green-600/30 bg-green-600/10 p-3 text-sm text-green-800">{message}</p>}
       <section className="mt-8 grid gap-5 md:grid-cols-2">
@@ -156,9 +197,7 @@ export function UpdatesPanel({
             <Row label="Sürüm" value={status?.version || check?.currentVersion || '—'} />
             <Row label="Build" value={status?.build || '—'} />
             <Row label="Commit" value={shortSha(status?.currentCommit || check?.currentCommit)} />
-            <Row label="Son workflow" value={status ? resultLabel(status) : '—'} />
             <Row label="Son dağıtım" value={formatDate(status?.completedAt || status?.startedAt)} />
-            <Row label="Sonuç" value={status?.conclusion || '—'} />
           </dl>
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
@@ -168,56 +207,82 @@ export function UpdatesPanel({
             <Row label="Yazar" value={check?.latestAuthor || '—'} />
             <Row label="Tarih" value={formatDate(check?.latestDate)} />
             <Row label="Mesaj" value={check?.latestMessage || '—'} />
-            <Row label="Güncelleme" value={check?.updateAvailable ? 'Yeni commit mevcut' : 'Güncel'} />
+            <Row label="Güncelleme" value={check?.updateAvailable ? 'Yeni güncelleme mevcut' : 'Güncel'} />
           </dl>
+          {check?.updateAvailable && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {shortSha(check.currentCommit)} → {shortSha(check.latestCommit)}
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              disabled={busy}
+              disabled={checking || installing}
               onClick={() => void checkUpdates()}
               className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
             >
-              Güncellemeleri Kontrol Et
+              {checking ? 'Kontrol ediliyor...' : 'Güncellemeleri Kontrol Et'}
             </button>
             <button
-              disabled={busy || active || !check?.updateAvailable}
+              disabled={checking || installing || active || !check?.updateAvailable}
               onClick={() => void install()}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              Güncellemeyi Kur
+              {installing ? 'Kuruluyor...' : 'Güncellemeyi Kur'}
             </button>
           </div>
         </div>
       </section>
-      <section className="mt-8 rounded-xl border border-border bg-card p-6">
-        <h2 className="font-display text-xl font-bold">Dağıtım durumu</h2>
-        <ol className="mt-5 space-y-3">
-          {PHASES.map((item, index) => {
-            const currentIndex = PHASES.findIndex((phaseItem) => phaseItem.id === phase)
-            const failed = status?.status === 'completed' && status.conclusion !== 'success'
-            const done = !failed && (phase === 'success' || currentIndex > index)
-            const current = !failed && item.id === phase
-            return (
-              <li key={item.id} className="flex items-center gap-3 text-sm">
-                <span className={`h-2.5 w-2.5 rounded-full ${failed && current ? 'bg-destructive' : done ? 'bg-green-600' : current ? 'bg-accent' : 'bg-border'}`} />
-                <span className={current ? 'font-medium text-foreground' : 'text-muted-foreground'}>{item.label}</span>
-              </li>
-            )
-          })}
-        </ol>
-        {status?.url && (
-          <p className="mt-4 text-sm">
-            <a href={status.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
-              GitHub Actions kaydı
-            </a>
+
+      {showProgress && (
+        <section className="mt-8 rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-display text-xl font-bold">
+              {failed ? 'Güncelleme başarısız' : succeeded ? 'Güncelleme başarıyla tamamlandı' : 'Güncelleme kuruluyor'}
+            </h2>
+            <span className={`text-lg font-bold ${failed ? 'text-destructive' : succeeded ? 'text-green-700' : 'text-accent'}`}>
+              {progress}%
+            </span>
+          </div>
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-secondary">
+            <div
+              className={`h-full rounded-full transition-all ${failed ? 'bg-destructive' : succeeded ? 'bg-green-600' : 'bg-accent'}`}
+              style={{ width: `${Math.max(0, Math.min(progress, failed ? 95 : 100))}%` }}
+            />
+          </div>
+          <p className="mt-3 text-sm font-medium">
+            {failed ? `İşlem %${progress} aşamasında durdu.` : status?.phaseLabel || 'İşlem sıraya alındı'}
           </p>
-        )}
-      </section>
+          {failed && status?.errorMessage && (
+            <p className="mt-2 text-sm text-destructive">{status.errorMessage}</p>
+          )}
+          <ol className="mt-6 space-y-3">
+            {PROGRESS_STEPS.map((item, index) => {
+              const nextMin = PROGRESS_STEPS[index + 1]?.min ?? 101
+              const state = stepVisual(progress, item.min, nextMin, failed, succeeded)
+              return (
+                <li key={item.label} className={`flex items-center gap-3 text-sm ${state.className}`}>
+                  <span className="w-4 text-center">{state.mark}</span>
+                  <span>{item.label}</span>
+                </li>
+              )
+            })}
+          </ol>
+          {status?.url && (
+            <p className="mt-4 text-sm">
+              <a href={status.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+                GitHub Actions kaydı
+              </a>
+            </p>
+          )}
+        </section>
+      )}
+
       <section className="mt-8 rounded-xl border border-border bg-card p-6">
         <h2 className="font-display text-xl font-bold">Önceki sürüme dön</h2>
         <p className="mt-2 text-sm text-muted-foreground">ZIP yedek kullanılmaz. Son başarılı commit GitHub Actions ile yeniden derlenir ve dağıtılır.</p>
         <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
         <button
-          disabled={busy || active || !status?.previousCommit}
+          disabled={checking || installing || active || !status?.previousCommit}
           onClick={() => void rollback()}
           className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
         >
@@ -226,6 +291,23 @@ export function UpdatesPanel({
       </section>
     </div>
   )
+}
+
+function stepVisual(progress: number, min: number, nextMin: number, failed: boolean, succeeded: boolean) {
+  if (succeeded || (!failed && progress >= nextMin)) {
+    return { mark: '✓', className: 'text-green-700' }
+  }
+  const current = (progress >= min && progress < nextMin) || (progress === 0 && min === 0)
+  if (failed && current) {
+    return { mark: '✕', className: 'text-destructive' }
+  }
+  if (!failed && current) {
+    return { mark: '→', className: 'font-medium text-accent' }
+  }
+  if (!failed && progress >= min) {
+    return { mark: '✓', className: 'text-green-700' }
+  }
+  return { mark: '○', className: 'text-muted-foreground' }
 }
 
 function shortSha(value?: string) {

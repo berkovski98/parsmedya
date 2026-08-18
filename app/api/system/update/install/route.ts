@@ -5,6 +5,7 @@ import { getSystemUpdateService } from '@/lib/system-update/service'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/** Explicit user action only. Dispatches production-deploy workflow. */
 export async function POST() {
   try {
     const admin = await requireAdminApi()

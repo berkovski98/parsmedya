@@ -6,6 +6,7 @@ import { getSystemUpdateService } from '@/lib/system-update/service'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/** Explicit user action only. Dispatches production-deploy for a previous SHA. */
 export async function POST(request: Request) {
   try {
     const admin = await requireAdminApi()

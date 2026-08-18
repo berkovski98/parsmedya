@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { requireAdminApi } from '../lib/system-update/auth'
 import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
-import { isActiveRun, mapDeployPhase, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
+import { isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
 import { SystemUpdateService } from '../lib/system-update/service'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -136,7 +136,28 @@ test('update available', async () => {
   assert.equal(check.latestAuthor, 'Berk')
 })
 
-test('workflow dispatch', async () => {
+test('update check does not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  const check = await service.check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(dispatched, 0)
+})
+
+test('status does not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    runs: [run({ status: 'in_progress', conclusion: null })],
+    onDispatch: () => { dispatched += 1 },
+  }))
+  await service.status()
+  assert.equal(dispatched, 0)
+})
+
+test('install dispatches once', async () => {
   let dispatched: string | undefined = 'not-called'
   const service = serviceFor(clientFor({
     latest: LATEST,
@@ -146,6 +167,96 @@ test('workflow dispatch', async () => {
   assert.equal(result.status, 'queued')
   assert.equal(result.commit, LATEST)
   assert.equal(dispatched, undefined)
+})
+
+test('page load check and status do not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: [run({ status: 'completed', conclusion: 'success' })],
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await service.check()
+  await service.status()
+  assert.equal(dispatched, 0)
+})
+
+test('second install is 409 and does not dispatch again', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await service.install('admin')
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
+  ))
+  assert.equal(dispatched, 1)
+})
+
+test('progress failure does not leak secrets', async () => {
+  const mapped = mapDeployProgress(run({ status: 'completed', conclusion: 'failure' }), [
+    { name: 'Upload token ghp_exampleprivatekey', status: 'completed', conclusion: 'failure' },
+  ])
+  assert.ok(mapped.errorMessage)
+  assert.doesNotMatch(mapped.errorMessage, /ghp_|token|private key/i)
+})
+
+test('progress queued is 0', async () => {
+  const mapped = mapDeployProgress(run({ status: 'queued', conclusion: null }))
+  assert.equal(mapped.progress, 0)
+  assert.equal(mapped.phaseLabel, 'İşlem sıraya alındı')
+})
+
+test('progress build maps to 40', async () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Production build', status: 'in_progress', conclusion: null },
+  ])
+  assert.equal(mapped.progress, 40)
+  assert.equal(mapped.phase, 'build')
+})
+
+test('progress deploy maps to 75', async () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Upload to staging', status: 'in_progress', conclusion: null },
+  ])
+  assert.equal(mapped.progress, 75)
+  assert.equal(mapped.phase, 'deploy')
+})
+
+test('progress health is 95', async () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Health check', status: 'in_progress', conclusion: null },
+  ])
+  assert.equal(mapped.progress, 95)
+})
+
+test('progress success is 100', async () => {
+  const mapped = mapDeployProgress(run({ status: 'completed', conclusion: 'success' }))
+  assert.equal(mapped.progress, 100)
+  assert.equal(mapped.phase, 'success')
+})
+
+test('progress failure is not 100', async () => {
+  const mapped = mapDeployProgress(run({ status: 'completed', conclusion: 'failure' }), [
+    { name: 'Upload to staging', status: 'completed', conclusion: 'failure' },
+  ])
+  assert.equal(mapped.progress, 75)
+  assert.notEqual(mapped.progress, 100)
+  assert.equal(mapped.phase, 'failed')
+  assert.match(mapped.errorMessage || '', /Upload to staging/)
+})
+
+test('status restores active run', async () => {
+  const service = serviceFor(clientFor({
+    runs: [run({ status: 'in_progress', conclusion: null, id: 99 })],
+    steps: [{ name: 'Upload to staging', status: 'in_progress', conclusion: null }],
+  }))
+  const status = await service.status()
+  assert.equal(status.runId, 99)
+  assert.equal(status.status, 'in_progress')
+  assert.equal(status.progress, 75)
+  assert.equal(status.phaseLabel, 'Sunucuya aktarılıyor')
 })
 
 test('duplicate update 409', async () => {
@@ -165,6 +276,7 @@ test('status queued', async () => {
   const status = await service.status()
   assert.equal(status.status, 'queued')
   assert.equal(status.phase, 'preparing')
+  assert.equal(status.progress, 0)
   assert.equal(status.runId, 11)
 })
 
@@ -176,6 +288,7 @@ test('status in_progress', async () => {
   const status = await service.status()
   assert.equal(status.status, 'in_progress')
   assert.equal(status.phase, 'build')
+  assert.equal(status.progress, 40)
 })
 
 test('status success', async () => {
@@ -186,6 +299,7 @@ test('status success', async () => {
   assert.equal(status.status, 'completed')
   assert.equal(status.conclusion, 'success')
   assert.equal(status.phase, 'success')
+  assert.equal(status.progress, 100)
   assert.equal(mapRunStatus(run({ status: 'completed', conclusion: 'success' })), 'completed')
   assert.equal(mapDeployPhase(run({ status: 'completed', conclusion: 'success' })), 'success')
 })
