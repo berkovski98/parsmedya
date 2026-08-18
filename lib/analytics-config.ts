@@ -14,3 +14,13 @@ export function analyticsDisabledReason() {
   }
   return 'analytics env is not true'
 }
+
+export function reportAnalyticsEnvPresence() {
+  return {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'PRESENT' : 'MISSING',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'PRESENT' : 'MISSING',
+    NEXT_PUBLIC_ANALYTICS_ENABLED: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED ? 'PRESENT' : 'MISSING',
+    ANALYTICS_ENABLED: process.env.ANALYTICS_ENABLED ? 'PRESENT' : 'MISSING',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'PRESENT' : 'MISSING',
+  }
+}

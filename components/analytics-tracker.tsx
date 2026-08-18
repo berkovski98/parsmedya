@@ -2,35 +2,58 @@
 
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { isTrackablePath } from '@/lib/analytics-validation'
-
-const visitorKey = 'parsmedya_visitor_id'
-const sessionKey = 'parsmedya_session_id'
-const lastPathKey = 'parsmedya_last_tracked_path'
+import {
+  LAST_PATH_STORAGE_KEY,
+  SESSION_STORAGE_KEY,
+  VISITOR_STORAGE_KEY,
+  createAnonymousId,
+  isAnalyticsDomEnabled,
+  shouldSkipDuplicatePath,
+} from '@/lib/analytics-client'
+import { isTrackablePath, localeFromPath, normalizeAnalyticsPath } from '@/lib/analytics-validation'
 
 function getOrCreateId(storage: Storage, key: string) {
-  const existing = storage.getItem(key)
-  if (existing) return existing
-  const value = crypto.randomUUID()
-  storage.setItem(key, value)
-  return value
+  try {
+    const created = createAnonymousId(storage.getItem(key))
+    storage.setItem(key, created)
+    return created
+  } catch {
+    return createAnonymousId()
+  }
 }
 
 export function AnalyticsTracker() {
   const pathname = usePathname()
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== 'true' || !isTrackablePath(pathname)) return
-    if (window.sessionStorage.getItem(lastPathKey) === pathname) return
-    window.sessionStorage.setItem(lastPathKey, pathname)
-    const visitorId = getOrCreateId(window.localStorage, visitorKey)
-    const sessionId = getOrCreateId(window.sessionStorage, sessionKey)
-    void fetch('/api/analytics', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ path: pathname, visitorId, sessionId, referrer: document.referrer.slice(0, 1000) }),
-      keepalive: true,
-    }).catch(() => window.sessionStorage.removeItem(lastPathKey))
+    try {
+      const path = normalizeAnalyticsPath(pathname)
+      if (!isAnalyticsDomEnabled(document.documentElement.dataset.analytics) || !isTrackablePath(path)) return
+      if (shouldSkipDuplicatePath(window.sessionStorage.getItem(LAST_PATH_STORAGE_KEY), path)) return
+      window.sessionStorage.setItem(LAST_PATH_STORAGE_KEY, path)
+      const visitorId = getOrCreateId(window.localStorage, VISITOR_STORAGE_KEY)
+      const sessionId = getOrCreateId(window.sessionStorage, SESSION_STORAGE_KEY)
+      const referrer = document.referrer ? document.referrer.split('?')[0].slice(0, 1000) : ''
+      void fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          event: 'page_view',
+          pathname: path,
+          visitorId,
+          sessionId,
+          locale: localeFromPath(path),
+          referrer,
+        }),
+        keepalive: true,
+      }).then((response) => {
+        if (!response.ok && response.status >= 500) window.sessionStorage.removeItem(LAST_PATH_STORAGE_KEY)
+      }).catch(() => {
+        window.sessionStorage.removeItem(LAST_PATH_STORAGE_KEY)
+      })
+    } catch {
+      // Tracking must never crash the public site.
+    }
   }, [pathname])
 
   return null

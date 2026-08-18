@@ -1,6 +1,7 @@
 export interface AnalyticsPageTotal {
   path: string
   views: number
+  visitors: number
 }
 
 export interface AnalyticsSummary {
@@ -20,9 +21,15 @@ export interface AnalyticsDay {
   visitors: number
 }
 
-export interface AnalyticsReferrer {
-  referrer: string
+export interface AnalyticsTrafficSource {
+  source: string
   views: number
+  visitors: number
+}
+
+export interface AnalyticsLocaleStats {
+  views: number
+  visitors: number
 }
 
 export interface AnalyticsDetails {
@@ -30,7 +37,21 @@ export interface AnalyticsDetails {
   thirty_day_views: number
   seven_day_visitors: number
   thirty_day_visitors: number
+  tr_views: number
+  tr_visitors: number
+  en_views: number
+  en_visitors: number
+  tracking_started_at: string | null
   daily: AnalyticsDay[]
   top_pages: AnalyticsPageTotal[]
-  top_referrers: AnalyticsReferrer[]
+  traffic_sources: AnalyticsTrafficSource[]
 }
+
+export interface AnalyticsQueryError {
+  code: string
+  message: string
+}
+
+export type AnalyticsQueryResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: AnalyticsQueryError }

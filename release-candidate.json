@@ -1,11 +1,11 @@
 {
-  "version": "1.1.4",
-  "title": "Türkiye Hizmet Bölgeleri",
-  "releaseTitle": "Türkiye Hizmet Bölgeleri",
-  "summary": "81 il ve tüm resmi ilçeler için yazılım hizmet sayfaları eklendi; her sayfa kendi adresine, başlığına ve bölge bilgisine sahip.",
+  "version": "1.1.5",
+  "title": "Ziyaret İstatistikleri",
+  "releaseTitle": "Ziyaret İstatistikleri",
+  "summary": "Site ziyaretleri artık gerçek kayıtlardan hesaplanır; hata olursa sıfır yazılmaz, nedeni gösterilir.",
   "releaseNotes": [
-    "Türkiye genelindeki iller ve ilçeler için ayrı hizmet sayfaları yayınlanır.",
-    "Yanlış il-ilçe eşleşmeleri açılmaz; her sayfa kendi adresini kullanır.",
-    "Yönetim panelinden Local SEO özeti görülebilir ve seçilen sayfa önizlenebilir."
+    "İstatistikler sayfası hata olduğunda sıfır göstermez; sorgu başarısızsa bunu açıkça belirtir.",
+    "Sayfa görüntüleme kaydı sorgu parametrelerini ve yönetici sayfalarını dahil etmez.",
+    "Türkçe ve İngilizce trafik ile günlük grafik Europe/Istanbul gününe göre hesaplanır."
   ]
 }
