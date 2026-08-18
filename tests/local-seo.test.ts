@@ -6,7 +6,7 @@ import { buildCityHub, buildDistrictHub, buildLocalServicePage, buildNationalHub
 import { localHubJsonLd, localServiceJsonLd } from '../lib/local-seo/schema'
 import { isValidLocalPath, resolveCityChild, resolveDistrictService } from '../lib/local-seo/resolve'
 import { getLocalSeoInventory } from '../lib/local-seo/stats'
-import { buildLocalCitySitemapEntries, buildLocalServiceSitemapEntries, localServiceSitemapNames } from '../lib/local-seo/sitemap'
+import { buildLocalCitySitemapEntries, buildLocalServiceSitemapChunk, buildLocalServiceSitemapEntries, localServiceSitemapNames } from '../lib/local-seo/sitemap'
 import { getLocalService, getLocalServices } from '../lib/services/service-registry'
 import { canonicalAbsoluteUrl, PRODUCTION_SITE_URL } from '../lib/site-url'
 import { buildEnglishSitemapEntries, childSitemapPath, locUrls, sitemapIndex, urlset } from '../lib/sitemap-xml'
@@ -39,14 +39,15 @@ test('location slug utility converts Turkish characters to ASCII kebab-case', ()
 })
 
 test('valid and invalid local paths resolve correctly', () => {
+  assert.equal(isValidLocalPath('/istanbul'), true)
+  assert.equal(isValidLocalPath('/istanbul/kadikoy'), true)
+  assert.equal(isValidLocalPath('/istanbul/ozel-yazilim-gelistirme'), true)
+  assert.equal(isValidLocalPath('/istanbul/kadikoy/ozel-yazilim-gelistirme'), true)
+  assert.equal(isValidLocalPath('/ankara/cankaya/crm-yazilim-cozumleri'), true)
   assert.equal(isValidLocalPath('/tr/istanbul'), true)
-  assert.equal(isValidLocalPath('/tr/istanbul/kadikoy'), true)
-  assert.equal(isValidLocalPath('/tr/istanbul/ozel-yazilim-gelistirme'), true)
-  assert.equal(isValidLocalPath('/tr/istanbul/kadikoy/ozel-yazilim-gelistirme'), true)
-  assert.equal(isValidLocalPath('/tr/ankara/cankaya/crm-yazilim-cozumleri'), true)
-  assert.equal(isValidLocalPath('/tr/istanbul/cankaya/crm-yazilim-cozumleri'), false)
-  assert.equal(isValidLocalPath('/tr/istanbul/kadikoy/olmayan-hizmet'), false)
-  assert.equal(isValidLocalPath('/tr/olmayan-il'), false)
+  assert.equal(isValidLocalPath('/istanbul/cankaya/crm-yazilim-cozumleri'), false)
+  assert.equal(isValidLocalPath('/istanbul/kadikoy/olmayan-hizmet'), false)
+  assert.equal(isValidLocalPath('/olmayan-il'), false)
   assert.equal(resolveCityChild('istanbul', 'cankaya'), null)
   assert.equal(resolveDistrictService('istanbul', 'cankaya', 'crm-yazilim-cozumleri'), null)
   assert.equal(resolveCityChild('istanbul', 'kadikoy')?.type, 'district-hub')
@@ -84,14 +85,14 @@ test('service pages produce unique title, description, H1 and self-canonical', (
   for (const city of cities) {
     const hub = buildCityHub(city)
     assert.ok(hub.h1.includes(city.name))
-    assert.equal(hub.canonicalPath, `/tr/${city.slug}`)
+    assert.equal(hub.canonicalPath, `/${city.slug}`)
     assert.equal(canonicalAbsoluteUrl(hub.canonicalPath).startsWith(PRODUCTION_SITE_URL), true)
   }
 
   for (const { city, district } of districts) {
     const hub = buildDistrictHub(city, district)
     assert.ok(hub.h1.includes(district.name))
-    assert.equal(hub.canonicalPath, `/tr/${city.slug}/${district.slug}`)
+    assert.equal(hub.canonicalPath, `/${city.slug}/${district.slug}`)
   }
 
   for (const city of cities) {
@@ -107,7 +108,7 @@ test('service pages produce unique title, description, H1 and self-canonical', (
       canonicals.add(model.canonicalPath)
       assert.equal(model.title, `${city.name} ${service.title} | Pars Medya`)
       assert.equal(model.h1, `${city.name} ${service.title}`)
-      assert.equal(model.canonicalPath, `/tr/${city.slug}/${service.slug}`)
+      assert.equal(model.canonicalPath, `/${city.slug}/${service.slug}`)
       assert.ok(!model.description.toLowerCase().includes('localhost'))
       assert.ok(model.description.length >= 120)
       assert.ok(model.breadcrumbs.some((item) => item.name === city.name))
@@ -119,7 +120,7 @@ test('service pages produce unique title, description, H1 and self-canonical', (
     for (const service of services.slice(0, 4)) {
       const model = buildLocalServicePage(city, service, district)
       assert.equal(model.h1, `${district.name} ${service.title}`)
-      assert.equal(model.canonicalPath, `/tr/${city.slug}/${district.slug}/${service.slug}`)
+      assert.equal(model.canonicalPath, `/${city.slug}/${district.slug}/${service.slug}`)
       assert.ok(model.heroDescription.includes(city.name) || model.locationIntro.includes(city.name))
       assert.deepEqual(model.areaServed, [district.name, city.name])
       assert.equal(canonicals.has(model.canonicalPath), false)
@@ -144,7 +145,7 @@ test('JSON-LD includes BreadcrumbList, Service, FAQPage and no fake LocalBusines
   assert.ok(types.includes('Organization'))
   assert.equal(types.includes('LocalBusiness'), false)
   const serviceNode = parsed['@graph'].find((node) => node['@type'] === 'Service')!
-  assert.equal(serviceNode.url, `${PRODUCTION_SITE_URL}/tr/istanbul/kadikoy/ozel-yazilim-gelistirme`)
+  assert.equal(serviceNode.url, `${PRODUCTION_SITE_URL}/istanbul/kadikoy/ozel-yazilim-gelistirme`)
   const areas = serviceNode.areaServed as Array<{ name: string }>
   assert.deepEqual(areas.map((item) => item.name), ['Kadıköy', 'İstanbul'])
   const crumbs = parsed['@graph'].find((node) => node['@type'] === 'BreadcrumbList')!
@@ -159,19 +160,19 @@ test('local sitemaps contain only valid canonical Turkish URLs and skip English'
   const cityXml = urlset(buildLocalCitySitemapEntries(new Date('2026-08-19T00:00:00.000Z')))
   const serviceXml = urlset(buildLocalServiceSitemapEntries({
     now: new Date('2026-08-19T00:00:00.000Z'),
-    excluded: new Set(['/tr/istanbul/kadikoy/ozel-yazilim-gelistirme']),
+    excluded: new Set(['/istanbul/kadikoy/ozel-yazilim-gelistirme']),
   }))
   const cityLocs = locUrls(cityXml)
   const serviceLocs = locUrls(serviceXml)
-  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/tr/istanbul`))
-  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/tr/istanbul/kadikoy`))
-  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/tr/hizmet-bolgeleri`))
-  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/tr/istanbul/ozel-yazilim-gelistirme`))
-  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/tr/ankara/cankaya/crm-yazilim-cozumleri`))
-  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/tr/istanbul/kadikoy/ozel-yazilim-gelistirme`), false)
-  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/tr/istanbul/cankaya/crm-yazilim-cozumleri`), false)
-  assert.ok(cityLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/tr/`)))
-  assert.ok(serviceLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/tr/`)))
+  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/istanbul`))
+  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/kadikoy`))
+  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/hizmet-bolgeleri`))
+  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/ozel-yazilim-gelistirme`))
+  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/ankara/cankaya/crm-yazilim-cozumleri`))
+  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/kadikoy/ozel-yazilim-gelistirme`), false)
+  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/cankaya/crm-yazilim-cozumleri`), false)
+  assert.ok(cityLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/`) && !url.includes('/tr/')))
+  assert.ok(serviceLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/`) && !url.includes('/tr/')))
   assert.equal(cityXml.includes('localhost'), false)
   const english = urlset(buildEnglishSitemapEntries({ serviceSlugs: ['website-development'] }))
   assert.equal(english.includes('/tr/istanbul'), false)
@@ -194,4 +195,8 @@ test('sitemap index lists child sitemaps without exceeding URL limits', () => {
   const inventory = getLocalSeoInventory()
   assert.ok(inventory.districtServicePages < 50000)
   assert.ok(buildLocalServiceSitemapEntries().length < 50000)
+  const chunk = buildLocalServiceSitemapChunk(0)
+  assert.ok(chunk.length > 0)
+  assert.ok(chunk.length <= 10000)
+  assert.ok(chunk.every((entry) => entry.url.startsWith(PRODUCTION_SITE_URL) && !entry.url.includes('/en/')))
 })

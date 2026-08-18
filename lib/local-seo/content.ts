@@ -198,12 +198,12 @@ function relatedLocationLinks(city: TurkeyCity, district: TurkeyDistrict | null,
   if (district) {
     return getSiblingDistricts(city, district.slug, 8).map((item) => ({
       name: item.name,
-      href: `/tr/${city.slug}/${item.slug}/${service.slug}`,
+      href: `/${city.slug}/${item.slug}/${service.slug}`,
     }))
   }
   return getRelatedCities(city, 6).map((item) => ({
     name: item.name,
-    href: `/tr/${item.slug}/${service.slug}`,
+    href: `/${item.slug}/${service.slug}`,
   }))
 }
 
@@ -230,21 +230,21 @@ export function buildLocalServicePage(
   const place = locationLabel(city, district)
   const kind = district ? 'district-service' : 'city-service'
   const canonicalPath = district
-    ? `/tr/${city.slug}/${district.slug}/${service.slug}`
-    : `/tr/${city.slug}/${service.slug}`
+    ? `/${city.slug}/${district.slug}/${service.slug}`
+    : `/${city.slug}/${service.slug}`
   const defaultH1 = `${place} ${service.title}`
   const breadcrumbs: LocalBreadcrumb[] = [
-    { name: 'Ana Sayfa', href: '/tr' },
-    { name: 'Hizmetler', href: '/tr/hizmetler' },
-    { name: city.name, href: `/tr/${city.slug}` },
+    { name: 'Ana Sayfa', href: '/' },
+    { name: 'Hizmetler', href: '/hizmetler' },
+    { name: city.name, href: `/${city.slug}` },
   ]
-  if (district) breadcrumbs.push({ name: district.name, href: `/tr/${city.slug}/${district.slug}` })
+  if (district) breadcrumbs.push({ name: district.name, href: `/${city.slug}/${district.slug}` })
   breadcrumbs.push({ name: service.title, href: canonicalPath })
 
   const faqs = override?.faq_json?.length ? override.faq_json : locationFaqs(service, city, district)
   const districtCards = city.districts.map((item) => ({
     name: item.name,
-    href: `/tr/${city.slug}/${item.slug}/${service.slug}`,
+    href: `/${city.slug}/${item.slug}/${service.slug}`,
   }))
 
   return {
@@ -280,14 +280,14 @@ export function buildLocalServicePage(
     districts: district ? [] : districtCards,
     otherDistricts: district ? getSiblingDistricts(city, district.slug, 10).map((item) => ({
       name: item.name,
-      href: `/tr/${city.slug}/${item.slug}/${service.slug}`,
+      href: `/${city.slug}/${item.slug}/${service.slug}`,
     })) : [],
-    allDistrictsHref: `/tr/${city.slug}`,
+    allDistrictsHref: `/${city.slug}`,
     relatedServices: getRelatedLocalServices(service.slug, 4).map((item) => ({
       title: `${place} ${item.title}`,
       href: district
-        ? `/tr/${city.slug}/${district.slug}/${item.slug}`
-        : `/tr/${city.slug}/${item.slug}`,
+        ? `/${city.slug}/${district.slug}/${item.slug}`
+        : `/${city.slug}/${item.slug}`,
       description: item.shortDescription,
     })),
     relatedLocations: relatedLocationLinks(city, district, service),
@@ -315,16 +315,16 @@ export function buildCityHub(city: TurkeyCity): LocalHubModel {
   const districtCount = city.districts.length
   return {
     kind: 'city-hub',
-    canonicalPath: `/tr/${city.slug}`,
+    canonicalPath: `/${city.slug}`,
     title: `${city.name} Dijital Ajans ve Yazılım Hizmetleri | Pars Medya`,
     description: clipMeta(`${city.name} yazılım, web, CRM, ERP, e-ticaret ve dijital büyüme hizmetleri. ${districtCount} ilçedeki işletmeler için özel çözümleri Pars Medya ile planlayın.`),
     h1: `${city.name} Dijital Ajans ve Yazılım Hizmetleri`,
     intro: `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan işletmeler için yazılım ve dijital çözümler geliştirdiğimiz bir hizmet bölgesidir. Hazır paket dayatmadan, mevcut süreçlerinize uygun web, özel yazılım, entegrasyon ve büyüme projeleri kurgularız.`,
     breadcrumbs: [
-      { name: 'Ana Sayfa', href: '/tr' },
-      { name: 'Hizmetler', href: '/tr/hizmetler' },
-      { name: 'Hizmet Bölgeleri', href: '/tr/hizmet-bolgeleri' },
-      { name: city.name, href: `/tr/${city.slug}` },
+      { name: 'Ana Sayfa', href: '/' },
+      { name: 'Hizmetler', href: '/hizmetler' },
+      { name: 'Hizmet Bölgeleri', href: '/hizmet-bolgeleri' },
+      { name: city.name, href: `/${city.slug}` },
     ],
     faqs: [
       {
@@ -342,16 +342,16 @@ export function buildCityHub(city: TurkeyCity): LocalHubModel {
 export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): LocalHubModel {
   return {
     kind: 'district-hub',
-    canonicalPath: `/tr/${city.slug}/${district.slug}`,
+    canonicalPath: `/${city.slug}/${district.slug}`,
     title: `${district.name} Yazılım ve Dijital Çözümler | Pars Medya`,
     description: clipMeta(`${district.name} yazılım ve dijital çözümler: web, özel yazılım, CRM, ERP ve e-ticaret. ${city.name} genelindeki işletmeler için Pars Medya ile projenizi planlayın.`),
     h1: `${district.name} Yazılım ve Dijital Çözümler`,
     intro: `${district.name} ve ${city.name} genelindeki işletmeler için web, özel yazılım, entegrasyon ve dijital büyüme ihtiyaçlarını aynı ekip içinde planlıyoruz. İlçe sayfası, o bölgedeki hizmetlere giden net bir başlangıç noktasıdır.`,
     breadcrumbs: [
-      { name: 'Ana Sayfa', href: '/tr' },
-      { name: 'Hizmetler', href: '/tr/hizmetler' },
-      { name: city.name, href: `/tr/${city.slug}` },
-      { name: district.name, href: `/tr/${city.slug}/${district.slug}` },
+      { name: 'Ana Sayfa', href: '/' },
+      { name: 'Hizmetler', href: '/hizmetler' },
+      { name: city.name, href: `/${city.slug}` },
+      { name: district.name, href: `/${city.slug}/${district.slug}` },
     ],
     faqs: [
       {
@@ -369,15 +369,15 @@ export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): Lo
 export function buildNationalHub(): LocalHubModel {
   return {
     kind: 'national-hub',
-    canonicalPath: '/tr/hizmet-bolgeleri',
+    canonicalPath: '/hizmet-bolgeleri',
     title: 'Türkiye Geneli Yazılım ve Dijital Hizmetler | Pars Medya',
     description: clipMeta('Türkiye geneli yazılım ve dijital hizmetler. 81 il ve tüm ilçeler için web, özel yazılım, CRM, ERP ve dijital büyüme çözümlerini Pars Medya ile planlayın.'),
     h1: 'Türkiye Geneli Yazılım ve Dijital Hizmetler',
     intro: 'Pars Medya; web, özel yazılım, kurumsal sistemler ve dijital büyüme projelerini Türkiye genelindeki işletmeler için planlar. Aşağıdaki illerden kendi bölgenize ve ilgili hizmet sayfalarına ulaşabilirsiniz.',
     breadcrumbs: [
-      { name: 'Ana Sayfa', href: '/tr' },
-      { name: 'Hizmetler', href: '/tr/hizmetler' },
-      { name: 'Hizmet Bölgeleri', href: '/tr/hizmet-bolgeleri' },
+      { name: 'Ana Sayfa', href: '/' },
+      { name: 'Hizmetler', href: '/hizmetler' },
+      { name: 'Hizmet Bölgeleri', href: '/hizmet-bolgeleri' },
     ],
     faqs: [
       {

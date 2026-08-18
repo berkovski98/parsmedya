@@ -5,7 +5,7 @@ import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Hakkımızda | Pars Medya', description: 'Pars Medya’nın yazılım mühendisliği, ürün tasarımı ve dijital stratejiyi birleştiren ekibini, çalışma yaklaşımını ve uluslararası bakışını tanıyın.', canonical: '/tr/hakkimizda', tr: '/tr/hakkimizda', en: '/en/about', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Hakkımızda | Pars Medya', description: 'Pars Medya’nın yazılım mühendisliği, ürün tasarımı ve dijital stratejiyi birleştiren ekibini, çalışma yaklaşımını ve uluslararası bakışını tanıyın.', canonical: '/hakkimizda', tr: '/hakkimizda', en: '/en/about', locale: 'tr' })
 
 export default function HakkimizdaPage() {
   return (

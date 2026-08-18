@@ -41,7 +41,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const pathname = (await headers()).get('x-pathname') || '/'
+  let pathname = '/'
+  try {
+    pathname = (await headers()).get('x-pathname') || '/'
+  } catch (error) {
+    console.error('[layout] pathname header unavailable', error)
+  }
   const lang = pathname === '/en' || pathname.startsWith('/en/') ? 'en' : 'tr'
   return (
     <html

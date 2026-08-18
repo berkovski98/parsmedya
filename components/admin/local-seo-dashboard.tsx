@@ -46,8 +46,8 @@ export function LocalSeoDashboard({ inventory, cities, services, message }: Prop
   }, [serviceQuery, services])
 
   const previewPath = districtSlug
-    ? `/tr/${citySlug}/${districtSlug}/${serviceSlug}`
-    : `/tr/${citySlug}/${serviceSlug}`
+    ? `/${citySlug}/${districtSlug}/${serviceSlug}`
+    : `/${citySlug}/${serviceSlug}`
 
   const metrics = [
     { label: 'Toplam il', value: inventory.cities },

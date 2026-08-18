@@ -57,7 +57,7 @@ export async function getNonIndexableLocalPaths() {
       const service = String(row.service_slug || '')
       if (!city || !service) continue
       const district = row.district_slug ? String(row.district_slug) : ''
-      excluded.add(district ? `/tr/${city}/${district}/${service}` : `/tr/${city}/${service}`)
+      excluded.add(district ? `/${city}/${district}/${service}` : `/${city}/${service}`)
     }
     return excluded
   } catch {

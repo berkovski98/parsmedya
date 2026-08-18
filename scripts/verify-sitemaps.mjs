@@ -28,15 +28,16 @@ function isEnglishPath(pathname) {
   return pathname === '/en' || pathname.startsWith('/en/')
 }
 
-function isTurkishPath(pathname) {
+function isPrefixedTurkishPath(pathname) {
   return pathname === '/tr' || pathname.startsWith('/tr/')
 }
 
-function isUnprefixedTurkishPath(pathname) {
-  if (isEnglishPath(pathname) || isTurkishPath(pathname)) return false
-  return [
-    '/', '/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/blog',
-  ].some((marker) => pathname === marker || pathname.startsWith(`${marker}/`))
+function isCanonicalTurkishPath(pathname) {
+  if (isEnglishPath(pathname) || isPrefixedTurkishPath(pathname)) return false
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return false
+  if (pathname === '/api' || pathname.startsWith('/api/')) return false
+  if (pathname === '/sitemaps' || pathname.startsWith('/sitemaps/')) return false
+  return true
 }
 
 function containsForbiddenHost(xml) {
@@ -71,10 +72,24 @@ async function fetchText(url) {
   throw lastError
 }
 
+function locForFetch(loc) {
+  if (base === PRODUCTION_SITE_URL) return loc
+  if (loc === PRODUCTION_SITE_URL || loc.startsWith(`${PRODUCTION_SITE_URL}/`)) {
+    return `${base}${loc.slice(PRODUCTION_SITE_URL.length) || '/'}`
+  }
+  return loc
+}
+
 function sample(urls, extra = []) {
   const blogs = urls.filter((url) => url.includes('/blog/'))
-  const services = urls.filter((url) => url.includes('/tr/hizmetler/') || url.includes('/en/services/'))
-  const local = urls.filter((url) => /\/tr\/[a-z0-9-]+\/[a-z0-9-]+/.test(pathnameOf(url)))
+  const services = urls.filter((url) => url.includes('/hizmetler/') || url.includes('/en/services/'))
+  const local = urls.filter((url) => {
+    const pathname = pathnameOf(url)
+    return /^\/[a-z0-9-]+\/[a-z0-9-]+/.test(pathname)
+      && !pathname.startsWith('/en/')
+      && !pathname.startsWith('/hizmetler/')
+      && !pathname.startsWith('/blog/')
+  })
   return [...new Set([
     ...extra,
     ...urls.slice(0, 8),
@@ -104,41 +119,42 @@ async function verifySitemap(path, locale) {
   const locs = locUrls(text)
   const localhostCount = (text.match(/localhost|127\.0\.0\.1/gi) || []).length
   const enCount = locs.filter((loc) => isEnglishPath(pathnameOf(loc))).length
-  const trCount = locs.filter((loc) => isTurkishPath(pathnameOf(loc))).length
-  const unprefixedCount = locs.filter((loc) => isUnprefixedTurkishPath(pathnameOf(loc))).length
-  const foreignHost = locs.filter((loc) => !loc.startsWith(PRODUCTION_SITE_URL))
+  const prefixedCount = locs.filter((loc) => isPrefixedTurkishPath(pathnameOf(loc))).length
+  const trCount = locs.filter((loc) => isCanonicalTurkishPath(pathnameOf(loc))).length
+  const foreignHost = locs.filter((loc) => loc !== PRODUCTION_SITE_URL && !loc.startsWith(`${PRODUCTION_SITE_URL}/`))
 
   if (locs.length === 0) fail(`${path} has no URLs`)
   if (localhostCount !== 0) fail(`${path} localhost count is ${localhostCount}`)
   if (foreignHost.length) fail(`${path} has non-canonical hosts: ${foreignHost.join(', ')}`)
-  if (unprefixedCount !== 0) fail(`${path} contains ${unprefixedCount} unprefixed Turkish loc URLs`)
+  if (/undefined|null/i.test(text)) fail(`${path} contains undefined/null`)
 
   if (locale === 'tr') {
     if (enCount !== 0) fail(`${path} contains ${enCount} English loc URLs`)
+    if (prefixedCount !== 0) fail(`${path} contains ${prefixedCount} /tr loc URLs`)
     if (trCount === 0) fail(`${path} has no Turkish URLs`)
-    if (locs.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/tr`))) {
-      fail(`${path} has a loc that is not a /tr URL`)
+    if (locs.some((loc) => !isCanonicalTurkishPath(pathnameOf(loc)))) {
+      fail(`${path} has a loc that is not an unprefixed Turkish URL`)
     }
   } else {
     if (enCount === 0) fail(`${path} has no English /en URLs`)
-    if (trCount !== 0) fail(`${path} contains ${trCount} /tr loc URLs`)
-    const leaked = locs.some((loc) => isUnprefixedTurkishPath(pathnameOf(loc)) || isTurkishPath(pathnameOf(loc)))
-    if (leaked) fail(`${path} leaked Turkish routes`)
+    if (trCount !== 0) fail(`${path} contains ${trCount} unprefixed Turkish loc URLs`)
+    if (prefixedCount !== 0) fail(`${path} contains ${prefixedCount} /tr loc URLs`)
+    if (locs.some((loc) => !isEnglishPath(pathnameOf(loc)))) fail(`${path} leaked Turkish routes`)
     if (locs.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/en`))) {
       fail(`${path} has a loc that is not an English URL`)
     }
   }
 
   const blogCount = locs.filter((loc) => (
-    locale === 'en' ? loc.includes('/en/blog/') : loc.includes('/tr/blog/')
+    locale === 'en' ? loc.includes('/en/blog/') : loc.includes('/blog/') && !loc.includes('/en/blog/')
   )).length
 
   const checked = sample(locs, locale === 'tr'
-    ? [`${PRODUCTION_SITE_URL}/tr`, `${PRODUCTION_SITE_URL}/tr/hakkimizda`, `${PRODUCTION_SITE_URL}/tr/blog`]
+    ? [PRODUCTION_SITE_URL, `${PRODUCTION_SITE_URL}/hakkimizda`, `${PRODUCTION_SITE_URL}/blog`]
     : [`${PRODUCTION_SITE_URL}/en`, `${PRODUCTION_SITE_URL}/en/about`, `${PRODUCTION_SITE_URL}/en/blog`])
 
   for (const loc of checked) {
-    const response = await fetch(loc, {
+    const response = await fetch(locForFetch(loc), {
       redirect: 'manual',
       headers: { 'user-agent': 'ParsMedyaSitemapVerify/1.0' },
       signal: AbortSignal.timeout(timeoutMs),
@@ -147,7 +163,7 @@ async function verifySitemap(path, locale) {
     else console.log(`  sample 200 ${loc}`)
   }
 
-  return { locs, blogCount, localhostCount, enCount, trCount, unprefixedCount, status }
+  return { locs, blogCount, localhostCount, enCount, trCount, prefixedCount, status }
 }
 
 async function verifyIndex() {
@@ -160,7 +176,9 @@ async function verifyIndex() {
   if (!text.includes('<sitemapindex') || !text.includes('</sitemapindex>')) {
     fail(`${path} is not a sitemap index`)
   }
+  if (text.includes('<urlset')) fail(`${path} mixed urlset into sitemap index`)
   if (containsForbiddenHost(text)) fail(`${path} contains localhost`)
+  if (/undefined|null/i.test(text)) fail(`${path} contains undefined/null`)
   const children = locUrls(text)
   if (!children.length) fail(`${path} has no child sitemaps`)
   if (children.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/sitemaps/`))) {

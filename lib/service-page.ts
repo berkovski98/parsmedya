@@ -133,7 +133,7 @@ export function turkishServiceSlug(service: Service | EnglishService) {
 export function buildServicePageModel(service: Service | EnglishService, locale: Locale): ServicePageModel {
   const trSlug = turkishServiceSlug(service)
   const extras = getServicePageExtras(trSlug)
-  const trPath = `/tr/hizmetler/${trSlug}`
+  const trPath = `/hizmetler/${trSlug}`
   const enPath = `/en/services/${toEnglishServiceSlug(trSlug)}`
   const canonical = locale === 'en' ? enPath : trPath
 
@@ -145,9 +145,9 @@ export function buildServicePageModel(service: Service | EnglishService, locale:
     tagline: service.tagline,
     description: service.description,
     category: getServiceCategoryLabel(service.category, locale),
-    homeHref: locale === 'en' ? '/en' : '/tr',
-    servicesHref: locale === 'en' ? '/en/services' : '/tr/hizmetler',
-    contactHref: locale === 'en' ? '/en/contact' : '/tr/iletisim',
+    homeHref: locale === 'en' ? '/en' : '/',
+    servicesHref: locale === 'en' ? '/en/services' : '/hizmetler',
+    contactHref: locale === 'en' ? '/en/contact' : '/iletisim',
     canonical,
     trPath,
     enPath,

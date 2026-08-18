@@ -9,11 +9,7 @@ import { resolveCityChild } from '@/lib/local-seo/resolve'
 import { localHubJsonLd, localServiceJsonLd } from '@/lib/local-seo/schema'
 
 export const revalidate = 86400
-export const dynamicParams = true
-
-export function generateStaticParams() {
-  return []
-}
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,

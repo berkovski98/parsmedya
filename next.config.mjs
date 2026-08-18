@@ -1,4 +1,4 @@
-import { LEGACY_TR_REDIRECTS } from './lib/locale-redirects.mjs'
+import { TR_PREFIX_REDIRECTS } from './lib/locale-redirects.mjs'
 
 const PRODUCTION_SITE_URL = 'https://parsmedya.net'
 
@@ -48,7 +48,16 @@ const nextConfig = {
     })),
   },
   async redirects() {
-    return LEGACY_TR_REDIRECTS
+    return TR_PREFIX_REDIRECTS
+  },
+  async rewrites() {
+    return {
+      afterFiles: [
+        { source: '/:city', destination: '/geo/:city' },
+        { source: '/:city/:slug', destination: '/geo/:city/:slug' },
+        { source: '/:city/:slug/:service', destination: '/geo/:city/:slug/:service' },
+      ],
+    }
   },
 }
 

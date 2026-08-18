@@ -14,6 +14,15 @@ export const RESERVED_TR_CITY_SEGMENTS = [
   'misyonumuz',
   'vizyonumuz',
   'hizmet-bolgeleri',
+  'en',
+  'admin',
+  'api',
+  'tr',
+  'sitemaps',
+  'sitemap.xml',
+  'sitemap-en.xml',
+  'robots.txt',
+  'geo',
 ] as const
 
 const reserved = new Set<string>(RESERVED_TR_CITY_SEGMENTS)
@@ -36,23 +45,23 @@ export function isReservedTrCitySegment(slug: string) {
 }
 
 export function localNationalHubPath() {
-  return '/tr/hizmet-bolgeleri'
+  return '/hizmet-bolgeleri'
 }
 
 export function localCityPath(city: string) {
-  return `/tr/${city}`
+  return `/${city}`
 }
 
 export function localDistrictPath(city: string, district: string) {
-  return `/tr/${city}/${district}`
+  return `/${city}/${district}`
 }
 
 export function localCityServicePath(city: string, service: string) {
-  return `/tr/${city}/${service}`
+  return `/${city}/${service}`
 }
 
 export function localDistrictServicePath(city: string, district: string, service: string) {
-  return `/tr/${city}/${district}/${service}`
+  return `/${city}/${district}/${service}`
 }
 
 export function resolveCityHub(citySlug: string): CityHubRoute | null {
@@ -82,12 +91,19 @@ export function resolveDistrictService(citySlug: string, districtSlug: string, s
   return { type: 'district-service', city, district, service }
 }
 
+function stripLegacyTrPrefix(pathname: string) {
+  if (pathname === '/tr') return '/'
+  if (pathname.startsWith('/tr/')) return pathname.slice(3)
+  return pathname
+}
+
 export function isValidLocalPath(pathname: string) {
-  const path = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname
-  if (path === '/tr/hizmet-bolgeleri') return true
+  const raw = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname
+  const path = stripLegacyTrPrefix(raw)
+  if (path === '/hizmet-bolgeleri') return true
   const parts = path.split('/').filter(Boolean)
-  if (parts[0] !== 'tr' || parts.length < 2 || parts.length > 4) return false
-  if (parts.length === 2) return Boolean(resolveCityHub(parts[1]))
-  if (parts.length === 3) return Boolean(resolveCityChild(parts[1], parts[2]))
-  return Boolean(resolveDistrictService(parts[1], parts[2], parts[3]))
+  if (parts.length < 1 || parts.length > 3) return false
+  if (parts.length === 1) return Boolean(resolveCityHub(parts[0]))
+  if (parts.length === 2) return Boolean(resolveCityChild(parts[0], parts[1]))
+  return Boolean(resolveDistrictService(parts[0], parts[1], parts[2]))
 }

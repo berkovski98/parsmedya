@@ -14,10 +14,12 @@ export type SitemapEntry = {
   lastModified: Date | string
 }
 
-export const TURKISH_STATIC_PATHS = ['/tr', '/tr/hakkimizda', '/tr/vizyonumuz', '/tr/misyonumuz', '/tr/hizmetler', '/tr/hizmet-bolgeleri', '/tr/blog', '/tr/iletisim'] as const
+export const TURKISH_STATIC_PATHS = ['/', '/hakkimizda', '/vizyonumuz', '/misyonumuz', '/hizmetler', '/hizmet-bolgeleri', '/blog', '/iletisim'] as const
 export const ENGLISH_STATIC_PATHS = ['/en', '/en/about', '/en/vision', '/en/mission', '/en/services', '/en/blog', '/en/contact'] as const
 
-const UNPREFIXED_TURKISH_MARKERS = ['/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim']
+const UNPREFIXED_TURKISH_MARKERS = ['/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/hizmet-bolgeleri']
+const FORBIDDEN_PATH_PREFIXES = ['/admin', '/api', '/sitemaps']
+const FORBIDDEN_SEGMENTS = new Set(['admin', 'api', 'undefined', 'null'])
 
 export function sitemapPathname(url: string) {
   try {
@@ -37,16 +39,18 @@ export function isPrefixedTurkishPathname(pathname: string) {
   return pathname === '/tr' || pathname.startsWith('/tr/')
 }
 
-export function isTurkishPathname(pathname: string) {
-  return isPrefixedTurkishPathname(pathname)
-}
-
 export function isUnprefixedTurkishPathname(pathname: string) {
   if (isEnglishPathname(pathname) || isPrefixedTurkishPathname(pathname)) return false
+  if (pathname === '/') return true
   return UNPREFIXED_TURKISH_MARKERS.some((marker) => pathname === marker || pathname.startsWith(`${marker}/`))
     || pathname === '/blog'
     || pathname.startsWith('/blog/')
-    || pathname === '/'
+}
+
+export function isTurkishPathname(pathname: string) {
+  if (isEnglishPathname(pathname) || isPrefixedTurkishPathname(pathname)) return false
+  if (FORBIDDEN_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return false
+  return true
 }
 
 export function isCanonicalSitemapUrl(url: string) {
@@ -55,6 +59,7 @@ export function isCanonicalSitemapUrl(url: string) {
     if (parsed.protocol !== 'https:') return false
     if (parsed.hostname !== PRODUCTION_SITE_HOST) return false
     if (isLocalhostHost(url)) return false
+    if (/undefined|null/i.test(url)) return false
     return true
   } catch {
     return false
@@ -67,6 +72,12 @@ export function locUrls(xml: string) {
 
 function escapeXml(value: string) {
   return value.replace(/[<>&'"]/g, (character) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[character]!)
+}
+
+function lastmodIso(value: Date | string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return new Date().toISOString()
+  return date.toISOString()
 }
 
 export function blogLastModified(post: SitemapPost) {
@@ -91,6 +102,34 @@ function uniqueEntries(entries: SitemapEntry[]) {
   })
 }
 
+export function isSafeSitemapPath(path: string) {
+  if (typeof path !== 'string' || !path.trim()) return false
+  if (/undefined|null/i.test(path)) return false
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  const segments = normalized.split('/').filter(Boolean)
+  if (segments.some((segment) => FORBIDDEN_SEGMENTS.has(segment.toLowerCase()))) return false
+  try {
+    const url = canonicalAbsoluteUrl(normalized)
+    return isCanonicalSitemapUrl(url)
+  } catch {
+    return false
+  }
+}
+
+export function toSitemapEntry(path: string, lastModified: Date | string = new Date()): SitemapEntry | null {
+  try {
+    if (!isSafeSitemapPath(path)) return null
+    return { url: canonicalAbsoluteUrl(path), lastModified: lastmodIso(lastModified) }
+  } catch (error) {
+    console.error('[sitemap] skipped invalid path', path, error)
+    return null
+  }
+}
+
+function compactEntries(entries: Array<SitemapEntry | null>, locale: 'tr' | 'en') {
+  return filterSitemapEntries(entries.filter((entry): entry is SitemapEntry => Boolean(entry)), locale)
+}
+
 export function filterSitemapEntries(entries: SitemapEntry[], locale: 'tr' | 'en') {
   return uniqueEntries(entries).filter((entry) => {
     if (!isCanonicalSitemapUrl(entry.url)) return false
@@ -109,10 +148,10 @@ export function buildTurkishSitemapEntries({
   now?: Date
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'tr')
-  return filterSitemapEntries([
-    ...TURKISH_STATIC_PATHS.map((path) => ({ url: canonicalAbsoluteUrl(path), lastModified: now })),
-    ...serviceSlugs.map((slug) => ({ url: canonicalAbsoluteUrl(`/tr/hizmetler/${slug}`), lastModified: now })),
-    ...published.map((post) => ({ url: canonicalAbsoluteUrl(`/tr/blog/${post.slug}`), lastModified: blogLastModified(post) })),
+  return compactEntries([
+    ...TURKISH_STATIC_PATHS.map((path) => toSitemapEntry(path, now)),
+    ...serviceSlugs.map((slug) => toSitemapEntry(`/hizmetler/${slug}`, now)),
+    ...published.map((post) => toSitemapEntry(`/blog/${post.slug}`, blogLastModified(post))),
   ], 'tr')
 }
 
@@ -126,20 +165,20 @@ export function buildEnglishSitemapEntries({
   now?: Date
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'en')
-  return filterSitemapEntries([
-    ...ENGLISH_STATIC_PATHS.map((path) => ({ url: canonicalAbsoluteUrl(path), lastModified: now })),
-    ...serviceSlugs.map((slug) => ({ url: canonicalAbsoluteUrl(`/en/services/${slug}`), lastModified: now })),
-    ...published.map((post) => ({ url: canonicalAbsoluteUrl(`/en/blog/${post.slug}`), lastModified: blogLastModified(post) })),
+  return compactEntries([
+    ...ENGLISH_STATIC_PATHS.map((path) => toSitemapEntry(path, now)),
+    ...serviceSlugs.map((slug) => toSitemapEntry(`/en/services/${slug}`, now)),
+    ...published.map((post) => toSitemapEntry(`/en/blog/${post.slug}`, blogLastModified(post))),
   ], 'en')
 }
 
 export function urlset(entries: SitemapEntry[]) {
-  const urls = entries.map((entry) => `<url><loc>${escapeXml(entry.url)}</loc><lastmod>${new Date(entry.lastModified).toISOString()}</lastmod></url>`).join('')
+  const urls = entries.map((entry) => `<url><loc>${escapeXml(entry.url)}</loc><lastmod>${lastmodIso(entry.lastModified)}</lastmod></url>`).join('')
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`
 }
 
 export function sitemapIndex(entries: SitemapEntry[]) {
-  const sitemaps = entries.map((entry) => `<sitemap><loc>${escapeXml(entry.url)}</loc><lastmod>${new Date(entry.lastModified).toISOString()}</lastmod></sitemap>`).join('')
+  const sitemaps = entries.map((entry) => `<sitemap><loc>${escapeXml(entry.url)}</loc><lastmod>${lastmodIso(entry.lastModified)}</lastmod></sitemap>`).join('')
   return `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${sitemaps}</sitemapindex>`
 }
 
@@ -162,9 +201,9 @@ export function buildTurkishPageSitemapEntries({
   serviceSlugs?: string[]
   now?: Date
 } = {}): SitemapEntry[] {
-  return filterSitemapEntries([
-    ...TURKISH_STATIC_PATHS.filter((path) => path !== '/tr/blog').map((path) => ({ url: canonicalAbsoluteUrl(path), lastModified: now })),
-    ...serviceSlugs.map((slug) => ({ url: canonicalAbsoluteUrl(`/tr/hizmetler/${slug}`), lastModified: now })),
+  return compactEntries([
+    ...TURKISH_STATIC_PATHS.filter((path) => path !== '/blog').map((path) => toSitemapEntry(path, now)),
+    ...serviceSlugs.map((slug) => toSitemapEntry(`/hizmetler/${slug}`, now)),
   ], 'tr')
 }
 
@@ -176,9 +215,9 @@ export function buildTurkishBlogSitemapEntries({
   now?: Date
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'tr')
-  return filterSitemapEntries([
-    { url: canonicalAbsoluteUrl('/tr/blog'), lastModified: now },
-    ...published.map((post) => ({ url: canonicalAbsoluteUrl(`/tr/blog/${post.slug}`), lastModified: blogLastModified(post) })),
+  return compactEntries([
+    toSitemapEntry('/blog', now),
+    ...published.map((post) => toSitemapEntry(`/blog/${post.slug}`, blogLastModified(post))),
   ], 'tr')
 }
 
@@ -189,9 +228,9 @@ export function buildEnglishPageSitemapEntries({
   serviceSlugs?: string[]
   now?: Date
 } = {}): SitemapEntry[] {
-  return filterSitemapEntries([
-    ...ENGLISH_STATIC_PATHS.filter((path) => path !== '/en/blog').map((path) => ({ url: canonicalAbsoluteUrl(path), lastModified: now })),
-    ...serviceSlugs.map((slug) => ({ url: canonicalAbsoluteUrl(`/en/services/${slug}`), lastModified: now })),
+  return compactEntries([
+    ...ENGLISH_STATIC_PATHS.filter((path) => path !== '/en/blog').map((path) => toSitemapEntry(path, now)),
+    ...serviceSlugs.map((slug) => toSitemapEntry(`/en/services/${slug}`, now)),
   ], 'en')
 }
 
@@ -203,9 +242,9 @@ export function buildEnglishBlogSitemapEntries({
   now?: Date
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'en')
-  return filterSitemapEntries([
-    { url: canonicalAbsoluteUrl('/en/blog'), lastModified: now },
-    ...published.map((post) => ({ url: canonicalAbsoluteUrl(`/en/blog/${post.slug}`), lastModified: blogLastModified(post) })),
+  return compactEntries([
+    toSitemapEntry('/en/blog', now),
+    ...published.map((post) => toSitemapEntry(`/en/blog/${post.slug}`, blogLastModified(post))),
   ], 'en')
 }
 
@@ -225,11 +264,12 @@ export function unprefixedTurkishLocCount(xml: string) {
   return locUrls(xml).filter((url) => isUnprefixedTurkishPathname(sitemapPathname(url))).length
 }
 
+export function prefixedTurkishLocCount(xml: string) {
+  return locUrls(xml).filter((url) => isPrefixedTurkishPathname(sitemapPathname(url))).length
+}
+
 export function hasTurkishRouteLeak(xml: string) {
-  return locUrls(xml).some((url) => {
-    const pathname = sitemapPathname(url)
-    return isUnprefixedTurkishPathname(pathname) || isPrefixedTurkishPathname(pathname)
-  })
+  return locUrls(xml).some((url) => !isEnglishPathname(sitemapPathname(url)))
 }
 
 export const xmlResponse = (xml: string) => new Response(xml, {

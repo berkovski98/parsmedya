@@ -67,7 +67,7 @@ test('service page models keep locale-specific titles and paired routes', () => 
   const enModel = buildServicePageModel(en, 'en')
   assert.equal(trModel.title, 'Özel Yazılım Geliştirme')
   assert.equal(enModel.title, 'Custom Software Development')
-  assert.equal(trModel.canonical, '/tr/hizmetler/ozel-yazilim-gelistirme')
+  assert.equal(trModel.canonical, '/hizmetler/ozel-yazilim-gelistirme')
   assert.equal(enModel.canonical, '/en/services/custom-software-development')
   assert.equal(trModel.enPath, enModel.canonical)
   assert.equal(enModel.trPath, trModel.canonical)

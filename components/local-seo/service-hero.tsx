@@ -30,7 +30,7 @@ export function LocalServiceHero({ model }: { model: LocalServicePageModel }) {
             {model.heroDescription}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link href="/tr/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
+            <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
               Projenizi Konuşalım
             </Link>
             <Link href="#hizmet-ozeti" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>

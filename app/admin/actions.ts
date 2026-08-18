@@ -102,8 +102,8 @@ export async function savePost(formData: FormData) {
     const message = error instanceof Error ? error.message : 'İşlem tamamlanamadı.'
     redirect(`${returnPath}?error=${safeMessage(message)}`)
   }
-  revalidatePath('/tr')
-  revalidatePath('/tr/blog')
+  revalidatePath('/')
+  revalidatePath('/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
   revalidatePath('/sitemap.xml')
@@ -123,8 +123,8 @@ export async function deletePost(formData: FormData) {
   const locale = String(formData.get('locale')) === 'en' ? 'en' : 'tr'
   const { error } = await (await createClient()).from('blog_posts').delete().eq('id', id)
   if (error) redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?error=${safeMessage('Yazı silinemedi.')}`)
-  revalidatePath('/tr')
-  revalidatePath('/tr/blog')
+  revalidatePath('/')
+  revalidatePath('/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
   revalidatePath('/sitemap.xml')
@@ -216,7 +216,7 @@ export async function saveLocalSeoOverride(formData: FormData) {
     onConflict: 'locale,city_slug,district_slug,service_slug',
   })
   if (error) redirect(`/admin/local-seo?error=${safeMessage('Override kaydedilemedi.')}`)
-  revalidatePath('/tr')
+  revalidatePath('/')
   revalidatePath('/sitemap.xml')
   revalidatePath('/sitemaps/local-cities.xml')
   revalidatePath('/sitemaps/local-services-1.xml')

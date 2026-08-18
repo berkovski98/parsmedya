@@ -7,7 +7,13 @@ export const revalidate = 3600
 export async function GET() {
   try {
     return xmlResponse(urlset(await turkishSitemapEntries()))
-  } catch {
-    return xmlResponse(urlset(buildTurkishSitemapEntries()))
+  } catch (error) {
+    console.error('[sitemap] turkish sitemap failed', error)
+    try {
+      return xmlResponse(urlset(buildTurkishSitemapEntries()))
+    } catch (fallbackError) {
+      console.error('[sitemap] turkish fallback failed', fallbackError)
+      return xmlResponse(urlset([]))
+    }
   }
 }

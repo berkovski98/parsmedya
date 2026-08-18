@@ -8,19 +8,15 @@ import { resolveDistrictService } from '@/lib/local-seo/resolve'
 import { localServiceJsonLd } from '@/lib/local-seo/schema'
 
 export const revalidate = 86400
-export const dynamicParams = true
-
-export function generateStaticParams() {
-  return []
-}
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ city: string; district: string; service: string }>
+  params: Promise<{ city: string; slug: string; service: string }>
 }): Promise<Metadata> {
-  const { city, district, service } = await params
-  const route = resolveDistrictService(city, district, service)
+  const { city, slug, service } = await params
+  const route = resolveDistrictService(city, slug, service)
   if (!route) return { title: 'Sayfa bulunamadı | Pars Medya' }
   const override = await getLocalSeoOverride(route.city.slug, route.district.slug, route.service.slug)
   const model = buildLocalServicePage(route.city, route.service, route.district, override)
@@ -35,10 +31,10 @@ export async function generateMetadata({
 export default async function DistrictServicePage({
   params,
 }: {
-  params: Promise<{ city: string; district: string; service: string }>
+  params: Promise<{ city: string; slug: string; service: string }>
 }) {
-  const { city, district, service } = await params
-  const route = resolveDistrictService(city, district, service)
+  const { city, slug, service } = await params
+  const route = resolveDistrictService(city, slug, service)
   if (!route) notFound()
   const override = await getLocalSeoOverride(route.city.slug, route.district.slug, route.service.slug)
   const model = buildLocalServicePage(route.city, route.service, route.district, override)

@@ -39,7 +39,7 @@ export async function LatestBlogPosts({ locale = 'tr' }: { locale?: 'tr' | 'en' 
 
         <div className="mt-10 flex justify-center sm:mt-12">
           <Link
-            href={isEnglish ? '/en/blog' : '/tr/blog'}
+            href={isEnglish ? '/en/blog' : '/blog'}
             className={buttonVariants({
               size: 'lg',
               className: 'min-h-11 px-5',

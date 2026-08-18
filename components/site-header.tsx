@@ -36,12 +36,12 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
   const corporateLinks = getCorporateLinks(locale)
   const serviceGroups = getServiceGroups(locale)
   const homeHref = localeHomePath(locale)
-  const servicesHref = english ? '/en/services' : '/tr/hizmetler'
-  const contactHref = english ? '/en/contact' : '/tr/iletisim'
+  const servicesHref = english ? '/en/services' : '/hizmetler'
+  const contactHref = english ? '/en/contact' : '/iletisim'
   const simpleLinks = english
     ? [{ label: 'Home', href: '/en' }, { label: 'Blog', href: '/en/blog' }, { label: 'Contact', href: '/en/contact' }]
-    : [{ label: 'Ana Sayfa', href: '/tr' }, { label: 'Blog', href: '/tr/blog' }, { label: 'İletişim', href: '/tr/iletisim' }]
-  const isActive = (href: string) => href === '/tr' || href === '/en' ? pathname === href : pathname.startsWith(href)
+    : [{ label: 'Ana Sayfa', href: '/' }, { label: 'Blog', href: '/blog' }, { label: 'İletişim', href: '/iletisim' }]
+  const isActive = (href: string) => href === '/' || href === '/en' ? pathname === href : pathname.startsWith(href)
   const closeMobile = () => { setOpenPath(null); setMobileSection(null) }
   const closeDesktop = (dropdown: 'corporate' | 'services', element: HTMLElement) => {
     setDismissedDropdown(dropdown)

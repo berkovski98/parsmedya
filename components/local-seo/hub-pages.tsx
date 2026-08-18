@@ -22,10 +22,10 @@ function HubHero({ model, kicker }: { model: LocalHubModel; kicker: string }) {
         <h1 className="mt-3 max-w-3xl text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">{model.h1}</h1>
         <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{model.intro}</p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href="/tr/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
+          <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
             Projenizi Konuşalım
           </Link>
-          <Link href="/tr/hizmetler" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>
+          <Link href="/hizmetler" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>
             Tüm hizmetler
           </Link>
         </div>
@@ -57,7 +57,7 @@ function FaqAndCta({ model }: { model: LocalHubModel }) {
             İşletmenize özel yazılım, web, otomasyon veya dijital büyüme ihtiyacınızı Pars Medya ekibiyle değerlendirin.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/tr/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
+            <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
               Projenizi Anlatın
             </Link>
             <Link href="mailto:info@parsmedya.net" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 border-primary-foreground/20 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10' })}>
@@ -83,7 +83,7 @@ export function LocalNationalHub({ model }: { model: LocalHubModel }) {
               {group.cities.map((city) => (
                 <Link
                   key={city.slug}
-                  href={`/tr/${city.slug}`}
+                  href={`/${city.slug}`}
                   className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary"
                 >
                   {city.name}
@@ -130,7 +130,7 @@ export function LocalCityHub({ model, city }: { model: LocalHubModel; city: Turk
           <h2 className="font-display text-2xl font-bold">Popüler hizmetler</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((service) => (
-              <Link key={service.slug} href={`/tr/${city.slug}/${service.slug}`} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/30">
+              <Link key={service.slug} href={`/${city.slug}/${service.slug}`} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/30">
                 <p className="font-display font-semibold">{service.title}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{service.shortDescription}</p>
               </Link>
@@ -140,7 +140,7 @@ export function LocalCityHub({ model, city }: { model: LocalHubModel; city: Turk
       </section>
       <section className="border-b border-border bg-secondary/40 py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <ServiceGroups hrefFor={(slug) => `/tr/${city.slug}/${slug}`} />
+          <ServiceGroups hrefFor={(slug) => `/${city.slug}/${slug}`} />
         </div>
       </section>
       <section className="border-b border-border py-12 sm:py-16">
@@ -150,7 +150,7 @@ export function LocalCityHub({ model, city }: { model: LocalHubModel; city: Turk
             {city.districts.map((district) => (
               <Link
                 key={district.slug}
-                href={`/tr/${city.slug}/${district.slug}`}
+                href={`/${city.slug}/${district.slug}`}
                 className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary"
               >
                 {district.name}
@@ -179,7 +179,7 @@ export function LocalDistrictHub({
       <HubHero model={model} kicker={`${city.name} • ${district.name}`} />
       <section className="border-b border-border py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <ServiceGroups hrefFor={(slug) => `/tr/${city.slug}/${district.slug}/${slug}`} />
+          <ServiceGroups hrefFor={(slug) => `/${city.slug}/${district.slug}/${slug}`} />
         </div>
       </section>
       <section className="border-b border-border bg-secondary/40 py-12 sm:py-16">
@@ -189,14 +189,14 @@ export function LocalDistrictHub({
             {others.map((item) => (
               <Link
                 key={item.slug}
-                href={`/tr/${city.slug}/${item.slug}`}
+                href={`/${city.slug}/${item.slug}`}
                 className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary"
               >
                 {item.name}
               </Link>
             ))}
           </div>
-          <Link href={`/tr/${city.slug}`} className="mt-6 inline-flex text-sm font-medium text-primary hover:underline">
+          <Link href={`/${city.slug}`} className="mt-6 inline-flex text-sm font-medium text-primary hover:underline">
             Tüm bölgeler
           </Link>
         </div>

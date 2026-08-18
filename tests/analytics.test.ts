@@ -47,7 +47,7 @@ test('runtime ANALYTICS_ENABLED overrides public flag', () => {
 })
 
 test('trackable public paths include TR, EN, blog, services and local SEO', () => {
-  for (const path of ['/', '/tr', '/en', '/tr/blog', '/en/blog', '/tr/hizmetler', '/en/services', '/tr/istanbul/kadikoy', '/tr/hizmet-bolgeleri']) {
+  for (const path of ['/', '/hakkimizda', '/en', '/blog', '/en/blog', '/hizmetler', '/en/services', '/istanbul/kadikoy', '/hizmet-bolgeleri', '/tr']) {
     assert.equal(isTrackablePath(path), true, path)
   }
 })
@@ -60,18 +60,18 @@ test('admin, api, sitemap and assets are not trackable', () => {
 
 test('query parameters are stripped from tracked paths', () => {
   assert.equal(normalizeAnalyticsPath('/search?q=berk'), '/search')
-  assert.equal(normalizeAnalyticsPath('/tr/blog/?utm_source=google'), '/tr/blog')
+  assert.equal(normalizeAnalyticsPath('/blog/?utm_source=google'), '/blog')
   const payload = validateAnalyticsPayload({
     event: 'page_view',
-    pathname: '/tr/hizmetler/erp-yazilim-cozumleri?ref=home',
+    pathname: '/hizmetler/erp-yazilim-cozumleri?ref=home',
     visitorId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
     locale: 'tr',
   })
-  assert.equal(payload?.path, '/tr/hizmetler/erp-yazilim-cozumleri')
+  assert.equal(payload?.path, '/hizmetler/erp-yazilim-cozumleri')
 })
 
 test('TR/EN locale is derived from the URL', () => {
-  assert.equal(localeFromPath('/tr/hizmetler'), 'tr')
+  assert.equal(localeFromPath('/hizmetler'), 'tr')
   assert.equal(localeFromPath('/en/services/website-development'), 'en')
   assert.equal(localeFromPath('/en'), 'en')
 })
@@ -146,8 +146,8 @@ test('Supabase error does not fall back to zero metrics', () => {
 test('7-day and 30-day unique counts stay distinct per visitor', () => {
   const now = new Date('2026-08-19T12:00:00.000Z')
   const rows = [
-    { path: '/tr', visitorId: 'a', createdAt: '2026-08-18T10:00:00.000Z', locale: 'tr' as const },
-    { path: '/tr/hizmetler', visitorId: 'a', createdAt: '2026-08-18T11:00:00.000Z', locale: 'tr' as const },
+    { path: '/', visitorId: 'a', createdAt: '2026-08-18T10:00:00.000Z', locale: 'tr' as const },
+    { path: '/hizmetler', visitorId: 'a', createdAt: '2026-08-18T11:00:00.000Z', locale: 'tr' as const },
     { path: '/en', visitorId: 'b', createdAt: '2026-08-18T12:00:00.000Z', locale: 'en' as const },
     { path: '/tr', visitorId: 'c', createdAt: '2026-07-01T12:00:00.000Z', locale: 'tr' as const },
   ]

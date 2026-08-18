@@ -69,7 +69,7 @@ export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
   const english = locale === 'en'
   const sections = english ? enSections : trSections
   const source = english ? englishServices : services
-  const prefix = english ? '/en/services' : '/tr/hizmetler'
+  const prefix = english ? '/en/services' : '/hizmetler'
   const processes = english ? processEn : processTr
   const categories = english ? categoryLabels.en : categoryLabels.tr
   const highlights = english ? editorialHighlights.en : editorialHighlights.tr

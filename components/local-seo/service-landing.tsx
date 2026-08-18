@@ -186,7 +186,7 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
           <h2 className="font-display text-3xl font-bold tracking-tight">{model.ctaTitle}</h2>
           <p className="mt-4 max-w-2xl text-pretty text-primary-foreground/80">{model.ctaText}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/tr/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
+            <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
               Projenizi Anlatın
             </Link>
             <Link href="mailto:info@parsmedya.net" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 border-primary-foreground/20 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10' })}>

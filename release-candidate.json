@@ -1,11 +1,11 @@
 {
-  "version": "1.1.5",
-  "title": "Ziyaret İstatistikleri",
-  "releaseTitle": "Ziyaret İstatistikleri",
-  "summary": "Site ziyaretleri artık gerçek kayıtlardan hesaplanır; hata olursa sıfır yazılmaz, nedeni gösterilir.",
+  "version": "1.1.6",
+  "title": "Türkçe adresler ve site haritası",
+  "releaseTitle": "Türkçe adresler ve site haritası",
+  "summary": "Türkçe sayfalar artık /tr olmadan açılır. Site haritası bir parça veri gelmese bile hata sayfası göstermez.",
   "releaseNotes": [
-    "İstatistikler sayfası hata olduğunda sıfır göstermez; sorgu başarısızsa bunu açıkça belirtir.",
-    "Sayfa görüntüleme kaydı sorgu parametrelerini ve yönetici sayfalarını dahil etmez.",
-    "Türkçe ve İngilizce trafik ile günlük grafik Europe/Istanbul gününe göre hesaplanır."
+    "Türkçe sayfalar kök adreste yayınlanır; İngilizce sayfalar /en altında kalır.",
+    "Eski /tr adresleri yeni Türkçe adreslere yönlendirilir.",
+    "Site haritası blog veya yerel sayfa verisi gelmese bile açılmaya devam eder."
   ]
 }

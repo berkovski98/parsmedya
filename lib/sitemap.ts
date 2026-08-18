@@ -5,10 +5,10 @@ import { hasSupabaseConfig, getSupabaseConfig } from '@/lib/supabase/config'
 import { getNonIndexableLocalPaths } from '@/lib/local-seo/overrides'
 import {
   buildLocalCitySitemapEntries,
-  buildLocalServiceSitemapEntries,
-  chunkSitemapEntries,
+  buildLocalServiceSitemapChunk,
   localServiceSitemapNames,
 } from '@/lib/local-seo/sitemap'
+import { CHILD_SITEMAP_FILES, FALLBACK_CHILD_SITEMAP_FILES } from '@/lib/sitemap-index'
 import {
   buildEnglishBlogSitemapEntries,
   buildEnglishPageSitemapEntries,
@@ -33,7 +33,10 @@ function publicSupabase() {
 }
 
 async function publishedPosts(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
-  if (!hasSupabaseConfig()) return []
+  if (!hasSupabaseConfig()) {
+    console.warn('[sitemap] Supabase config missing; blog URLs omitted')
+    return []
+  }
   try {
     const supabase = publicSupabase()
     const { data, error } = await supabase
@@ -49,73 +52,149 @@ async function publishedPosts(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
         .select(legacyColumns)
         .eq('status', 'published')
         .order('published_at', { ascending: false })
+      if (legacy.error) {
+        console.error('[sitemap] blog query failed', legacy.error.message)
+        return []
+      }
       return (legacy.data || []).map((post) => ({ ...post, locale: 'tr' }))
     }
-    if (error || !data) return []
-    return data
-  } catch {
+    if (error) {
+      console.error('[sitemap] blog query failed', error.message)
+      return []
+    }
+    return data || []
+  } catch (error) {
+    console.error('[sitemap] blog query threw', error)
     return []
   }
 }
 
 export async function turkishSitemapEntries(): Promise<SitemapEntry[]> {
-  return buildTurkishSitemapEntries({
-    posts: await publishedPosts('tr'),
-    serviceSlugs: services.map((service) => service.slug),
-  })
+  try {
+    return buildTurkishSitemapEntries({
+      posts: await publishedPosts('tr'),
+      serviceSlugs: services.map((service) => service.slug),
+    })
+  } catch (error) {
+    console.error('[sitemap] Turkish entries failed', error)
+    return buildTurkishSitemapEntries()
+  }
 }
 
 export async function englishSitemapEntries(): Promise<SitemapEntry[]> {
-  return buildEnglishSitemapEntries({
-    posts: await publishedPosts('en'),
-    serviceSlugs: englishServices.map((service) => service.slug),
-  })
+  try {
+    return buildEnglishSitemapEntries({
+      posts: await publishedPosts('en'),
+      serviceSlugs: englishServices.map((service) => service.slug),
+    })
+  } catch (error) {
+    console.error('[sitemap] English entries failed', error)
+    return buildEnglishSitemapEntries()
+  }
 }
 
-const trServiceSlugs = () => services.map((service) => service.slug)
-const enServiceSlugs = () => englishServices.map((service) => service.slug)
+const trServiceSlugs = () => {
+  try {
+    return services.map((service) => service.slug).filter(Boolean)
+  } catch (error) {
+    console.error('[sitemap] Turkish service slugs failed', error)
+    return []
+  }
+}
+
+const enServiceSlugs = () => {
+  try {
+    return englishServices.map((service) => service.slug).filter(Boolean)
+  } catch (error) {
+    console.error('[sitemap] English service slugs failed', error)
+    return []
+  }
+}
 
 export async function turkishPageSitemapEntries() {
-  return buildTurkishPageSitemapEntries({ serviceSlugs: trServiceSlugs() })
+  try {
+    return buildTurkishPageSitemapEntries({ serviceSlugs: trServiceSlugs() })
+  } catch (error) {
+    console.error('[sitemap] Turkish page entries failed', error)
+    return buildTurkishPageSitemapEntries()
+  }
 }
 
 export async function turkishBlogSitemapEntries() {
-  return buildTurkishBlogSitemapEntries({ posts: await publishedPosts('tr') })
+  try {
+    return buildTurkishBlogSitemapEntries({ posts: await publishedPosts('tr') })
+  } catch (error) {
+    console.error('[sitemap] Turkish blog entries failed', error)
+    return buildTurkishBlogSitemapEntries()
+  }
 }
 
 export async function englishPageSitemapEntries() {
-  return buildEnglishPageSitemapEntries({ serviceSlugs: enServiceSlugs() })
+  try {
+    return buildEnglishPageSitemapEntries({ serviceSlugs: enServiceSlugs() })
+  } catch (error) {
+    console.error('[sitemap] English page entries failed', error)
+    return buildEnglishPageSitemapEntries()
+  }
 }
 
 export async function englishBlogSitemapEntries() {
-  return buildEnglishBlogSitemapEntries({ posts: await publishedPosts('en') })
+  try {
+    return buildEnglishBlogSitemapEntries({ posts: await publishedPosts('en') })
+  } catch (error) {
+    console.error('[sitemap] English blog entries failed', error)
+    return buildEnglishBlogSitemapEntries()
+  }
 }
 
 export async function localCitySitemapEntries() {
-  return buildLocalCitySitemapEntries()
+  try {
+    return buildLocalCitySitemapEntries()
+  } catch (error) {
+    console.error('[sitemap] local city entries failed', error)
+    return []
+  }
 }
 
-export async function localServiceSitemapChunks() {
-  const excluded = await getNonIndexableLocalPaths()
-  return chunkSitemapEntries(buildLocalServiceSitemapEntries({ excluded }))
+export async function localServiceSitemapChunk(index: number) {
+  try {
+    const excluded = await getNonIndexableLocalPaths()
+    return buildLocalServiceSitemapChunk(index, { excluded })
+  } catch (error) {
+    console.error('[sitemap] local service chunk failed', error)
+    return []
+  }
 }
 
 export function sitemapIndexEntries(now = new Date()): SitemapEntry[] {
-  const localFiles = ['local-cities.xml', ...localServiceSitemapNames()]
-  const files = ['tr-pages.xml', 'tr-blog.xml', 'en-pages.xml', 'en-blog.xml', ...localFiles]
-  return files.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+  try {
+    return CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+  } catch (error) {
+    console.error('[sitemap] index entries failed', error)
+    return FALLBACK_CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+  }
+}
+
+export function fallbackSitemapIndexEntries(now = new Date()): SitemapEntry[] {
+  return FALLBACK_CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
 }
 
 export async function childSitemapEntries(file: string): Promise<SitemapEntry[] | null> {
-  if (file === 'tr-pages.xml') return turkishPageSitemapEntries()
-  if (file === 'tr-blog.xml') return turkishBlogSitemapEntries()
-  if (file === 'en-pages.xml') return englishPageSitemapEntries()
-  if (file === 'en-blog.xml') return englishBlogSitemapEntries()
-  if (file === 'local-cities.xml') return localCitySitemapEntries()
-  const match = file.match(/^local-services-(\d+)\.xml$/)
-  if (!match) return null
-  const chunks = await localServiceSitemapChunks()
-  const index = Number(match[1]) - 1
-  if (index < 0 || index >= chunks.length) return null
-  return chunks[index]
+  try {
+    if (file === 'tr-pages.xml') return await turkishPageSitemapEntries()
+    if (file === 'tr-blog.xml') return await turkishBlogSitemapEntries()
+    if (file === 'en-pages.xml') return await englishPageSitemapEntries()
+    if (file === 'en-blog.xml') return await englishBlogSitemapEntries()
+    if (file === 'local-cities.xml') return await localCitySitemapEntries()
+    const match = file.match(/^local-services-(\d+)\.xml$/)
+    if (!match) return null
+    const index = Number(match[1]) - 1
+    if (!Number.isInteger(index) || index < 0 || index >= localServiceSitemapNames().length) return []
+    return localServiceSitemapChunk(index)
+  } catch (error) {
+    console.error('[sitemap] child entries failed', file, error)
+    if (file.startsWith('en-')) return buildEnglishPageSitemapEntries()
+    if (file.startsWith('tr-')) return buildTurkishPageSitemapEntries()
+    return []
+  }
 }

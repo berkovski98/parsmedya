@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const service = getEnglishService((await params).slug)
   if (!service) return { title: 'Service Not Found | Pars Medya' }
   const canonical = `/en/services/${service.slug}`
-  const tr = `/tr/hizmetler/${service.trSlug}`
+  const tr = `/hizmetler/${service.trSlug}`
   return createPageMetadata({
     title: service.seoTitle || `${service.title} | Pars Medya`,
     description: service.seoDescription || service.description,

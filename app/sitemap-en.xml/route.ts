@@ -7,7 +7,13 @@ export const revalidate = 3600
 export async function GET() {
   try {
     return xmlResponse(urlset(await englishSitemapEntries()))
-  } catch {
-    return xmlResponse(urlset(buildEnglishSitemapEntries()))
+  } catch (error) {
+    console.error('[sitemap] english sitemap failed', error)
+    try {
+      return xmlResponse(urlset(buildEnglishSitemapEntries()))
+    } catch (fallbackError) {
+      console.error('[sitemap] english fallback failed', fallbackError)
+      return xmlResponse(urlset([]))
+    }
   }
 }

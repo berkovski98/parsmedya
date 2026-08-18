@@ -7,14 +7,19 @@ import {
   canonicalAbsoluteUrl,
   resolveSiteUrl,
 } from '../lib/site-url'
+import { CHILD_SITEMAP_FILES } from '../lib/sitemap-index'
 import {
   SITEMAP_INDEX_URLS,
   buildEnglishSitemapEntries,
   buildTurkishSitemapEntries,
+  childSitemapPath,
   containsForbiddenHost,
   englishLocCount,
   hasTurkishRouteLeak,
   locUrls,
+  prefixedTurkishLocCount,
+  sitemapIndex,
+  toSitemapEntry,
   turkishLocCount,
   unprefixedTurkishLocCount,
   urlset,
@@ -40,12 +45,22 @@ test('production getSiteUrl ignores localhost env leftovers', () => {
 })
 
 test('canonical sitemap URLs always use parsmedya.net', () => {
-  assert.equal(canonicalAbsoluteUrl('/tr'), `${PRODUCTION_SITE_URL}/tr`)
-  assert.equal(canonicalAbsoluteUrl('/tr/blog/ornek'), `${PRODUCTION_SITE_URL}/tr/blog/ornek`)
+  assert.equal(canonicalAbsoluteUrl('/'), PRODUCTION_SITE_URL)
+  assert.equal(canonicalAbsoluteUrl('/blog/ornek'), `${PRODUCTION_SITE_URL}/blog/ornek`)
   assert.equal(canonicalAbsoluteUrl('/en/about'), `${PRODUCTION_SITE_URL}/en/about`)
 })
 
-test('Turkish sitemap contains only Turkish loc URLs', () => {
+test('invalid sitemap paths are skipped instead of throwing', () => {
+  assert.equal(toSitemapEntry(''), null)
+  assert.equal(toSitemapEntry('/admin'), null)
+  assert.equal(toSitemapEntry('/api/secret'), null)
+  assert.equal(toSitemapEntry('/undefined/foo'), null)
+  assert.equal(toSitemapEntry('/istanbul/null'), null)
+  assert.doesNotThrow(() => toSitemapEntry('not a url %'))
+  assert.ok(toSitemapEntry('/hakkimizda'))
+})
+
+test('Turkish sitemap contains only unprefixed Turkish loc URLs', () => {
   const xml = urlset(buildTurkishSitemapEntries({
     posts: trPosts,
     serviceSlugs: ['web-sitesi-gelistirme'],
@@ -54,25 +69,24 @@ test('Turkish sitemap contains only Turkish loc URLs', () => {
   const locs = locUrls(xml)
   assert.equal(containsForbiddenHost(xml), false)
   assert.equal(englishLocCount(xml), 0)
-  assert.equal(unprefixedTurkishLocCount(xml), 0)
+  assert.equal(prefixedTurkishLocCount(xml), 0)
+  assert.ok(unprefixedTurkishLocCount(xml) > 0)
   assert.ok(turkishLocCount(xml) > 0)
-  assert.equal(locs.includes(PRODUCTION_SITE_URL), false)
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hakkimizda`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/vizyonumuz`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/misyonumuz`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmet-bolgeleri`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/seo-nedir`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler/web-sitesi-gelistirme`))
-  assert.ok(locs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/tr`)))
-  assert.equal(locs.some((url) => url.includes('/en')), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/taslak-yazi`), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/english-only`), false)
+  assert.ok(locs.includes(PRODUCTION_SITE_URL))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hakkimizda`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/vizyonumuz`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/misyonumuz`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hizmet-bolgeleri`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/blog`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/blog/seo-nedir`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler/web-sitesi-gelistirme`))
+  assert.ok(locs.every((url) => url === PRODUCTION_SITE_URL || url.startsWith(`${PRODUCTION_SITE_URL}/`)))
+  assert.equal(locs.some((url) => url.includes('/en') || url.includes('/tr/')), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/tr`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/taslak-yazi`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/english-only`), false)
   assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/en/blog/english-only`), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/seo-nedir`), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler`), false)
 })
 
 test('English sitemap contains only English loc URLs', () => {
@@ -85,6 +99,7 @@ test('English sitemap contains only English loc URLs', () => {
   assert.equal(containsForbiddenHost(xml), false)
   assert.ok(englishLocCount(xml) > 0)
   assert.equal(turkishLocCount(xml), 0)
+  assert.equal(prefixedTurkishLocCount(xml), 0)
   assert.equal(unprefixedTurkishLocCount(xml), 0)
   assert.equal(hasTurkishRouteLeak(xml), false)
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/en`))
@@ -96,6 +111,18 @@ test('English sitemap contains only English loc URLs', () => {
   assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/turkish-only`), false)
   assert.equal(locs.some((url) => url.includes('/hakkimizda') || url.includes('/hizmetler') || url.includes('/iletisim')), false)
   assert.ok(locs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/en`)))
+})
+
+test('sitemap index lists child sitemaps without mixing urlset', () => {
+  const xml = sitemapIndex(CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now })))
+  assert.ok(xml.includes('<?xml version="1.0" encoding="UTF-8"?>'))
+  assert.ok(xml.includes('<sitemapindex'))
+  assert.equal(xml.includes('<urlset'), false)
+  const locs = locUrls(xml)
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/sitemaps/tr-pages.xml`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/sitemaps/local-cities.xml`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/sitemaps/local-services-1.xml`))
+  assert.ok(locs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/sitemaps/`)))
 })
 
 test('robots.txt lists both language sitemaps on the canonical host', () => {
@@ -110,16 +137,16 @@ test('hreflang alternates stay on the canonical host and default to Turkish', ()
   const metadata = createPageMetadata({
     title: 'Pars Medya',
     description: 'Test',
-    canonical: '/tr',
-    tr: '/tr',
+    canonical: '/',
+    tr: '/',
     en: '/en',
     locale: 'tr',
   })
-  assert.equal(metadata.alternates?.canonical, `${PRODUCTION_SITE_URL}/tr`)
+  assert.equal(metadata.alternates?.canonical, PRODUCTION_SITE_URL)
   assert.deepEqual(metadata.alternates?.languages, {
-    tr: `${PRODUCTION_SITE_URL}/tr`,
+    tr: PRODUCTION_SITE_URL,
     en: `${PRODUCTION_SITE_URL}/en`,
-    'x-default': `${PRODUCTION_SITE_URL}/tr`,
+    'x-default': PRODUCTION_SITE_URL,
   })
-  assert.equal(metadata.openGraph?.url, `${PRODUCTION_SITE_URL}/tr`)
+  assert.equal(metadata.openGraph?.url, PRODUCTION_SITE_URL)
 })
