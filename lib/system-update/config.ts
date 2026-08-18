@@ -3,7 +3,7 @@ export const GITHUB_REPO = 'parsmedya'
 export const GITHUB_BRANCH = 'main'
 export const WORKFLOW_FILE = 'production-deploy.yml'
 export const HEALTH_ORIGIN = 'https://parsmedya.net'
-export const HEALTH_PATHS = ['/', '/en', '/sitemap.xml', '/robots.txt', '/admin/login'] as const
+export const HEALTH_PATHS = ['/', '/en', '/sitemap.xml', '/sitemap-en.xml', '/robots.txt', '/admin/login'] as const
 
 export function getGithubDeployToken() {
   return process.env.GITHUB_DEPLOY_TOKEN?.trim() || ''
