@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelDeployDialog, confirmDeployDialog, openDeployDialog, type DeployDialog } from '@/lib/system-update/intent'
-import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress, nextStepProgress, stepToneVisual } from '@/lib/system-update/progress-steps'
+import { displayProgress } from '@/lib/system-update/progress-steps'
 import { deploymentPanelState } from '@/lib/system-update/tracking'
+import { DeploymentProgressPanel } from '@/components/admin/deployment-progress'
 
 type CheckData = {
   currentCommit: string
@@ -22,9 +23,16 @@ type CheckData = {
 type StatusData = {
   status: 'queued' | 'in_progress' | 'completed'
   conclusion: 'success' | 'failure' | 'cancelled' | null
-  phase: 'idle' | 'preparing' | 'build' | 'deploy' | 'restart' | 'health' | 'success' | 'failed'
+  phase: 'idle' | 'queued' | 'preparing' | 'dependencies' | 'tests' | 'build' | 'deploy' | 'restart' | 'health' | 'success' | 'failed'
   phaseLabel: string
   progress: number
+  overallProgress?: number
+  stepProgress?: number
+  stepLabel?: string
+  stepDetail?: string
+  completedSubsteps?: number
+  totalSubsteps?: number
+  substeps?: { label: string; state: 'complete' | 'active' | 'pending' | 'failed' }[]
   runId: number | null
   commit: string
   startedAt: string | null
@@ -208,9 +216,15 @@ export function UpdatesPanel({
   })
 
   const polling = installing || panel.waitingForGithub || (status?.isTrackedDeployment && isActiveStatus(status))
+  const statusInFlight = useRef(false)
   useEffect(() => {
     if (!polling) return
-    const timer = window.setInterval(() => { void loadStatus() }, 5000)
+    const tick = () => {
+      if (statusInFlight.current) return
+      statusInFlight.current = true
+      void loadStatus().finally(() => { statusInFlight.current = false })
+    }
+    const timer = window.setInterval(tick, 2000)
     return () => window.clearInterval(timer)
   }, [polling, loadStatus])
 
@@ -412,56 +426,17 @@ export function UpdatesPanel({
       </section>
 
       {panel.show && (
-        <section className="mt-8 rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="font-display text-xl font-bold">
-              {failed ? 'Güncelleme başarısız' : succeeded ? 'Güncelleme tamamlandı' : 'Güncelleme kuruluyor'}
-            </h2>
-            <span className={`text-lg font-bold ${failed ? 'text-destructive' : succeeded ? 'text-green-700' : 'text-accent'}`}>
-              {progress}%
-            </span>
-          </div>
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-secondary">
-            <div
-              className={`h-full rounded-full transition-all ${failed ? 'bg-destructive' : succeeded ? 'bg-green-600' : 'bg-accent'}`}
-              style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm font-medium">
-            {failed ? `İşlem %${progress} aşamasında durdu.` : succeeded ? '✓ Güncelleme başarıyla tamamlandı' : panel.phaseLabel || 'GitHub Actions başlatılıyor'}
-          </p>
-          {failed && status?.errorMessage && (
-            <p className="mt-2 text-sm text-destructive">{status.errorMessage}</p>
-          )}
-          <ol className="mt-6 max-w-md space-y-2.5">
-            {DEPLOYMENT_STEPS.map((item, index) => {
-              const tone = deploymentStepTone({
-                progress,
-                stepProgress: item.progress,
-                nextProgress: nextStepProgress(index),
-                failed,
-                succeeded,
-              })
-              const visual = stepToneVisual(tone)
-              return (
-                <li key={item.key} className={`flex items-center justify-between gap-6 text-sm ${visual.className}`}>
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="w-4 shrink-0 text-center">{visual.mark}</span>
-                    <span className="truncate">{item.label}</span>
-                  </span>
-                  <span className="w-12 shrink-0 text-right tabular-nums">{item.progress}%</span>
-                </li>
-              )
-            })}
-          </ol>
-          {status?.url && (
-            <p className="mt-4 text-sm">
-              <a href={status.url} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
-                GitHub Actions kaydı
-              </a>
-            </p>
-          )}
-        </section>
+        <DeploymentProgressPanel
+          overallProgress={progress}
+          stepProgress={status?.stepProgress ?? 0}
+          stepLabel={panel.phaseLabel || status?.stepLabel || 'GitHub Actions başlatılıyor'}
+          stepDetail={status?.stepDetail || ''}
+          substeps={status?.substeps || []}
+          failed={failed}
+          succeeded={succeeded}
+          errorMessage={status?.errorMessage}
+          url={status?.url}
+        />
       )}
 
       <section className="mt-8 rounded-xl border border-border bg-card p-6">

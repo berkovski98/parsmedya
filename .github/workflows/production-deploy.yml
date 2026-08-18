@@ -72,6 +72,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run lint
+        run: pnpm lint
+
       - name: Production build
         env:
           NEXT_PUBLIC_SITE_URL: https://parsmedya.net
@@ -97,7 +100,7 @@ jobs:
           strip_components: 1
           overwrite: true
 
-      - name: Promote, restart Passenger
+      - name: Promote files to production
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.CPANEL_SFTP_HOST }}
@@ -144,21 +147,36 @@ jobs:
                 else:
                     item.unlink()
             PY
+
+      - name: Restart Passenger
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.CPANEL_SFTP_HOST }}
+          username: ${{ secrets.CPANEL_SFTP_USERNAME }}
+          key: ${{ secrets.CPANEL_SFTP_PRIVATE_KEY }}
+          port: ${{ secrets.CPANEL_SFTP_PORT }}
+          script: |
+            set -euo pipefail
+            APP="/home/parsmedya/parsmedya-app"
+            mkdir -p "$APP/tmp"
+            test -f "$APP/server.js"
+            test -f "$APP/version.json"
             touch "$APP/tmp/restart.txt"
 
-      - name: Health check
-        run: |
-          set -euo pipefail
-          check() {
-            curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$1" >/dev/null
-          }
-          check https://parsmedya.net/
-          check https://parsmedya.net/tr
-          check https://parsmedya.net/en
-          check https://parsmedya.net/sitemap.xml
-          check https://parsmedya.net/sitemap-en.xml
-          check https://parsmedya.net/robots.txt
-          check https://parsmedya.net/admin/login
+      - name: Health check /
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://parsmedya.net/ >/dev/null
+
+      - name: Health check /en
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://parsmedya.net/en >/dev/null
+
+      - name: Health check /sitemap.xml
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://parsmedya.net/sitemap.xml >/dev/null
+
+      - name: Health check /robots.txt
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://parsmedya.net/robots.txt >/dev/null
+
+      - name: Health check /admin/login
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://parsmedya.net/admin/login >/dev/null
 
       - name: Verify production sitemaps
         run: node scripts/verify-sitemaps.mjs https://parsmedya.net

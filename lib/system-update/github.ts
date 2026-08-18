@@ -1,6 +1,13 @@
 import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, hasGithubDeployToken, isCommitSha } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
-import { DEPLOYMENT_PROGRESS } from './progress-steps'
+import {
+  DEPLOYMENT_PROGRESS,
+  emptyPhaseMeasurement,
+  inferPhaseFromSteps,
+  isIgnoredJobStep,
+  measurePhase,
+  type PhaseMeasurement,
+} from './progress-steps'
 
 const API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`
@@ -33,7 +40,10 @@ export interface GithubJobStep {
 
 export type DeployPhase =
   | 'idle'
+  | 'queued'
   | 'preparing'
+  | 'dependencies'
+  | 'tests'
   | 'build'
   | 'deploy'
   | 'restart'
@@ -45,6 +55,13 @@ export interface DeployProgress {
   phase: DeployPhase
   phaseLabel: string
   progress: number
+  overallProgress: number
+  stepProgress: number
+  stepLabel: string
+  stepDetail: string
+  completedSubsteps: number
+  totalSubsteps: number
+  substeps: PhaseMeasurement['substeps']
   errorMessage: string | null
 }
 
@@ -217,30 +234,6 @@ export function mapRunStatus(run: GithubWorkflowRun | null) {
   return mapWorkflowState(run).status
 }
 
-const STEP_PROGRESS: Array<{
-  test: RegExp
-  progress: number
-  phase: DeployPhase
-  label: string
-}> = [
-  { test: /health|curl|doğrula|verify/, progress: DEPLOYMENT_PROGRESS.health, phase: 'health', label: 'Health check yapılıyor' },
-  { test: /promote.*restart|restart passenger/, progress: DEPLOYMENT_PROGRESS.restart, phase: 'restart', label: 'Passenger restart ediliyor' },
-  { test: /promote|rsync/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Dosyalar production\'a alınıyor' },
-  { test: /restart|passenger/, progress: DEPLOYMENT_PROGRESS.restart, phase: 'restart', label: 'Passenger restart ediliyor' },
-  { test: /upload|scp|sftp|staging/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Sunucuya aktarılıyor' },
-  { test: /prepare standalone|prepare-deploy|standalone deploy/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Deployment hazırlanıyor' },
-  { test: /production build|pnpm build/, progress: DEPLOYMENT_PROGRESS.build, phase: 'build', label: 'Production build alınıyor' },
-  { test: /run tests|pnpm test/, progress: DEPLOYMENT_PROGRESS.tests, phase: 'build', label: 'Testler çalıştırılıyor' },
-  { test: /install dependenc|frozen-lockfile|enable pnpm|setup node|write version/, progress: DEPLOYMENT_PROGRESS.dependencies, phase: 'preparing', label: 'Bağımlılıklar hazırlanıyor' },
-  { test: /checkout|validate deploy|set up job|setup job/, progress: DEPLOYMENT_PROGRESS.preparing, phase: 'preparing', label: 'Hazırlanıyor' },
-]
-
-function mapStep(name: string) {
-  const lower = name.toLowerCase()
-  return STEP_PROGRESS.find((rule) => rule.test.test(lower))
-    || { progress: DEPLOYMENT_PROGRESS.preparing, phase: 'preparing' as DeployPhase, label: 'Hazırlanıyor' }
-}
-
 function publicStepError(stepName?: string) {
   if (!stepName) return 'GitHub Actions adımı başarısız oldu.'
   const safe = stepName.replace(/https?:\/\/\S+/g, '').trim().slice(0, 80)
@@ -251,43 +244,66 @@ function publicStepError(stepName?: string) {
 }
 
 function currentStep(steps: GithubJobStep[]) {
-  return [...steps].reverse().find((step) => step.status === 'in_progress')
-    || steps.find((step) => step.status === 'queued' && step.conclusion == null)
-    || [...steps].reverse().find((step) => step.conclusion === 'failure' || step.conclusion === 'cancelled')
+  const relevant = steps.filter((step) => !isIgnoredJobStep(step.name))
+  return [...relevant].reverse().find((step) => step.status === 'in_progress')
+    || relevant.find((step) => step.status === 'queued' && step.conclusion == null)
+    || [...relevant].reverse().find((step) => step.conclusion === 'failure' || step.conclusion === 'cancelled')
     || null
+}
+
+function withMeasurement(
+  phase: DeployPhase,
+  measurement: PhaseMeasurement,
+  extras: { phaseLabel?: string; errorMessage?: string | null } = {},
+): DeployProgress {
+  const overallProgress = measurement.overallProgress
+  return {
+    phase,
+    phaseLabel: extras.phaseLabel !== undefined ? extras.phaseLabel : measurement.stepLabel,
+    progress: overallProgress,
+    overallProgress,
+    stepProgress: measurement.stepProgress,
+    stepLabel: measurement.stepLabel,
+    stepDetail: measurement.stepDetail,
+    completedSubsteps: measurement.completedSubsteps,
+    totalSubsteps: measurement.totalSubsteps,
+    substeps: measurement.substeps,
+    errorMessage: extras.errorMessage ?? null,
+  }
 }
 
 export function mapDeployProgress(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployProgress {
   if (!run) {
-    return { phase: 'idle', phaseLabel: '', progress: 0, errorMessage: null }
+    return withMeasurement('idle', emptyPhaseMeasurement('queued'), { phaseLabel: '', errorMessage: null })
   }
   const state = mapWorkflowState(run)
   if (state.status === 'queued') {
-    return { phase: 'preparing', phaseLabel: 'İşlem sıraya alındı', progress: DEPLOYMENT_PROGRESS.queued, errorMessage: null }
+    return withMeasurement('queued', emptyPhaseMeasurement('queued'), { phaseLabel: 'İşlem sıraya alındı' })
   }
   if (state.status === 'completed' && state.conclusion === 'success') {
-    return { phase: 'success', phaseLabel: 'Güncelleme başarıyla tamamlandı', progress: DEPLOYMENT_PROGRESS.completed, errorMessage: null }
+    return withMeasurement('success', {
+      ...emptyPhaseMeasurement('completed'),
+      stepProgress: 100,
+    }, { phaseLabel: 'Güncelleme başarıyla tamamlandı' })
   }
 
+  const phaseKey = inferPhaseFromSteps(steps)
+  const measurement = measurePhase(phaseKey, steps)
   const step = currentStep(steps)
-  const mapped = mapStep(step?.name || '')
   if (state.status === 'completed') {
-    return {
-      phase: 'failed',
-      phaseLabel: mapped.label,
-      progress: Math.min(mapped.progress, DEPLOYMENT_PROGRESS.health),
+    return withMeasurement('failed', {
+      ...measurement,
+      overallProgress: Math.min(measurement.overallProgress, DEPLOYMENT_PROGRESS.health),
+    }, {
+      phaseLabel: measurement.stepLabel,
       errorMessage: publicStepError(step?.name),
-    }
+    })
   }
   if (!step) {
-    return { phase: 'preparing', phaseLabel: 'Hazırlanıyor', progress: DEPLOYMENT_PROGRESS.preparing, errorMessage: null }
+    return withMeasurement('preparing', measurePhase('preparing', steps), { phaseLabel: 'Hazırlanıyor' })
   }
-  return {
-    phase: mapped.phase,
-    phaseLabel: mapped.label,
-    progress: mapped.progress,
-    errorMessage: null,
-  }
+  const uiPhase: DeployPhase = phaseKey === 'queued' || phaseKey === 'completed' ? 'preparing' : phaseKey
+  return withMeasurement(uiPhase, measurement)
 }
 
 export function mapDeployPhase(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployPhase {

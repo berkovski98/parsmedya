@@ -7,7 +7,10 @@ import { githubActions, githubApiHeaders, isActiveRun, mapDeployPhase, mapDeploy
 import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
 import { countDispatches } from '../lib/system-update/intent'
-import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress } from '../lib/system-update/progress-steps'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { DeploymentProgressPanel } from '../components/admin/deployment-progress'
+import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress, measurePhase } from '../lib/system-update/progress-steps'
 import { deploymentPanelState } from '../lib/system-update/tracking'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -492,7 +495,7 @@ test('status queued', async () => {
   }))
   const status = await service.status()
   assert.equal(status.status, 'queued')
-  assert.equal(status.phase, 'preparing')
+  assert.equal(status.phase, 'queued')
   assert.equal(status.progress, 0)
   assert.equal(status.runId, 11)
 })
@@ -583,7 +586,7 @@ test('install does not report previous successful run as 100 percent', async () 
   assert.equal(status.progress, 0)
   assert.notEqual(status.progress, 100)
   assert.equal(status.runId, null)
-  assert.equal(status.phase, 'preparing')
+  assert.equal(status.phase, 'queued')
   assert.equal(status.phaseLabel, 'GitHub Actions başlatılıyor')
   assert.equal(status.isTrackedDeployment, true)
   assert.equal(status.status, 'queued')
@@ -837,6 +840,9 @@ test('GET update routes are read-only and install GET is rejected', () => {
   assert.ok(effect)
   assert.doesNotMatch(effect[0], /installConfirmed|rollbackConfirmed|\/install|\/rollback/)
   assert.match(effect[0], /if \(!polling\) return/)
+  assert.match(panel, /setInterval\(tick, 2000\)/)
+  assert.match(panel, /DeploymentProgressPanel/)
+  assert.doesNotMatch(panel, /Math\.random/)
 })
 
 test('production-deploy.yml is workflow_dispatch only', () => {
@@ -902,4 +908,113 @@ test('progress restart maps to 85', async () => {
   ])
   assert.equal(mapped.progress, 85)
   assert.equal(mapped.phase, 'restart')
+})
+
+test('overallProgress and stepProgress stay independent', () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Upload to staging', status: 'completed', conclusion: 'success' },
+    { name: 'Promote files to production', status: 'in_progress', conclusion: null },
+  ])
+  assert.equal(mapped.overallProgress, 75)
+  assert.equal(mapped.progress, 75)
+  assert.equal(mapped.stepProgress, 50)
+  assert.equal(mapped.stepLabel, 'Sunucuya aktarılıyor')
+  assert.equal(mapped.stepDetail, 'Dosyalar yerleştiriliyor')
+})
+
+test('health 3 of 5 endpoints is 60 percent step progress', () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Health check /', status: 'completed', conclusion: 'success' },
+    { name: 'Health check /en', status: 'completed', conclusion: 'success' },
+    { name: 'Health check /sitemap.xml', status: 'completed', conclusion: 'success' },
+    { name: 'Health check /robots.txt', status: 'in_progress', conclusion: null },
+    { name: 'Health check /admin/login', status: 'queued', conclusion: null },
+  ])
+  assert.equal(mapped.overallProgress, 95)
+  assert.equal(mapped.stepProgress, 60)
+  assert.equal(mapped.completedSubsteps, 3)
+  assert.equal(mapped.totalSubsteps, 5)
+  const health = measurePhase('health', mapped.substeps.map((item, index) => ({
+    name: ['Health check /', 'Health check /en', 'Health check /sitemap.xml', 'Health check /robots.txt', 'Health check /admin/login'][index],
+    status: item.state === 'complete' ? 'completed' : item.state === 'active' ? 'in_progress' : 'queued',
+    conclusion: item.state === 'complete' ? 'success' : null,
+  })))
+  assert.equal(health.stepProgress, 60)
+})
+
+test('rendered step list includes every milestone percent', () => {
+  const html = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: 75,
+    stepProgress: 63,
+    stepLabel: 'Sunucuya aktarılıyor',
+    stepDetail: 'Dosyalar sunucuya aktarılıyor',
+    substeps: [{ label: 'Dosyalar sunucuya aktarılıyor', state: 'active' }],
+    failed: false,
+    succeeded: false,
+  }))
+  for (const value of ['0%', '5%', '15%', '30%', '50%', '75%', '85%', '95%', '100%']) {
+    assert.match(html, new RegExp(value.replace('%', '\\%')))
+  }
+  assert.equal((html.match(/>75%</g) || []).length >= 2, true)
+  assert.match(html, />63%</)
+  assert.match(html, /Dosyalar sunucuya aktarılıyor/)
+  assert.match(html, /h-1\.5/)
+  const source = readFileSync('components/admin/deployment-progress.tsx', 'utf8')
+  assert.match(source, /\{step\.progress\}%/)
+})
+
+test('sub-progress renders only on the active step', () => {
+  const active = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: 75,
+    stepProgress: 63,
+    stepLabel: 'Sunucuya aktarılıyor',
+    stepDetail: 'Dosyalar sunucuya aktarılıyor',
+    substeps: [{ label: 'Dosyalar sunucuya aktarılıyor', state: 'active' }],
+    failed: false,
+    succeeded: false,
+  }))
+  assert.match(active, /Dosyalar sunucuya aktarılıyor/)
+  const complete = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: 75,
+    stepProgress: 63,
+    stepLabel: 'Sunucuya aktarılıyor',
+    stepDetail: 'Dosyalar sunucuya aktarılıyor',
+    substeps: [{ label: 'Dosyalar sunucuya aktarılıyor', state: 'active' }],
+    failed: false,
+    succeeded: true,
+  }))
+  assert.doesNotMatch(complete, /Dosyalar sunucuya aktarılıyor/)
+  assert.doesNotMatch(complete, />63%</)
+  const pendingBuild = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: 30,
+    stepProgress: 50,
+    stepLabel: 'Testler çalıştırılıyor',
+    stepDetail: 'Lint çalıştırılıyor',
+    substeps: [{ label: 'Lint çalıştırılıyor', state: 'active' }],
+    failed: false,
+    succeeded: false,
+  }))
+  assert.match(pendingBuild, /Lint çalıştırılıyor/)
+  assert.doesNotMatch(pendingBuild, /Dosyalar sunucuya aktarılıyor/)
+})
+
+test('failure freezes progress below 100', () => {
+  const mapped = mapDeployProgress(run({ status: 'completed', conclusion: 'failure' }), [
+    { name: 'Upload to staging', status: 'completed', conclusion: 'failure' },
+  ])
+  assert.equal(mapped.progress, 75)
+  assert.equal(mapped.overallProgress, 75)
+  assert.notEqual(mapped.progress, 100)
+  const html = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: mapped.overallProgress,
+    stepProgress: mapped.stepProgress,
+    stepLabel: mapped.stepLabel,
+    stepDetail: mapped.stepDetail,
+    substeps: mapped.substeps,
+    failed: true,
+    succeeded: false,
+    errorMessage: mapped.errorMessage,
+  }))
+  assert.match(html, /Güncelleme başarısız/)
+  assert.doesNotMatch(html, /Güncelleme başarıyla tamamlandı/)
 })
