@@ -98,29 +98,51 @@ jobs:
 
       - name: Promote, restart Passenger
         uses: appleboy/ssh-action@v1.2.2
-        env:
-          CPANEL_DEPLOY_PATH: ${{ secrets.CPANEL_DEPLOY_PATH }}
         with:
           host: ${{ secrets.CPANEL_SFTP_HOST }}
           username: ${{ secrets.CPANEL_SFTP_USERNAME }}
           key: ${{ secrets.CPANEL_SFTP_PRIVATE_KEY }}
           port: ${{ secrets.CPANEL_SFTP_PORT }}
-          envs: CPANEL_DEPLOY_PATH
           script: |
             set -euo pipefail
-            APP="${CPANEL_DEPLOY_PATH:-/home/parsmedya/parsmedya-app}"
+            APP="/home/parsmedya/parsmedya-app"
             IN="/home/parsmedya/deployments/incoming"
             test -f "$IN/server.js"
             test -f "$IN/package.json"
             test -f "$IN/version.json"
+            test -d "$IN/.next"
             mkdir -p "$APP/tmp"
-            rsync -a --delete \
-              --exclude '.env' \
-              --exclude '.env.*' \
-              --exclude 'tmp/' \
-              --exclude 'logs/' \
-              --exclude '.git/' \
-              "$IN/" "$APP/"
+            python3 - <<'PY'
+            from pathlib import Path
+            import shutil
+
+            src = Path("/home/parsmedya/deployments/incoming")
+            dst = Path("/home/parsmedya/parsmedya-app")
+            protected = {".env", "tmp", "logs", ".git"}
+
+            def protected_name(name: str) -> bool:
+                return name in protected or name.startswith(".env.")
+
+            for item in src.iterdir():
+                if protected_name(item.name):
+                    continue
+                target = dst / item.name
+                if item.is_dir():
+                    if target.exists():
+                        shutil.rmtree(target)
+                    shutil.copytree(item, target, symlinks=True)
+                else:
+                    shutil.copy2(item, target)
+
+            src_names = {item.name for item in src.iterdir()}
+            for item in dst.iterdir():
+                if protected_name(item.name) or item.name in src_names:
+                    continue
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+            PY
             touch "$APP/tmp/restart.txt"
 
       - name: Health check
