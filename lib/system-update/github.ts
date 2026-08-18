@@ -1,46 +1,57 @@
-import { createHash } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
-import path from 'node:path'
-import { GITHUB_OWNER, GITHUB_REPO, getGithubToken, productionZipName } from './config'
-import { UpdateError, UPDATE_CODES } from './errors'
-import { isSemver, normalizeVersion } from './semver'
-
-export interface GithubAsset {
-  id: number
-  name: string
-  size: number
-  url: string
-  browser_download_url: string
-  digest?: string | null
-}
-
-export interface GithubRelease {
-  tag_name: string
-  name: string | null
-  body: string | null
-  published_at: string | null
-  assets: GithubAsset[]
-}
-
-export interface ReleasePackage {
-  version: string
-  releaseDate: string
-  releaseNotes: string
-  assetName: string
-  assetSize: number
-  assetId: number
-  assetApiUrl: string
-  sha256: string
-  requiresMigration: boolean
-  commit: string
-}
+import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, isCommitSha } from './config'
+import { UPDATE_CODES, UpdateError } from './errors'
 
 const API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`
+const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`
 
-function headers(accept = 'application/vnd.github+json') {
-  const token = getGithubToken()
+export interface GithubCommit {
+  sha: string
+  message: string
+  date: string
+  author: string
+}
+
+export interface GithubWorkflowRun {
+  id: number
+  status: string
+  conclusion: string | null
+  html_url: string
+  created_at: string
+  updated_at: string
+  head_sha: string
+  display_title: string
+  run_number: number
+  event: string
+}
+
+export interface GithubJobStep {
+  name: string
+  status: string
+  conclusion: string | null
+}
+
+export type DeployPhase =
+  | 'idle'
+  | 'preparing'
+  | 'build'
+  | 'deploy'
+  | 'restart'
+  | 'health'
+  | 'success'
+  | 'failed'
+
+export interface GithubActionsClient {
+  latestMainCommit(): Promise<GithubCommit>
+  commitExists(sha: string): Promise<boolean>
+  listWorkflowRuns(): Promise<GithubWorkflowRun[]>
+  listJobSteps(runId: number): Promise<GithubJobStep[]>
+  dispatch(deploySha?: string): Promise<void>
+}
+
+function headers() {
+  const token = getGithubDeployToken()
   const result: Record<string, string> = {
-    Accept: accept,
+    Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'parsmedya-system-update',
   }
@@ -48,121 +59,122 @@ function headers(accept = 'application/vnd.github+json') {
   return result
 }
 
-export async function githubRequest(url: string, accept?: string) {
-  const response = await fetch(url, { headers: headers(accept), redirect: 'follow', cache: 'no-store' })
+async function githubFetch(url: string, init: RequestInit = {}) {
+  const response = await fetch(url, {
+    ...init,
+    headers: { ...headers(), ...(init.headers as Record<string, string> | undefined) },
+    cache: 'no-store',
+  })
   return response
 }
 
-export async function fetchLatestRelease() {
-  const response = await githubRequest(`${API}/releases/latest`)
-  if (response.status === 404) {
-    throw new UpdateError(UPDATE_CODES.RELEASE_NOT_FOUND, 'Yayınlanmış bir sürüm bulunamadı.', 404)
-  }
-  if (!response.ok) {
-    throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Sürüm bilgisi alınamadı.', 502)
-  }
-  return (await response.json()) as GithubRelease
+async function readJson<T>(response: Response): Promise<T> {
+  return await response.json() as T
 }
 
-export async function fetchReleaseByVersion(version: string) {
-  if (!isSemver(version)) {
-    throw new UpdateError(UPDATE_CODES.INVALID_VERSION, 'Geçersiz sürüm numarası.', 400)
-  }
-  const normalized = normalizeVersion(version)
-  for (const tag of [`v${normalized}`, normalized]) {
-    const response = await githubRequest(`${API}/releases/tags/${encodeURIComponent(tag)}`)
-    if (response.ok) return (await response.json()) as GithubRelease
-    if (response.status !== 404) {
-      throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Sürüm bilgisi alınamadı.', 502)
+function failUnavailable() {
+  return new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
+}
+
+export const githubActions: GithubActionsClient = {
+  async latestMainCommit() {
+    const response = await githubFetch(`${API}/commits/${encodeURIComponent(GITHUB_BRANCH)}`)
+    if (!response.ok) throw failUnavailable()
+    const payload = await readJson<{
+      sha: string
+      commit?: { message?: string; author?: { name?: string; date?: string } }
+    }>(response)
+    return {
+      sha: payload.sha,
+      message: (payload.commit?.message || '').split('\n')[0] || '',
+      date: payload.commit?.author?.date || '',
+      author: payload.commit?.author?.name || '',
     }
-  }
-  throw new UpdateError(UPDATE_CODES.RELEASE_NOT_FOUND, 'İstenen sürüm GitHub üzerinde bulunamadı.', 404)
+  },
+
+  async commitExists(sha: string) {
+    if (!isCommitSha(sha)) return false
+    const response = await githubFetch(`${API}/commits/${encodeURIComponent(sha.toLowerCase())}`)
+    return response.ok
+  },
+
+  async listWorkflowRuns() {
+    const response = await githubFetch(
+      `${API}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/runs?per_page=10&branch=${GITHUB_BRANCH}`,
+    )
+    if (response.status === 404) return []
+    if (!response.ok) throw failUnavailable()
+    const payload = await readJson<{ workflow_runs?: GithubWorkflowRun[] }>(response)
+    return payload.workflow_runs || []
+  },
+
+  async listJobSteps(runId: number) {
+    const response = await githubFetch(`${API}/actions/runs/${runId}/jobs?per_page=20`)
+    if (!response.ok) return []
+    const payload = await readJson<{ jobs?: { steps?: GithubJobStep[] }[] }>(response)
+    return (payload.jobs || []).flatMap((job) => job.steps || [])
+  },
+
+  async dispatch(deploySha?: string) {
+    const body: { ref: string; inputs?: { deploy_sha: string } } = { ref: GITHUB_BRANCH }
+    if (deploySha) {
+      if (!isCommitSha(deploySha)) {
+        throw new UpdateError(UPDATE_CODES.INVALID_SHA, 'Geçersiz commit SHA.', 400)
+      }
+      body.inputs = { deploy_sha: deploySha.toLowerCase() }
+    }
+    const response = await githubFetch(`${API}/actions/workflows/${encodeURIComponent(WORKFLOW_FILE)}/dispatches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (response.status === 204 || response.ok) return
+    if (response.status === 404) {
+      throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Production Deploy workflow bulunamadı.', 502)
+    }
+    throw failUnavailable()
+  },
 }
 
-export function parseReleasePackage(release: GithubRelease, expectedVersion?: string): ReleasePackage {
-  const version = normalizeVersion(release.tag_name || '')
-  if (!isSemver(version)) {
-    throw new UpdateError(UPDATE_CODES.INVALID_VERSION, 'Yayın etiketi geçerli bir sürüm değil.', 400)
-  }
-  if (expectedVersion && normalizeVersion(expectedVersion) !== version) {
-    throw new UpdateError(UPDATE_CODES.RELEASE_NOT_FOUND, 'İstenen sürüm GitHub üzerinde bulunamadı.', 404)
-  }
-
-  const assetName = productionZipName(version)
-  const asset = (release.assets || []).find((item) => item.name === assetName)
-  if (!asset) {
-    throw new UpdateError(UPDATE_CODES.ASSET_NOT_FOUND, 'Üretim paketi bu sürümde bulunamadı.', 400)
-  }
-
-  const notes = release.body || ''
-  return {
-    version,
-    releaseDate: release.published_at || '',
-    releaseNotes: notes,
-    assetName: asset.name,
-    assetSize: asset.size,
-    assetId: asset.id,
-    assetApiUrl: asset.url,
-    sha256: extractSha256(release, asset),
-    requiresMigration: /requires[-\s]?migration/i.test(notes),
-    commit: '',
-  }
+export function isActiveRun(run: GithubWorkflowRun) {
+  return run.status === 'queued' || run.status === 'in_progress' || run.status === 'waiting' || run.status === 'requested' || run.status === 'pending'
 }
 
-export function extractSha256(release: GithubRelease, asset: GithubAsset) {
-  const digest = asset.digest?.replace(/^sha256:/i, '').trim()
-  if (digest && /^[a-f0-9]{64}$/i.test(digest)) return digest.toLowerCase()
-
-  const checksumAsset = (release.assets || []).find((item) =>
-    item.name === `${asset.name}.sha256` || item.name === 'SHA256SUMS' || item.name === 'checksums.txt',
-  )
-  const fromBody = (release.body || '').match(new RegExp(`(?:sha256|SHA-256)[:\\s]+([a-f0-9]{64})`, 'i'))
-  if (fromBody?.[1]) return fromBody[1].toLowerCase()
-  if (checksumAsset?.digest?.replace(/^sha256:/i, '')) {
-    const value = checksumAsset.digest.replace(/^sha256:/i, '')
-    if (/^[a-f0-9]{64}$/i.test(value)) return value.toLowerCase()
+export function mapWorkflowState(run: GithubWorkflowRun | null): {
+  status: 'queued' | 'in_progress' | 'completed'
+  conclusion: 'success' | 'failure' | 'cancelled' | null
+} {
+  if (!run) return { status: 'completed', conclusion: null }
+  if (run.status === 'queued' || run.status === 'waiting' || run.status === 'requested' || run.status === 'pending') {
+    return { status: 'queued', conclusion: null }
   }
-  return ''
+  if (run.status === 'in_progress') return { status: 'in_progress', conclusion: null }
+  if (run.conclusion === 'success') return { status: 'completed', conclusion: 'success' }
+  if (run.conclusion === 'cancelled') return { status: 'completed', conclusion: 'cancelled' }
+  return { status: 'completed', conclusion: 'failure' }
 }
 
-export function assertGithubAssetUrl(url: string) {
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch {
-    throw new UpdateError(UPDATE_CODES.ASSET_NOT_FOUND, 'Paket adresi geçersiz.', 400)
-  }
-  const allowedHost = parsed.hostname === 'api.github.com'
-  const allowedPath = parsed.pathname === `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${parsed.pathname.split('/').pop()}`
-    && parsed.pathname.startsWith(`/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/`)
-  if (!allowedHost || !allowedPath) {
-    throw new UpdateError(UPDATE_CODES.ASSET_NOT_FOUND, 'Paket yalnızca GitHub Releases üzerinden indirilebilir.', 400)
-  }
+export function mapRunStatus(run: GithubWorkflowRun | null) {
+  return mapWorkflowState(run).status
 }
 
-export async function downloadReleaseAsset(pkg: ReleasePackage, destination: string) {
-  assertGithubAssetUrl(pkg.assetApiUrl)
-  await mkdir(path.dirname(destination), { recursive: true })
-  const response = await githubRequest(pkg.assetApiUrl, 'application/octet-stream')
-  if (!response.ok || !response.body) {
-    throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Üretim paketi indirilemedi.', 502)
-  }
-  const buffer = Buffer.from(await response.arrayBuffer())
-  await writeFile(destination, buffer)
-  return buffer
+export function mapDeployPhase(run: GithubWorkflowRun | null, steps: GithubJobStep[] = []): DeployPhase {
+  if (!run) return 'idle'
+  const state = mapWorkflowState(run)
+  if (state.status === 'completed' && state.conclusion === 'success') return 'success'
+  if (state.status === 'completed') return 'failed'
+  if (state.status === 'queued') return 'preparing'
+
+  const current = [...steps].reverse().find((step) => step.status === 'in_progress')
+    || steps.find((step) => step.status === 'queued' && step.conclusion == null)
+  const name = (current?.name || '').toLowerCase()
+  if (/health|curl|doğrula|verify/.test(name)) return 'health'
+  if (/restart|passenger/.test(name)) return 'restart'
+  if (/sftp|deploy|rsync|upload|promote/.test(name)) return 'deploy'
+  if (/build|test|install|pnpm|standalone|version/.test(name)) return 'build'
+  return 'preparing'
 }
 
-export function sha256(buffer: Buffer) {
-  return createHash('sha256').update(buffer).digest('hex')
-}
-
-export function verifyChecksum(buffer: Buffer, expected: string) {
-  if (!expected) {
-    throw new UpdateError(UPDATE_CODES.CHECKSUM_MISSING, 'Paket imzası doğrulanamadı.', 400)
-  }
-  const actual = sha256(buffer)
-  if (actual !== expected.toLowerCase()) {
-    throw new UpdateError(UPDATE_CODES.CHECKSUM_MISMATCH, 'Paket bütünlüğü doğrulanamadı.', 400)
-  }
-  return actual
+export function workflowFilePath() {
+  return WORKFLOW_PATH
 }

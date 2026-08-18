@@ -1,0 +1,136 @@
+name: Production Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_sha:
+        description: Commit SHA
+        required: false
+        type: string
+
+concurrency:
+  group: parsmedya-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.26.2'
+  APP_ROOT: /home/parsmedya/parsmedya-app
+  STAGING_ROOT: /home/parsmedya/deployments/incoming
+
+jobs:
+  deploy:
+    name: Build and deploy production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validate deploy SHA
+        env:
+          DEPLOY_SHA: ${{ github.event.inputs.deploy_sha }}
+        run: |
+          if [ -n "$DEPLOY_SHA" ]; then
+            case "$DEPLOY_SHA" in
+              *[!0-9a-fA-F]* | "")
+                echo "Invalid commit SHA."
+                exit 1
+                ;;
+            esac
+            if [ "${#DEPLOY_SHA}" -ne 40 ]; then
+              echo "Commit SHA must be 40 hex characters."
+              exit 1
+            fi
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.deploy_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@${PNPM_VERSION} --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write version.json
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: GITHUB_SHA=$(git rev-parse HEAD) node scripts/write-version.mjs
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://parsmedya.net
+          NEXT_PUBLIC_ANALYTICS_ENABLED: 'true'
+          ANALYTICS_ENABLED: 'true'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: pnpm build
+
+      - name: Prepare standalone deploy directory
+        run: node scripts/prepare-deploy.mjs
+
+      - name: Upload to staging
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CPANEL_SFTP_HOST }}
+          username: ${{ secrets.CPANEL_SFTP_USERNAME }}
+          key: ${{ secrets.CPANEL_SFTP_PRIVATE_KEY }}
+          port: ${{ secrets.CPANEL_SFTP_PORT }}
+          source: ".deploy/*"
+          target: ${{ env.STAGING_ROOT }}
+          rm: true
+          strip_components: 1
+          overwrite: true
+
+      - name: Promote, restart Passenger
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          CPANEL_DEPLOY_PATH: ${{ secrets.CPANEL_DEPLOY_PATH }}
+        with:
+          host: ${{ secrets.CPANEL_SFTP_HOST }}
+          username: ${{ secrets.CPANEL_SFTP_USERNAME }}
+          key: ${{ secrets.CPANEL_SFTP_PRIVATE_KEY }}
+          port: ${{ secrets.CPANEL_SFTP_PORT }}
+          envs: CPANEL_DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            APP="${CPANEL_DEPLOY_PATH:-/home/parsmedya/parsmedya-app}"
+            IN="/home/parsmedya/deployments/incoming"
+            test -f "$IN/server.js"
+            test -f "$IN/package.json"
+            test -f "$IN/version.json"
+            mkdir -p "$APP/tmp"
+            rsync -a --delete \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              --exclude 'tmp/' \
+              --exclude 'logs/' \
+              --exclude '.git/' \
+              "$IN/" "$APP/"
+            touch "$APP/tmp/restart.txt"
+
+      - name: Health check
+        run: |
+          set -euo pipefail
+          check() {
+            curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$1" >/dev/null
+          }
+          check https://parsmedya.net/
+          check https://parsmedya.net/en
+          check https://parsmedya.net/sitemap.xml
+          check https://parsmedya.net/robots.txt
+          check https://parsmedya.net/admin/login

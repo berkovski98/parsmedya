@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { UpdatePaths } from './config'
 
 export interface VersionInfo {
   version: string
@@ -27,8 +26,4 @@ export async function readVersionFile(appRoot: string): Promise<VersionInfo> {
   } catch {
     return emptyVersionInfo()
   }
-}
-
-export async function readCurrentVersion(paths: UpdatePaths) {
-  return readVersionFile(paths.appRoot)
 }

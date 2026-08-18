@@ -13,5 +13,6 @@ supabase/.temp/
 # Common ignores
 node_modules
 .next/
+.deploy/
 *.tsbuildinfo
 .DS_Store

@@ -1,93 +1,43 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
 import { test } from 'node:test'
-import AdmZip from 'adm-zip'
-import { acquireLock, releaseLock } from '../lib/system-update/lock'
 import { requireAdminApi } from '../lib/system-update/auth'
-import { UpdateError, UPDATE_CODES } from '../lib/system-update/errors'
-import { sha256, type GithubRelease } from '../lib/system-update/github'
-import { SystemUpdateService, type GithubClient } from '../lib/system-update/service'
-import { requestPassengerRestart } from '../lib/system-update/restart'
-import { inspectZip } from '../lib/system-update/zip'
+import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
+import { isActiveRun, mapDeployPhase, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
+import { SystemUpdateService } from '../lib/system-update/service'
 import type { HistoryStore } from '../lib/system-update/history'
-import type { UpdatePaths } from '../lib/system-update/config'
+import type { VersionInfo } from '../lib/system-update/version-file'
 
-async function tempPaths(): Promise<UpdatePaths & { root: string }> {
-  const root = await mkdtemp(path.join(tmpdir(), 'pars-update-'))
-  const paths: UpdatePaths = {
-    appRoot: path.join(root, 'app'),
-    deployRoot: path.join(root, 'deploy'),
-    backupRoot: path.join(root, 'deploy', 'backups'),
-    stagingRoot: path.join(root, 'deploy', 'staging'),
-    downloadRoot: path.join(root, 'deploy', 'downloads'),
+const CURRENT = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+const LATEST = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+const PREVIOUS = 'cccccccccccccccccccccccccccccccccccccccc'
+
+function run(partial: Partial<GithubWorkflowRun>): GithubWorkflowRun {
+  return {
+    id: 11,
+    status: 'completed',
+    conclusion: 'success',
+    html_url: 'https://github.com/berkovski98/parsmedya/actions/runs/11',
+    created_at: '2026-08-18T12:00:00Z',
+    updated_at: '2026-08-18T12:10:00Z',
+    head_sha: LATEST,
+    display_title: 'Production Deploy',
+    run_number: 4,
+    event: 'workflow_dispatch',
+    ...partial,
   }
-  await mkdir(paths.appRoot, { recursive: true })
-  await mkdir(paths.backupRoot, { recursive: true })
-  await mkdir(paths.downloadRoot, { recursive: true })
-  await seedApp(paths.appRoot, '1.0.5')
-  return { ...paths, root }
 }
 
-async function seedApp(appRoot: string, version: string) {
-  await mkdir(path.join(appRoot, '.next'), { recursive: true })
-  await mkdir(path.join(appRoot, 'public'), { recursive: true })
-  await mkdir(path.join(appRoot, 'node_modules'), { recursive: true })
-  await writeFile(path.join(appRoot, 'server.js'), 'module.exports = {}\n')
-  await writeFile(path.join(appRoot, 'package.json'), '{"name":"parsmedya"}\n')
-  await writeFile(path.join(appRoot, '.next', 'BUILD_ID'), 'old\n')
-  await writeFile(path.join(appRoot, 'public', 'ok.txt'), 'ok\n')
-  await writeFile(path.join(appRoot, 'node_modules', '.keep'), '1\n')
-  await writeFile(path.join(appRoot, '.env'), 'SECRET=keep-me\n')
-  await writeFile(path.join(appRoot, 'version.json'), JSON.stringify({
-    version,
-    build: '2026.08.18.1',
-    commit: 'old',
-    createdAt: '2026-08-18T00:00:00.000Z',
+function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
+  const rows: { id: string; status: string; commit_sha: string; completed_at: string | null }[] = successful.map((sha, index) => ({
+    id: `success-${index + 1}`,
+    status: 'success',
+    commit_sha: sha,
+    completed_at: '2026-08-18T11:00:00.000Z',
   }))
-}
-
-function validZip(version: string) {
-  const zip = new AdmZip()
-  zip.addFile('server.js', Buffer.from('module.exports = { version: "' + version + '" }\n'))
-  zip.addFile('package.json', Buffer.from('{"name":"parsmedya","version":"' + version + '"}\n'))
-  zip.addFile('version.json', Buffer.from(JSON.stringify({
-    version,
-    build: '2026.08.18.2',
-    commit: 'new',
-    createdAt: '2026-08-18T12:00:00.000Z',
-  })))
-  zip.addFile('.next/BUILD_ID', Buffer.from(version))
-  zip.addFile('public/ok.txt', Buffer.from('new\n'))
-  zip.addFile('node_modules/.keep', Buffer.from('1\n'))
-  return zip.toBuffer()
-}
-
-function releaseFor(version: string, buffer: Buffer, digest?: string): GithubRelease {
-  const name = `parsmedya-production-${version}.zip`
   return {
-    tag_name: `v${version}`,
-    name: `v${version}`,
-    body: `Release ${version}`,
-    published_at: '2026-08-18T12:00:00Z',
-    assets: [{
-      id: 41,
-      name,
-      size: buffer.length,
-      url: 'https://api.github.com/repos/berkovski98/parsmedya/releases/assets/41',
-      browser_download_url: `https://github.com/berkovski98/parsmedya/releases/download/v${version}/${name}`,
-      digest: `sha256:${digest || sha256(buffer)}`,
-    }],
-  }
-}
-
-function memoryHistory(): HistoryStore {
-  const rows: { id: string; completed_at: string | null; status: string }[] = []
-  return {
-    async start() {
+    async start(record) {
       const id = String(rows.length + 1)
-      rows.push({ id, completed_at: null, status: 'started' })
+      rows.push({ id, status: record.status, commit_sha: record.commit_sha, completed_at: null })
       return id
     },
     async finish(id, patch) {
@@ -98,38 +48,58 @@ function memoryHistory(): HistoryStore {
       }
     },
     async latest() {
-      return rows.at(-1) || null
+      const row = rows.at(-1)
+      return row ? { completed_at: row.completed_at, status: row.status, commit_sha: row.commit_sha } : null
+    },
+    async latestSuccessful() {
+      const row = [...rows].reverse().find((item) => item.status === 'success')
+      return row ? { commit_sha: row.commit_sha } : null
+    },
+    async hasSuccessfulCommit(sha) {
+      return rows.some((item) => item.status === 'success' && item.commit_sha.toLowerCase() === sha.toLowerCase())
     },
   }
 }
 
-function clientFor(version: string, buffer: Buffer, digest?: string): GithubClient {
-  const release = releaseFor(version, buffer, digest)
+function clientFor(options: {
+  latest?: string
+  runs?: GithubWorkflowRun[]
+  existing?: string[]
+  onDispatch?: (sha?: string) => void
+  steps?: { name: string; status: string; conclusion: string | null }[]
+} = {}): GithubActionsClient {
+  const existing = new Set((options.existing || [CURRENT, LATEST, PREVIOUS]).map((sha) => sha.toLowerCase()))
   return {
-    async latest() { return release },
-    async byVersion(requested) {
-      if (requested !== version) {
-        throw new UpdateError(UPDATE_CODES.RELEASE_NOT_FOUND, 'İstenen sürüm GitHub üzerinde bulunamadı.', 404)
-      }
-      return release
+    async latestMainCommit() {
+      const sha = options.latest || LATEST
+      return { sha, message: 'feat: production deploy', date: '2026-08-18T12:00:00Z', author: 'Berk' }
     },
-    async download(_pkg, destination) {
-      await mkdir(path.dirname(destination), { recursive: true })
-      await writeFile(destination, buffer)
-      return buffer
+    async commitExists(sha) {
+      return existing.has(sha.toLowerCase())
+    },
+    async listWorkflowRuns() {
+      return options.runs || []
+    },
+    async listJobSteps() {
+      return options.steps || []
+    },
+    async dispatch(sha) {
+      options.onDispatch?.(sha)
     },
   }
 }
 
-function serviceFor(paths: UpdatePaths, github: GithubClient, healthStatus = 200) {
+function serviceFor(github: GithubActionsClient, commit = CURRENT) {
+  const version: VersionInfo = {
+    version: '1.1.0',
+    build: '12',
+    commit,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  }
   return new SystemUpdateService({
-    paths,
     github,
     history: memoryHistory(),
-    fetchHealth: async () => ({ status: healthStatus }),
-    restart: requestPassengerRestart,
-    healthRetries: 1,
-    healthDelayMs: 0,
+    readVersion: async () => version,
   })
 }
 
@@ -149,105 +119,107 @@ test('unauthorized install', async () => {
   ))
 })
 
-test('invalid version', async () => {
-  const paths = await tempPaths()
-  const service = serviceFor(paths, clientFor('1.0.6', validZip('1.0.6')))
-  await assert.rejects(() => service.install('latest'), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.INVALID_VERSION
+test('no update', async () => {
+  const service = serviceFor(clientFor({ latest: CURRENT }), CURRENT)
+  const check = await service.check()
+  assert.equal(check.updateAvailable, false)
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.NO_UPDATE
   ))
 })
 
-test('fake release', async () => {
-  const paths = await tempPaths()
-  const service = serviceFor(paths, clientFor('1.0.6', validZip('1.0.6')))
-  await assert.rejects(() => service.install('9.9.9'), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.RELEASE_NOT_FOUND
+test('update available', async () => {
+  const service = serviceFor(clientFor({ latest: LATEST }), CURRENT)
+  const check = await service.check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(check.latestCommit, LATEST)
+  assert.equal(check.latestAuthor, 'Berk')
+})
+
+test('workflow dispatch', async () => {
+  let dispatched: string | undefined = 'not-called'
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: (sha) => { dispatched = sha },
+  }), CURRENT)
+  const result = await service.install('admin-1')
+  assert.equal(result.status, 'queued')
+  assert.equal(result.commit, LATEST)
+  assert.equal(dispatched, undefined)
+})
+
+test('duplicate update 409', async () => {
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: [run({ status: 'in_progress', conclusion: null })],
+  }), CURRENT)
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
   ))
 })
 
-test('corrupt zip', async () => {
-  const paths = await tempPaths()
-  const buffer = Buffer.from('not-a-zip')
-  const service = serviceFor(paths, clientFor('1.0.6', buffer))
-  await assert.rejects(() => service.install('1.0.6'), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.ZIP_INVALID
-  ))
-})
-
-test('zip-slip', async () => {
-  const zip = new AdmZip()
-  zip.addFile('server.js', Buffer.from('ok'))
-  zip.addFile('package.json', Buffer.from('{}'))
-  zip.addFile('version.json', Buffer.from('{"version":"1.0.6"}'))
-  zip.addFile('.next/BUILD_ID', Buffer.from('x'))
-  zip.addFile('public/ok.txt', Buffer.from('x'))
-  zip.addFile('node_modules/.keep', Buffer.from('x'))
-  zip.addFile('ok/tmp/evil.js', Buffer.from('evil'))
-  const planted = zip.toBuffer()
-  const slipped = Buffer.from(planted.toString('latin1').replaceAll('ok/tmp/evil.js', '../tmp/evil.js'), 'latin1')
-  assert.throws(() => inspectZip(slipped), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.ZIP_SLIP
-  ))
-})
-
-test('missing server.js', async () => {
-  const zip = new AdmZip()
-  zip.addFile('package.json', Buffer.from('{}'))
-  zip.addFile('version.json', Buffer.from('{"version":"1.0.6"}'))
-  zip.addFile('.next/BUILD_ID', Buffer.from('x'))
-  zip.addFile('public/ok.txt', Buffer.from('x'))
-  zip.addFile('node_modules/.keep', Buffer.from('x'))
-  assert.throws(() => inspectZip(zip.toBuffer()), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.PACKAGE_INVALID
-  ))
-})
-
-test('duplicate deployment', async () => {
-  const paths = await tempPaths()
-  await acquireLock(paths.deployRoot)
-  try {
-    const service = serviceFor(paths, clientFor('1.0.6', validZip('1.0.6')))
-    await assert.rejects(() => service.install('1.0.6'), (error: unknown) => (
-      error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.CONFLICT
-    ))
-  } finally {
-    await releaseLock(paths.deployRoot)
-  }
-})
-
-test('successful staging', async () => {
-  const paths = await tempPaths()
-  const buffer = validZip('1.0.6')
-  const service = serviceFor(paths, clientFor('1.0.6', buffer))
-  const result = await service.install('1.0.6')
-  assert.equal(result.version, '1.0.6')
-  const version = JSON.parse(await readFile(path.join(paths.appRoot, 'version.json'), 'utf8')) as { version: string }
-  assert.equal(version.version, '1.0.6')
-  assert.equal(await readFile(path.join(paths.appRoot, '.env'), 'utf8'), 'SECRET=keep-me\n')
-  assert.match(await readFile(path.join(paths.appRoot, 'tmp', 'restart.txt'), 'utf8'), /^\d+/)
+test('status queued', async () => {
+  const service = serviceFor(clientFor({
+    runs: [run({ status: 'queued', conclusion: null })],
+  }))
   const status = await service.status()
-  assert.equal(status.backupCount, 1)
-  assert.equal(status.version, '1.0.6')
+  assert.equal(status.status, 'queued')
+  assert.equal(status.phase, 'preparing')
+  assert.equal(status.runId, 11)
 })
 
-test('failed health check', async () => {
-  const paths = await tempPaths()
-  const service = serviceFor(paths, clientFor('1.0.6', validZip('1.0.6')), 500)
-  await assert.rejects(() => service.install('1.0.6'), (error: unknown) => (
-    error instanceof UpdateError && error.code === UPDATE_CODES.HEALTH_FAILED
-  ))
-  const version = JSON.parse(await readFile(path.join(paths.appRoot, 'version.json'), 'utf8')) as { version: string }
-  assert.equal(version.version, '1.0.5')
-})
-
-test('rollback', async () => {
-  const paths = await tempPaths()
-  const service = serviceFor(paths, clientFor('1.0.6', validZip('1.0.6')))
-  await service.install('1.0.6')
+test('status in_progress', async () => {
+  const service = serviceFor(clientFor({
+    runs: [run({ status: 'in_progress', conclusion: null })],
+    steps: [{ name: 'Production build', status: 'in_progress', conclusion: null }],
+  }))
   const status = await service.status()
-  const backupId = status.backups[0]?.id
-  assert.ok(backupId)
-  await service.rollback(backupId)
-  const version = JSON.parse(await readFile(path.join(paths.appRoot, 'version.json'), 'utf8')) as { version: string }
-  assert.equal(version.version, '1.0.5')
+  assert.equal(status.status, 'in_progress')
+  assert.equal(status.phase, 'build')
+})
+
+test('status success', async () => {
+  const service = serviceFor(clientFor({
+    runs: [run({ status: 'completed', conclusion: 'success' })],
+  }))
+  const status = await service.status()
+  assert.equal(status.status, 'completed')
+  assert.equal(status.conclusion, 'success')
+  assert.equal(status.phase, 'success')
+  assert.equal(mapRunStatus(run({ status: 'completed', conclusion: 'success' })), 'completed')
+  assert.equal(mapDeployPhase(run({ status: 'completed', conclusion: 'success' })), 'success')
+})
+
+test('status failed', async () => {
+  const state = mapWorkflowState(run({ status: 'completed', conclusion: 'failure' }))
+  assert.equal(state.status, 'completed')
+  assert.equal(state.conclusion, 'failure')
+  assert.equal(isActiveRun(run({ status: 'completed', conclusion: 'failure' })), false)
+})
+
+test('status cancelled', async () => {
+  const state = mapWorkflowState(run({ status: 'completed', conclusion: 'cancelled' }))
+  assert.equal(state.status, 'completed')
+  assert.equal(state.conclusion, 'cancelled')
+})
+
+test('valid rollback', async () => {
+  let dispatched = ''
+  const service = serviceFor(clientFor({
+    onDispatch: (sha) => { dispatched = sha || '' },
+  }), CURRENT)
+  const result = await service.rollback(PREVIOUS, 'admin')
+  assert.equal(result.status, 'queued')
+  assert.equal(result.commit, PREVIOUS)
+  assert.equal(dispatched, PREVIOUS)
+})
+
+test('invalid rollback SHA', async () => {
+  const service = serviceFor(clientFor({ existing: [CURRENT, LATEST, PREVIOUS, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef'] }), CURRENT)
+  await assert.rejects(() => service.rollback('main', 'admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 400 && error.code === UPDATE_CODES.INVALID_SHA
+  ))
+  await assert.rejects(() => service.rollback('deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 'admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 404 && error.code === UPDATE_CODES.COMMIT_NOT_FOUND
+  ))
 })
