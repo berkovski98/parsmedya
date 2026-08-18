@@ -9,11 +9,11 @@ Every work session in this repo starts with a version number. Do this before edi
 
 1. Read `release-candidate.json` (pending install) and `version.json` (repo template, not live production).
 2. First user-facing sentence: `Çalışma sürümü: X.Y.Z`
-3. New shippable work on `main` that is not yet in the current candidate: bump `release-candidate.json` first (patch unless the user asks for minor/major).
-4. Same pending candidate, still not installed: keep that version. Do not invent a second number.
+3. A version already pushed to GitHub `main` is frozen. Do not edit that version’s notes, title, or treat later work as the same candidate.
+4. New shippable work after a GitHub push: bump `release-candidate.json` first (patch unless the user asks for minor/major). Continue with the new number.
 5. Never treat GitHub `main` or an in-progress/failed deploy as the installed version.
 6. Never start a production deploy unless the user explicitly asks (Güncellemeyi Kur).
-7. Before commit, refresh Turkish `release-candidate.json` title, summary, and notes for the current candidate.
+7. Before commit, write Turkish title, summary, and notes for the **new** candidate only.
 8. After each prompt with shippable changes: commit and push `main`. Do not wait to be asked.
 
 Installed version (Admin → Mevcut Sürüm) = production `version.json` after successful deploy + health + confirm.
