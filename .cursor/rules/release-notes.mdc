@@ -1,0 +1,21 @@
+---
+description: Keep Turkish customer-facing release notes in sync before every main commit
+alwaysApply: true
+---
+
+# Release notes before commit
+
+Before committing shippable work to `main`:
+
+1. Open with `Çalışma sürümü: X.Y.Z` from `release-candidate.json`.
+2. If this work is new and the candidate is still uninstalled, keep the same version. If the candidate was already installed, bump first (patch unless the change is a small feature → minor, or breaking → major). Do not bump aggressively.
+3. Update `release-candidate.json` with Turkish customer copy:
+   - `version`
+   - `title` / `releaseTitle` (short, human)
+   - `summary` (one sentence)
+   - `releaseNotes` (bullet list)
+4. Language: Turkish, plain, no commit jargon, no marketing hype.
+   - Bad: `fix: map github actions workflow status`
+   - Good: `Güncelleme ilerleme durumu daha doğru takip edilecek şekilde iyileştirildi.`
+5. Never put commit SHA, GitHub usernames, or raw commit messages in the customer Updates UI.
+6. Do not start a production deploy unless the user asks.

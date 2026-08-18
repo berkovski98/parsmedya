@@ -15,7 +15,7 @@ import {
   type DeploymentTrack,
   type StatusQuery,
 } from './tracking'
-import { isUpdateAvailable } from './release'
+import { emptyReleaseCandidate, isUpdateAvailable } from './release'
 import { readVersionFile, type VersionInfo } from './version-file'
 
 export interface SystemUpdateDeps {
@@ -59,8 +59,15 @@ export class SystemUpdateService {
         latestAuthor: latest.author,
         currentVersion: current.version,
         currentBuild: current.build,
+        latestVersion: candidateVersion,
         candidateVersion,
         candidateTitle: candidate.releaseTitle || '',
+        releaseTitle: candidate.releaseTitle || '',
+        releaseSummary: candidate.summary || '',
+        releaseNotes: candidate.releaseNotes || [],
+        releasedAt: latest.date,
+        installedTitle: current.releaseTitle || '',
+        installedNotes: current.releaseNotes || [],
         installedReleasedAt: current.releasedAt || current.createdAt,
         githubError: null as string | null,
         ...capabilities,
@@ -76,8 +83,15 @@ export class SystemUpdateService {
           latestAuthor: '',
           currentVersion: current.version,
           currentBuild: current.build,
+          latestVersion: '',
           candidateVersion: '',
           candidateTitle: '',
+          releaseTitle: '',
+          releaseSummary: '',
+          releaseNotes: [] as string[],
+          releasedAt: '',
+          installedTitle: current.releaseTitle || '',
+          installedNotes: current.releaseNotes || [],
           installedReleasedAt: current.releasedAt || current.createdAt,
           githubError: error.message,
           ...capabilities,
@@ -122,6 +136,10 @@ export class SystemUpdateService {
       targetCommit: query.targetCommit || this.track?.targetCommit || null,
       installingVersion: null as string | null,
       installingCommit: null as string | null,
+      installingTitle: null as string | null,
+      installingNotes: [] as string[],
+      releaseTitle: current.releaseTitle || '',
+      releaseNotes: current.releaseNotes || [],
       lastSuccessfulDeployment: {
         version: current.version,
         build: current.build,
@@ -132,7 +150,7 @@ export class SystemUpdateService {
     }
     try {
       const runs = await this.github.listWorkflowRuns()
-      const candidate = await this.github.releaseCandidate().catch(() => ({ version: '', releaseTitle: '', releaseNotes: [] as string[] }))
+      const candidate = await this.github.releaseCandidate().catch(() => emptyReleaseCandidate())
       const candidateVersion = candidate.version || ''
       const successful = [...runs]
         .filter((item) => item.conclusion === 'success' && sameCommit(item.head_sha, current.commit))
@@ -162,6 +180,8 @@ export class SystemUpdateService {
           currentCommit: current.commit,
           installingVersion: candidateVersion || null,
           installingCommit,
+          installingTitle: candidate.releaseTitle || null,
+          installingNotes: candidate.releaseNotes || [],
           previousRunId: merged.previousRunId ?? null,
           requestedAt: merged.requestedAt || null,
           targetCommit: merged.targetCommit || null,
@@ -211,6 +231,8 @@ export class SystemUpdateService {
         targetCommit: merged.targetCommit || this.track?.targetCommit || selected.run.head_sha,
         installingVersion: selected.isTrackedDeployment && (trackedActive || trackedFailed) ? (candidateVersion || null) : null,
         installingCommit: selected.isTrackedDeployment && (trackedActive || trackedFailed) ? installingCommit : null,
+        installingTitle: selected.isTrackedDeployment ? (candidate.releaseTitle || null) : null,
+        installingNotes: selected.isTrackedDeployment ? (candidate.releaseNotes || []) : [],
       }
     } catch {
       if (mergeStatusQuery(this.track, query).requestedAt || mergeStatusQuery(this.track, query).previousRunId != null) {

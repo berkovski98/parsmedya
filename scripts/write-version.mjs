@@ -14,12 +14,17 @@ try {
 
 const notes = Array.isArray(manifest.releaseNotes)
   ? manifest.releaseNotes.filter((item) => typeof item === 'string')
-  : []
+  : Array.isArray(manifest.changes)
+    ? manifest.changes.filter((item) => typeof item === 'string')
+    : []
 
 const next = {
   version: typeof manifest.version === 'string' && manifest.version ? manifest.version : '0.0.0',
   commit: process.env.GITHUB_SHA || '',
-  releaseTitle: typeof manifest.releaseTitle === 'string' ? manifest.releaseTitle : '',
+  releaseTitle: typeof manifest.releaseTitle === 'string' && manifest.releaseTitle
+    ? manifest.releaseTitle
+    : typeof manifest.title === 'string' ? manifest.title : '',
+  summary: typeof manifest.summary === 'string' ? manifest.summary : '',
   releaseNotes: notes,
 }
 

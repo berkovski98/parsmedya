@@ -1,0 +1,20 @@
+---
+description: Start every Pars Medya work session by stating and assigning the release candidate version
+alwaysApply: true
+---
+
+# Version first
+
+Every work session in this repo starts with a version number. Do this before editing code.
+
+1. Read `release-candidate.json` (pending install) and `version.json` (repo template, not live production).
+2. First user-facing sentence: `Çalışma sürümü: X.Y.Z`
+3. New shippable work on `main` that is not yet in the current candidate: bump `release-candidate.json` first (patch unless the user asks for minor/major).
+4. Same pending candidate, still not installed: keep that version. Do not invent a second number.
+5. Never treat GitHub `main` or an in-progress/failed deploy as the installed version.
+6. Never start a production deploy unless the user explicitly asks.
+7. Before commit, refresh Turkish `release-candidate.json` title, summary, and notes for the current candidate.
+
+Installed version (Admin → Mevcut Sürüm) = production `version.json` after successful deploy + health + confirm.
+Candidate version (Admin → Yeni Güncelleme) = `release-candidate.json` on `main`.
+Customer Updates UI never shows GitHub, branch, SHA, author, or raw commit messages.

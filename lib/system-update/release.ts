@@ -13,6 +13,7 @@ export type ReleaseCandidate = {
   version: string
   commit: string
   releaseTitle: string
+  summary: string
   releaseNotes: string[]
 }
 
@@ -55,18 +56,25 @@ export function confirmInstalledVersion(
 }
 
 export function emptyReleaseCandidate(): ReleaseCandidate {
-  return { version: '', commit: '', releaseTitle: '', releaseNotes: [] }
+  return { version: '', commit: '', releaseTitle: '', summary: '', releaseNotes: [] }
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
 }
 
 export function parseReleaseCandidate(value: unknown, commit = ''): ReleaseCandidate {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {}
-  const notes = Array.isArray(record.releaseNotes)
-    ? record.releaseNotes.filter((item): item is string => typeof item === 'string')
-    : []
+  const notes = stringList(record.releaseNotes)
+  const changes = stringList(record.changes)
   return {
     version: typeof record.version === 'string' ? record.version : '',
     commit: typeof record.commit === 'string' && record.commit ? record.commit : commit,
-    releaseTitle: typeof record.releaseTitle === 'string' ? record.releaseTitle : '',
-    releaseNotes: notes,
+    releaseTitle: typeof record.releaseTitle === 'string' && record.releaseTitle
+      ? record.releaseTitle
+      : typeof record.title === 'string' ? record.title : '',
+    summary: typeof record.summary === 'string' ? record.summary : '',
+    releaseNotes: notes.length > 0 ? notes : changes,
   }
 }

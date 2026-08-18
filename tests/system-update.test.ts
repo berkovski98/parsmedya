@@ -72,6 +72,9 @@ function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
 function clientFor(options: {
   latest?: string
   candidateVersion?: string
+  candidateTitle?: string
+  candidateSummary?: string
+  candidateNotes?: string[]
   runs?: GithubWorkflowRun[] | (() => GithubWorkflowRun[])
   existing?: string[]
   onDispatch?: (sha?: string) => void
@@ -85,7 +88,12 @@ function clientFor(options: {
       return { sha, message: 'feat: production deploy', date: '2026-08-18T12:00:00Z', author: 'Berk' }
     },
     async releaseCandidate() {
-      return { version: options.candidateVersion || '1.1.0', releaseTitle: 'Güncelleme', releaseNotes: [] }
+      return {
+        version: options.candidateVersion || '1.1.0',
+        releaseTitle: options.candidateTitle || 'Güncelleme',
+        summary: options.candidateSummary || '',
+        releaseNotes: options.candidateNotes || [],
+      }
     },
     async commitExists(sha) {
       return existing.has(sha.toLowerCase())
@@ -860,13 +868,23 @@ test('GET update routes are read-only and install GET is rejected', () => {
   assert.doesNotMatch(panel, /Math\.random/)
   assert.match(panel, /Mevcut Sürüm/)
   assert.match(panel, /Yeni Güncelleme/)
-  assert.match(panel, /Son başarılı kurulum/)
+  assert.match(panel, /Güncel Sürüm/)
+  assert.match(panel, /Son başarılı kurulum|Son güncelleme/)
   assert.match(panel, /Kurulan sürüm/)
+  assert.match(panel, /Neler değişti/)
+  assert.match(panel, /sürümü kurulacak/)
+  assert.match(panel, /Değişiklikleri göster/)
   assert.doesNotMatch(panel, /GitHub main/)
   assert.doesNotMatch(panel, /shortSha/)
   assert.doesNotMatch(panel, /Row label="Yazar"/)
   assert.doesNotMatch(panel, /Row label="Commit"/)
+  assert.doesNotMatch(panel, /Row label="Son commit"/)
   assert.doesNotMatch(panel, /GitHub Actions kaydı/)
+  assert.doesNotMatch(panel, /berkovski98/)
+  assert.doesNotMatch(panel, /latestMessage/)
+  const progress = readFileSync('components/admin/deployment-progress.tsx', 'utf8')
+  assert.doesNotMatch(progress, /GitHub/)
+  assert.match(progress, /başarıyla kuruldu/)
 })
 
 test('production-deploy.yml is workflow_dispatch only', () => {
@@ -1059,7 +1077,13 @@ const INSTALLED_113 = {
 
 test('A production current stays 1.1.3 while GitHub candidate is 1.1.4', async () => {
   const service = serviceFor(
-    clientFor({ latest: LATEST, candidateVersion: '1.1.4' }),
+    clientFor({
+      latest: LATEST,
+      candidateVersion: '1.1.4',
+      candidateTitle: 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi',
+      candidateSummary: 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.',
+      candidateNotes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+    }),
     CURRENT,
     true,
     INSTALLED_113,
@@ -1067,8 +1091,12 @@ test('A production current stays 1.1.3 while GitHub candidate is 1.1.4', async (
   const check = await service.check()
   const status = await service.status()
   assert.equal(check.currentVersion, '1.1.3')
+  assert.equal(check.latestVersion, '1.1.4')
   assert.equal(check.candidateVersion, '1.1.4')
   assert.equal(check.updateAvailable, true)
+  assert.equal(check.releaseTitle, 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi')
+  assert.deepEqual(check.releaseNotes, ['Hizmet sayfalarının görsel yapısı yenilendi.'])
+  assert.notEqual(check.releaseNotes[0], check.latestMessage)
   assert.equal(status.version, '1.1.3')
   assert.equal(status.build, '12')
   assert.equal(status.currentCommit, CURRENT)
@@ -1234,4 +1262,25 @@ test('confirm production version stays in the health phase', () => {
     { name: 'Health check /admin/login', status: 'completed', conclusion: 'success' },
     { name: 'Confirm production version', status: 'in_progress', conclusion: null },
   ]), 'health')
+})
+
+test('success panel shows version and Turkish notes without GitHub jargon', () => {
+  const html = renderToStaticMarkup(createElement(DeploymentProgressPanel, {
+    overallProgress: 100,
+    stepProgress: 100,
+    stepLabel: 'Tamamlandı',
+    stepDetail: '',
+    substeps: [],
+    failed: false,
+    succeeded: true,
+    successVersion: '1.1.1',
+    successNotes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+  }))
+  assert.match(html, /Güncelleme tamamlandı/)
+  assert.match(html, /Sürüm 1\.1\.1 başarıyla kuruldu/)
+  assert.match(html, /Neler değişti/)
+  assert.match(html, /Hizmet sayfalarının görsel yapısı yenilendi/)
+  assert.doesNotMatch(html, /GitHub/)
+  assert.doesNotMatch(html, /berkovski/)
+  assert.doesNotMatch(html, /fix:/)
 })

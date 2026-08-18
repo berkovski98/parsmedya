@@ -1,5 +1,13 @@
 {
   "version": "1.1.1",
-  "releaseTitle": "Güncelleme",
-  "releaseNotes": []
+  "title": "Yönetim Paneli ve Hizmet Sayfaları Güncellemesi",
+  "releaseTitle": "Yönetim Paneli ve Hizmet Sayfaları Güncellemesi",
+  "summary": "Yönetim paneli, hizmet sayfaları ve sistem güncellemelerinde çeşitli iyileştirmeler yapıldı.",
+  "releaseNotes": [
+    "Hizmet sayfalarının görsel yapısı yenilendi.",
+    "Güncelleme ilerleme ekranı iyileştirildi.",
+    "Kurulu sürüm, yalnızca başarılı kurulumdan sonra güncellenecek şekilde ayrıldı.",
+    "Güncelleme ekranı müşteriler için sadeleştirildi.",
+    "Sürüm kontrol sistemi iyileştirildi."
+  ]
 }

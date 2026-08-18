@@ -7,16 +7,19 @@ import { deploymentPanelState } from '@/lib/system-update/tracking'
 import { DeploymentProgressPanel } from '@/components/admin/deployment-progress'
 
 type CheckData = {
-  currentCommit: string
-  latestCommit: string
   updateAvailable: boolean
-  latestMessage: string
-  latestDate: string
-  latestAuthor: string
   currentVersion: string
   currentBuild?: string
+  latestVersion?: string
   candidateVersion?: string
   candidateTitle?: string
+  releaseTitle?: string
+  releaseSummary?: string
+  releaseNotes?: string[]
+  releasedAt?: string
+  latestDate?: string
+  installedTitle?: string
+  installedNotes?: string[]
   installedReleasedAt?: string
   githubReadAvailable: boolean
   githubDeployConfigured: boolean
@@ -58,6 +61,10 @@ type StatusData = {
   targetCommit: string | null
   installingVersion?: string | null
   installingCommit?: string | null
+  installingTitle?: string | null
+  installingNotes?: string[]
+  releaseTitle?: string
+  releaseNotes?: string[]
   lastSuccessfulDeployment?: {
     version: string
     build: string
@@ -91,6 +98,13 @@ const STORAGE_KEY = 'parsmedya.deploy-track'
 
 function isActiveStatus(status?: StatusData | null) {
   return status?.status === 'queued' || status?.status === 'in_progress'
+}
+
+function publicError(message?: string | null) {
+  if (!message) return ''
+  if (/yapılandırılmamış|not configured/i.test(message)) return 'Otomatik kurulum yapılandırılmadı.'
+  if (/github|workflow run|head_sha|commit sha/i.test(message)) return 'Güncelleme bilgisi alınamadı.'
+  return message
 }
 
 function readStoredTrack(): TrackState | null {
@@ -144,12 +158,13 @@ export function UpdatesPanel({
   const [readAvailable, setReadAvailable] = useState(initialReadAvailable)
   const [deployConfigured, setDeployConfigured] = useState(initialDeployConfigured)
   const [message, setMessage] = useState('')
-  const [error, setError] = useState(initialError)
+  const [error, setError] = useState(publicError(initialError))
   const [checking, setChecking] = useState(false)
   const [installing, setInstalling] = useState(() => Boolean(initialStatus?.isTrackedDeployment && isActiveStatus(initialStatus)))
   const [track, setTrack] = useState<TrackState | null>(() => initialTrack(initialStatus))
   const [outcome, setOutcome] = useState<'success' | 'failure' | 'cancelled' | null>(null)
   const [dialog, setDialog] = useState<DeployDialog>(null)
+  const [showChanges, setShowChanges] = useState(false)
   const installLock = useRef(false)
   const trackRef = useRef<TrackState | null>(initialTrack(initialStatus))
 
@@ -163,13 +178,13 @@ export function UpdatesPanel({
     const checkRes = await fetch('/api/system/update/check', { cache: 'no-store' })
     const checkJson = await checkRes.json() as ApiResponse<CheckData>
     if (!checkJson.ok) {
-      setError(checkJson.error.message)
+      setError(publicError(checkJson.error.message))
       return null
     }
     setCheck(checkJson.data)
     setReadAvailable(checkJson.data.githubReadAvailable)
     setDeployConfigured(checkJson.data.githubDeployConfigured)
-    if (checkJson.data.githubError) setError(checkJson.data.githubError)
+    if (checkJson.data.githubError) setError(publicError(checkJson.data.githubError))
     return checkJson.data
   }, [])
 
@@ -184,7 +199,7 @@ export function UpdatesPanel({
     const statusRes = await fetch(`/api/system/update/status${suffix}`, { cache: 'no-store' })
     const statusJson = await statusRes.json() as ApiResponse<StatusData>
     if (!statusJson.ok) {
-      if (statusJson.error.code !== 'GITHUB_DEPLOY_NOT_CONFIGURED') setError(statusJson.error.message)
+      if (statusJson.error.code !== 'GITHUB_DEPLOY_NOT_CONFIGURED') setError(publicError(statusJson.error.message))
       return null
     }
     const next = statusJson.data
@@ -210,7 +225,7 @@ export function UpdatesPanel({
       setInstalling(false)
       installLock.current = false
       if (nextOutcome === 'success') {
-        setMessage('Yeni sürüm aktif.')
+        setMessage('')
         void loadCheck()
       }
     }
@@ -244,6 +259,7 @@ export function UpdatesPanel({
   function requestInstall() {
     if (!deployConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
     setError('')
+    setShowChanges(false)
     setDialog(openDeployDialog('install').dialog)
   }
 
@@ -254,6 +270,7 @@ export function UpdatesPanel({
   }
 
   function closeDialog() {
+    setShowChanges(false)
     setDialog(cancelDeployDialog().dialog)
   }
 
@@ -273,11 +290,11 @@ export function UpdatesPanel({
     persistTrack(null)
     try {
       const next = await loadCheck()
-      if (next?.latestCommit) {
+      if (next && !next.githubError) {
         setError('')
         setMessage('Güncelleme bilgisi kontrol edildi. Kurulum başlatılmadı.')
       } else {
-        setError(next?.githubError || 'Güncelleme bilgisi alınamadı.')
+        setError(publicError(next?.githubError) || 'Güncelleme bilgisi alınamadı.')
       }
     } catch {
       setError('Güncelleme bilgisi alınamadı.')
@@ -301,7 +318,7 @@ export function UpdatesPanel({
       })
       const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
-        setError(json.error.message)
+        setError(publicError(json.error.message))
         setInstalling(false)
         installLock.current = false
         return
@@ -349,7 +366,7 @@ export function UpdatesPanel({
       })
       const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
-        setError(json.error.message)
+        setError(publicError(json.error.message))
         setInstalling(false)
         installLock.current = false
         return
@@ -372,11 +389,22 @@ export function UpdatesPanel({
   const failed = panel.outcome === 'failure' || panel.outcome === 'cancelled'
   const succeeded = panel.outcome === 'success'
   const progress = displayProgress(panel.progress, succeeded)
+  const currentVersion = status?.version || check?.currentVersion || '—'
+  const latestVersion = check?.latestVersion || check?.candidateVersion || ''
+  const updateAvailable = Boolean(check?.updateAvailable)
+  const candidateTitle = check?.releaseTitle || check?.candidateTitle || status?.installingTitle || ''
+  const candidateSummary = check?.releaseSummary || ''
+  const candidateNotes = check?.releaseNotes?.length ? check.releaseNotes : (status?.installingNotes || [])
+  const installedStatus = !check ? '—' : updateAvailable ? 'Yeni sürüm mevcut' : 'Güncel'
+  const updateCardTitle = updateAvailable || installing || panel.waitingForGithub ? 'Yeni Güncelleme' : 'Güncel Sürüm'
+  const successVersion = succeeded
+    ? (status?.version && !updateAvailable ? status.version : latestVersion || status?.version)
+    : null
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Güncellemeler</h1>
-      <p className="mt-2 text-muted-foreground">Mevcut sürüm, production’a kurulmuş son başarılı sürümdür. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
+      <p className="mt-2 text-muted-foreground">Mevcut sürüm, kurulmuş son başarılı sürümdür. Yeni sürüm yalnız “Güncellemeyi Kur” ile yüklenir.</p>
       {!deployConfigured && (
         <div role="status" className="mt-6 rounded-lg border border-border bg-secondary/60 p-4 text-sm">
           <p className="font-medium">Otomatik kurulum yapılandırılmadı.</p>
@@ -396,23 +424,38 @@ export function UpdatesPanel({
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="font-display text-xl font-bold">Mevcut Sürüm</h2>
           <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Sürüm" value={status?.version || check?.currentVersion || '—'} />
+            <Row label="Sürüm" value={currentVersion} />
             <Row label="Build" value={status?.build || check?.currentBuild || '—'} />
-            <Row label="Son başarılı kurulum" value={formatDate(status?.lastSuccessfulDeployment?.deployedAt || status?.completedAt || check?.installedReleasedAt)} />
+            <Row label="Son güncelleme" value={formatDateTime(status?.lastSuccessfulDeployment?.deployedAt || status?.completedAt || check?.installedReleasedAt)} />
+            <Row label="Durum" value={installedStatus} />
           </dl>
-          {succeeded && (
-            <p className="mt-4 inline-flex rounded-full border border-green-600/30 bg-green-600/10 px-3 py-1 text-xs font-semibold text-green-800">Yeni sürüm aktif</p>
-          )}
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-display text-xl font-bold">Yeni Güncelleme</h2>
+          <h2 className="font-display text-xl font-bold">{updateCardTitle}</h2>
           <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Aday sürüm" value={check?.candidateVersion || (check?.updateAvailable ? 'Yeni güncelleme mevcut' : '—')} />
-            <Row label="Durum" value={!check ? '—' : check.updateAvailable ? 'Kurulmayı bekliyor' : check.latestCommit ? 'Sistem güncel' : '—'} />
+            <Row label="Sürüm" value={latestVersion || (updateAvailable ? 'Yeni güncelleme mevcut' : currentVersion)} />
+            <Row label="Yayın tarihi" value={formatDate(check?.releasedAt || check?.latestDate)} />
+            <Row label="Güncelleme" value={!check ? '—' : updateAvailable ? 'Yeni sürüm mevcut' : 'Sistem güncel'} />
           </dl>
-          {panel.show && (status?.installingVersion || check?.candidateVersion) && (installing || panel.waitingForGithub || isActiveStatus(status)) && (
+          {(candidateTitle || candidateSummary) && (
+            <div className="mt-4">
+              <p className="text-sm text-muted-foreground">Güncelleme özeti</p>
+              <p className="mt-1 text-sm font-medium">{candidateSummary || candidateTitle}</p>
+            </div>
+          )}
+          {candidateNotes.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium">Neler değişti?</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {candidateNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {panel.show && (status?.installingVersion || latestVersion) && (installing || panel.waitingForGithub || isActiveStatus(status)) && (
             <p className="mt-4 text-sm font-medium text-accent">
-              Kurulan sürüm: {status?.installingVersion || check?.candidateVersion}
+              Kurulan sürüm: {status?.installingVersion || latestVersion}
             </p>
           )}
           <div className="mt-5 flex flex-wrap gap-3">
@@ -444,7 +487,9 @@ export function UpdatesPanel({
           failed={failed}
           succeeded={succeeded}
           errorMessage={status?.errorMessage}
-          installingVersion={status?.installingVersion || check?.candidateVersion || null}
+          installingVersion={status?.installingVersion || latestVersion || null}
+          successVersion={successVersion}
+          successNotes={candidateNotes}
         />
       )}
 
@@ -472,11 +517,38 @@ export function UpdatesPanel({
             <h2 id="deploy-confirm-title" className="font-display text-xl font-bold">
               {dialog === 'rollback' ? 'Önceki sürüme dönülsün mü?' : 'Güncelleme kurulsun mu?'}
             </h2>
-            <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
-              {dialog === 'rollback'
-                ? 'Önceki başarılı sürüme dönülecek.\nDevam etmek istiyor musunuz?'
-                : 'Yeni sürüm production ortamına kurulacak.\nDevam etmek istiyor musunuz?'}
-            </p>
+            {dialog === 'rollback' ? (
+              <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
+                Önceki başarılı sürüme dönülecek.{'\n'}Devam etmek istiyor musunuz?
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3 text-sm">
+                <p className="font-medium">{latestVersion ? `${latestVersion} sürümü kurulacak.` : 'Yeni sürüm kurulacak.'}</p>
+                {candidateSummary || candidateTitle ? (
+                  <p className="text-muted-foreground">{candidateSummary || candidateTitle}</p>
+                ) : (
+                  <p className="text-muted-foreground">Yeni sürüm canlı ortama kurulacak. Devam etmek istiyor musunuz?</p>
+                )}
+                {candidateNotes.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      className="font-medium text-accent hover:underline"
+                      onClick={() => setShowChanges((open) => !open)}
+                    >
+                      {showChanges ? 'Değişiklikleri gizle' : 'Değişiklikleri göster'}
+                    </button>
+                    {showChanges && (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+                        {candidateNotes.map((note) => (
+                          <li key={note}>{note}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={closeDialog} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium">
                 Vazgeç
@@ -500,7 +572,14 @@ function formatDate(value?: string | null) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'long' }).format(date)
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'long', timeStyle: 'short' }).format(date)
 }
 
 function Row({ label, value }: { label: string; value: string }) {

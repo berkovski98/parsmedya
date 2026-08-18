@@ -16,6 +16,8 @@ export type DeploymentProgressPanelProps = {
   succeeded: boolean
   errorMessage?: string | null
   installingVersion?: string | null
+  successVersion?: string | null
+  successNotes?: string[]
 }
 
 export function DeploymentProgressPanel({
@@ -28,6 +30,8 @@ export function DeploymentProgressPanel({
   succeeded,
   errorMessage,
   installingVersion,
+  successVersion,
+  successNotes = [],
 }: DeploymentProgressPanelProps) {
   const progress = Math.max(0, Math.min(overallProgress, 100))
   const inner = Math.max(0, Math.min(stepProgress, 100))
@@ -51,8 +55,22 @@ export function DeploymentProgressPanel({
         <p className="mt-3 max-w-2xl text-sm font-medium">Kurulan sürüm: {installingVersion}</p>
       )}
       <p className="mt-3 max-w-2xl text-sm font-medium">
-        {failed ? `İşlem %${progress} aşamasında durdu.` : succeeded ? '✓ Güncelleme başarıyla tamamlandı' : stepLabel}
+        {failed
+          ? `İşlem %${progress} aşamasında durdu.`
+          : succeeded
+            ? (successVersion ? `Sürüm ${successVersion} başarıyla kuruldu.` : '✓ Güncelleme başarıyla tamamlandı')
+            : stepLabel}
       </p>
+      {succeeded && successNotes.length > 0 && (
+        <div className="mt-4 max-w-2xl">
+          <p className="text-sm font-medium">Neler değişti</p>
+          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+            {successNotes.map((note) => (
+              <li key={note}>✓ {note}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {failed && errorMessage && (
         <p className="mt-2 max-w-2xl text-sm text-destructive">{errorMessage}</p>
       )}

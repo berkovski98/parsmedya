@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { confirmInstalledVersion, isUpdateAvailable, nextBuildNumber, parseBuildNumber } from '../lib/system-update/release'
+import { confirmInstalledVersion, isUpdateAvailable, nextBuildNumber, parseBuildNumber, parseReleaseCandidate } from '../lib/system-update/release'
 
 test('F build number increments only on successful production confirm', () => {
   assert.equal(parseBuildNumber('12'), 12)
@@ -21,6 +21,7 @@ test('F build number increments only on successful production confirm', () => {
       version: '1.1.4',
       commit: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       releaseTitle: 'Güncelleme',
+      summary: 'Yeni sürüm kurulur.',
       releaseNotes: ['Yeni sürüm'],
     },
     '2026-08-18T13:00:00.000Z',
@@ -51,4 +52,17 @@ test('updateAvailable compares installed production against the GitHub candidate
     { version: '1.1.3', commit: 'aaa' },
     { version: '1.1.4', commit: 'aaa' },
   ), true)
+})
+
+test('release manifest accepts title, summary and changes aliases', () => {
+  const parsed = parseReleaseCandidate({
+    version: '1.1.1',
+    title: 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi',
+    summary: 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.',
+    changes: ['Hizmet sayfalarının görsel yapısı yenilendi.'],
+  })
+  assert.equal(parsed.version, '1.1.1')
+  assert.equal(parsed.releaseTitle, 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi')
+  assert.equal(parsed.summary, 'Yönetim paneli ve hizmet sayfalarında iyileştirmeler yapıldı.')
+  assert.deepEqual(parsed.releaseNotes, ['Hizmet sayfalarının görsel yapısı yenilendi.'])
 })

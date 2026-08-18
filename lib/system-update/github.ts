@@ -1,4 +1,5 @@
 import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, hasGithubDeployToken, isCommitSha } from './config'
+import { emptyReleaseCandidate, parseReleaseCandidate } from './release'
 import { UPDATE_CODES, UpdateError } from './errors'
 import {
   DEPLOYMENT_PROGRESS,
@@ -67,7 +68,7 @@ export interface DeployProgress {
 
 export interface GithubActionsClient {
   latestMainCommit(): Promise<GithubCommit>
-  releaseCandidate(): Promise<{ version: string; releaseTitle: string; releaseNotes: string[] }>
+  releaseCandidate(): Promise<{ version: string; releaseTitle: string; summary: string; releaseNotes: string[] }>
   commitExists(sha: string): Promise<boolean>
   listWorkflowRuns(): Promise<GithubWorkflowRun[]>
   getWorkflowRun(runId: number): Promise<GithubWorkflowRun | null>
@@ -150,19 +151,12 @@ export const githubActions: GithubActionsClient = {
   async releaseCandidate() {
     try {
       const response = await githubFetch(`${API}/contents/release-candidate.json?ref=${encodeURIComponent(GITHUB_BRANCH)}`)
-      if (!response.ok) return { version: '', releaseTitle: '', releaseNotes: [] as string[] }
+      if (!response.ok) return emptyReleaseCandidate()
       const payload = await readJson<{ content?: string }>(response)
       const raw = Buffer.from((payload.content || '').replace(/\s/g, ''), 'base64').toString('utf8')
-      const parsed = JSON.parse(raw) as { version?: string; releaseTitle?: string; releaseNotes?: unknown }
-      return {
-        version: typeof parsed.version === 'string' ? parsed.version : '',
-        releaseTitle: typeof parsed.releaseTitle === 'string' ? parsed.releaseTitle : '',
-        releaseNotes: Array.isArray(parsed.releaseNotes)
-          ? parsed.releaseNotes.filter((item): item is string => typeof item === 'string')
-          : [],
-      }
+      return parseReleaseCandidate(JSON.parse(raw))
     } catch {
-      return { version: '', releaseTitle: '', releaseNotes: [] as string[] }
+      return emptyReleaseCandidate()
     }
   },
 
