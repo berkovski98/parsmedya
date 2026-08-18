@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { Locale } from '@/lib/i18n'
-import { absoluteUrl } from '@/lib/site-url'
+import { canonicalAbsoluteUrl } from '@/lib/site-url'
 
 export const DEFAULT_SOCIAL_IMAGE = '/parsmedya-hero.png'
 
@@ -9,9 +9,9 @@ export function absoluteAlternates(
   languages: Record<string, string>,
 ): Metadata['alternates'] {
   return {
-    canonical: absoluteUrl(canonical),
+    canonical: canonicalAbsoluteUrl(canonical),
     languages: Object.fromEntries(
-      Object.entries(languages).map(([key, value]) => [key, absoluteUrl(value)]),
+      Object.entries(languages).map(([key, value]) => [key, canonicalAbsoluteUrl(value)]),
     ),
   }
 }
@@ -21,7 +21,7 @@ export function localizedAlternates(canonical: string, tr: string, en: string): 
 }
 
 export function createPageMetadata({ title, description, canonical, tr, en, locale, image = DEFAULT_SOCIAL_IMAGE, type = 'website' }: { title: string; description: string; canonical: string; tr: string; en: string; locale: Locale; image?: string; type?: 'website' | 'article' }): Metadata {
-  const canonicalUrl = absoluteUrl(canonical)
+  const canonicalUrl = canonicalAbsoluteUrl(canonical)
   return {
     title,
     description,

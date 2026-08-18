@@ -157,3 +157,6 @@ jobs:
           check https://parsmedya.net/sitemap-en.xml
           check https://parsmedya.net/robots.txt
           check https://parsmedya.net/admin/login
+
+      - name: Verify production sitemaps
+        run: node scripts/verify-sitemaps.mjs https://parsmedya.net
