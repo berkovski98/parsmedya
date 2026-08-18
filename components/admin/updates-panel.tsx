@@ -10,6 +10,7 @@ type CheckData = {
   latestDate: string
   latestAuthor: string
   currentVersion: string
+  githubConfigured: boolean
 }
 
 type StatusData = {
@@ -30,6 +31,7 @@ type StatusData = {
   previousCommit: string
   nodeVersion: string
   errorMessage: string | null
+  githubConfigured: boolean
 }
 
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
@@ -54,13 +56,16 @@ export function UpdatesPanel({
   initialCheck,
   initialStatus,
   initialError = '',
+  githubConfigured: initialGithubConfigured,
 }: {
   initialCheck: CheckData | null
   initialStatus: StatusData | null
   initialError?: string
+  githubConfigured: boolean
 }) {
   const [check, setCheck] = useState<CheckData | null>(initialCheck)
   const [status, setStatus] = useState<StatusData | null>(initialStatus)
+  const [githubConfigured, setGithubConfigured] = useState(initialGithubConfigured)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(initialError)
   const [checking, setChecking] = useState(false)
@@ -74,19 +79,27 @@ export function UpdatesPanel({
   const loadCheck = useCallback(async () => {
     const checkRes = await fetch('/api/system/update/check', { cache: 'no-store' })
     const checkJson = await checkRes.json() as ApiResponse<CheckData>
-    if (checkJson.ok) setCheck(checkJson.data)
-    else setError(checkJson.error.message)
+    if (checkJson.ok) {
+      setCheck(checkJson.data)
+      setGithubConfigured(checkJson.data.githubConfigured)
+    } else if (checkJson.error.code === 'GITHUB_DEPLOY_NOT_CONFIGURED') {
+      setGithubConfigured(false)
+    } else {
+      setError(checkJson.error.message)
+    }
   }, [])
 
   const loadStatus = useCallback(async () => {
     const statusRes = await fetch('/api/system/update/status', { cache: 'no-store' })
     const statusJson = await statusRes.json() as ApiResponse<StatusData>
     if (!statusJson.ok) {
-      setError(statusJson.error.message)
+      if (statusJson.error.code !== 'GITHUB_DEPLOY_NOT_CONFIGURED') setError(statusJson.error.message)
+      else setGithubConfigured(false)
       return null
     }
     const next = statusJson.data
     setStatus(next)
+    setGithubConfigured(next.githubConfigured)
     if (isActiveStatus(next) && next.runId) {
       setTrackedRunId(next.runId)
       awaitingRun.current = false
@@ -114,16 +127,16 @@ export function UpdatesPanel({
     setMessage('')
     try {
       await loadCheck()
-      setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
+      if (githubConfigured) setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
     } catch {
-      setError('Güncelleme bilgisi alınamadı.')
+      setError(githubConfigured ? 'Güncelleme bilgisi alınamadı.' : 'GitHub bağlantısı yapılandırılmadı.')
     } finally {
       setChecking(false)
     }
   }
 
   async function install() {
-    if (installLock.current || installing || isActiveStatus(status) || !check?.updateAvailable) return
+    if (!githubConfigured || installLock.current || installing || isActiveStatus(status) || !check?.updateAvailable) return
     if (!window.confirm('Yeni sürüm production ortamına kurulacak. Devam etmek istiyor musunuz?')) return
     installLock.current = true
     setInstalling(true)
@@ -149,7 +162,7 @@ export function UpdatesPanel({
   }
 
   async function rollback() {
-    if (!status?.previousCommit || installLock.current || isActiveStatus(status)) return
+    if (!githubConfigured || !status?.previousCommit || installLock.current || isActiveStatus(status)) return
     if (!window.confirm('Önceki başarılı sürüme dönülecek. Devam etmek istiyor musunuz?')) return
     installLock.current = true
     setInstalling(true)
@@ -188,6 +201,12 @@ export function UpdatesPanel({
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-3xl font-bold">Güncellemeler</h1>
       <p className="mt-2 text-muted-foreground">Kontrol yalnızca GitHub’ı okur. Production kurulumu yalnız “Güncellemeyi Kur” ile başlar.</p>
+      {!githubConfigured && (
+        <div role="status" className="mt-6 rounded-lg border border-border bg-secondary/60 p-4 text-sm">
+          <p className="font-medium">GitHub bağlantısı yapılandırılmadı.</p>
+          <p className="mt-2 text-muted-foreground">Otomatik güncelleme şu anda kullanılamıyor. GitHub deploy bağlantısı yapılandırıldığında bu özellik aktif olacaktır.</p>
+        </div>
+      )}
       {error && <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       {message && <p className="mt-6 rounded-lg border border-green-600/30 bg-green-600/10 p-3 text-sm text-green-800">{message}</p>}
       <section className="mt-8 grid gap-5 md:grid-cols-2">
@@ -207,7 +226,7 @@ export function UpdatesPanel({
             <Row label="Yazar" value={check?.latestAuthor || '—'} />
             <Row label="Tarih" value={formatDate(check?.latestDate)} />
             <Row label="Mesaj" value={check?.latestMessage || '—'} />
-            <Row label="Güncelleme" value={check?.updateAvailable ? 'Yeni güncelleme mevcut' : 'Güncel'} />
+            <Row label="Güncelleme" value={!check ? '—' : check.updateAvailable ? 'Yeni güncelleme mevcut' : githubConfigured ? 'Güncel' : '—'} />
           </dl>
           {check?.updateAvailable && (
             <p className="mt-3 text-sm text-muted-foreground">
@@ -223,7 +242,7 @@ export function UpdatesPanel({
               {checking ? 'Kontrol ediliyor...' : 'Güncellemeleri Kontrol Et'}
             </button>
             <button
-              disabled={checking || installing || active || !check?.updateAvailable}
+              disabled={!githubConfigured || checking || installing || active || !check?.updateAvailable}
               onClick={() => void install()}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
@@ -282,7 +301,7 @@ export function UpdatesPanel({
         <p className="mt-2 text-sm text-muted-foreground">ZIP yedek kullanılmaz. Son başarılı commit GitHub Actions ile yeniden derlenir ve dağıtılır.</p>
         <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
         <button
-          disabled={checking || installing || active || !status?.previousCommit}
+          disabled={!githubConfigured || checking || installing || active || !status?.previousCommit}
           onClick={() => void rollback()}
           className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
         >

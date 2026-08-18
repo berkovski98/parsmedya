@@ -9,6 +9,10 @@ export function getGithubDeployToken() {
   return process.env.GITHUB_DEPLOY_TOKEN?.trim() || ''
 }
 
+export function hasGithubDeployToken() {
+  return Boolean(getGithubDeployToken())
+}
+
 export function isCommitSha(value: string) {
   return /^[0-9a-f]{40}$/i.test(value.trim())
 }

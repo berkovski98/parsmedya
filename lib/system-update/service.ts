@@ -1,4 +1,4 @@
-import { isCommitSha, sameCommit } from './config'
+import { hasGithubDeployToken, isCommitSha, sameCommit } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
 import {
   githubActions,
@@ -15,12 +15,14 @@ export interface SystemUpdateDeps {
   history?: HistoryStore
   readVersion?: () => Promise<VersionInfo>
   appRoot?: string
+  isConfigured?: () => boolean
 }
 
 export class SystemUpdateService {
   private readonly github: GithubActionsClient
   private readonly history: HistoryStore
   private readonly readVersion: () => Promise<VersionInfo>
+  private readonly isConfigured: () => boolean
   private dispatchPending = false
   private pendingSince = 0
 
@@ -28,19 +30,38 @@ export class SystemUpdateService {
     this.github = deps.github || githubActions
     this.history = deps.history || supabaseHistory
     this.readVersion = deps.readVersion || (() => readVersionFile(deps.appRoot || process.cwd()))
+    this.isConfigured = deps.isConfigured || hasGithubDeployToken
   }
 
   async check() {
     const current = await this.readVersion()
-    const latest = await this.github.latestMainCommit()
-    return {
-      currentCommit: current.commit,
-      latestCommit: latest.sha,
-      updateAvailable: !sameCommit(current.commit, latest.sha),
-      latestMessage: latest.message,
-      latestDate: latest.date,
-      latestAuthor: latest.author,
-      currentVersion: current.version,
+    const githubConfigured = this.isConfigured()
+    try {
+      const latest = await this.github.latestMainCommit()
+      return {
+        currentCommit: current.commit,
+        latestCommit: latest.sha,
+        updateAvailable: !sameCommit(current.commit, latest.sha),
+        latestMessage: latest.message,
+        latestDate: latest.date,
+        latestAuthor: latest.author,
+        currentVersion: current.version,
+        githubConfigured,
+      }
+    } catch (error) {
+      if (error instanceof UpdateError && (error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED || error.code === UPDATE_CODES.GITHUB_UNAVAILABLE)) {
+        return {
+          currentCommit: current.commit,
+          latestCommit: '',
+          updateAvailable: false,
+          latestMessage: '',
+          latestDate: '',
+          latestAuthor: '',
+          currentVersion: current.version,
+          githubConfigured: githubConfigured && error.code !== UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED,
+        }
+      }
+      throw error
     }
   }
 
@@ -65,6 +86,7 @@ export class SystemUpdateService {
       previousCommit: previous,
       nodeVersion: process.versions.node,
       errorMessage: null as string | null,
+      githubConfigured: this.isConfigured(),
     }
     try {
       const runs = await this.github.listWorkflowRuns()
@@ -97,6 +119,7 @@ export class SystemUpdateService {
   }
 
   async install(adminUserId?: string) {
+    this.assertDeployConfigured()
     this.beginDispatch()
     try {
       await this.assertIdle()
@@ -124,6 +147,7 @@ export class SystemUpdateService {
     if (!isCommitSha(sha)) {
       throw new UpdateError(UPDATE_CODES.INVALID_SHA, 'Geçersiz commit SHA.', 400)
     }
+    this.assertDeployConfigured()
     this.beginDispatch()
     try {
       await this.assertIdle()
@@ -149,6 +173,12 @@ export class SystemUpdateService {
     } catch (error) {
       this.dispatchPending = false
       throw error
+    }
+  }
+
+  private assertDeployConfigured() {
+    if (!this.isConfigured()) {
+      throw new UpdateError(UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED, 'GitHub bağlantısı yapılandırılmadı.', 503)
     }
   }
 

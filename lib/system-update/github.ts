@@ -1,4 +1,4 @@
-import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, isCommitSha } from './config'
+import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, hasGithubDeployToken, isCommitSha } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
 
 const API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`
@@ -83,9 +83,18 @@ function failUnavailable() {
   return new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
 }
 
+function failNotConfigured() {
+  return new UpdateError(UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED, 'GitHub bağlantısı yapılandırılmadı.', 503)
+}
+
+function throwIfAuthFailed(response: Response) {
+  if (response.status === 401 || response.status === 403) throw failNotConfigured()
+}
+
 export const githubActions: GithubActionsClient = {
   async latestMainCommit() {
     const response = await githubFetch(`${API}/commits/${encodeURIComponent(GITHUB_BRANCH)}`)
+    throwIfAuthFailed(response)
     if (!response.ok) throw failUnavailable()
     const payload = await readJson<{
       sha: string
@@ -130,6 +139,7 @@ export const githubActions: GithubActionsClient = {
   },
 
   async dispatch(deploySha?: string) {
+    if (!hasGithubDeployToken()) throw failNotConfigured()
     const body: { ref: string; inputs?: { deploy_sha: string } } = { ref: GITHUB_BRANCH }
     if (deploySha) {
       if (!isCommitSha(deploySha)) {
@@ -143,6 +153,7 @@ export const githubActions: GithubActionsClient = {
       body: JSON.stringify(body),
     })
     if (response.status === 204 || response.ok) return
+    throwIfAuthFailed(response)
     if (response.status === 404) {
       throw new UpdateError(UPDATE_CODES.UPDATE_FAILED, 'Production Deploy workflow bulunamadı.', 502)
     }

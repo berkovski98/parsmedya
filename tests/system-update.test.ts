@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { requireAdminApi } from '../lib/system-update/auth'
 import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
-import { isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
+import { githubActions, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
+import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -89,7 +90,7 @@ function clientFor(options: {
   }
 }
 
-function serviceFor(github: GithubActionsClient, commit = CURRENT) {
+function serviceFor(github: GithubActionsClient, commit = CURRENT, configured = true) {
   const version: VersionInfo = {
     version: '1.1.0',
     build: '12',
@@ -100,6 +101,7 @@ function serviceFor(github: GithubActionsClient, commit = CURRENT) {
     github,
     history: memoryHistory(),
     readVersion: async () => version,
+    isConfigured: () => configured,
   })
 }
 
@@ -117,6 +119,100 @@ test('unauthorized install', async () => {
   await assert.rejects(() => requireAdminApi(), (error: unknown) => (
     error instanceof UpdateError && error.status === 401
   ))
+})
+
+test('token missing page loads', async () => {
+  let dispatched = 0
+  const service = serviceFor({
+    ...clientFor({
+      latest: LATEST,
+      onDispatch: () => { dispatched += 1 },
+    }),
+    async latestMainCommit() {
+      throw new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
+    },
+  }, CURRENT, false)
+  const status = await service.status()
+  const check = await service.check()
+  assert.equal(status.version, '1.1.0')
+  assert.equal(status.build, '12')
+  assert.equal(status.currentCommit, CURRENT)
+  assert.equal(status.githubConfigured, false)
+  assert.equal(check.githubConfigured, false)
+  assert.equal(check.updateAvailable, false)
+  assert.equal(dispatched, 0)
+})
+
+test('install disabled when token missing', async () => {
+  const check = await serviceFor(clientFor({ latest: LATEST }), CURRENT, false).check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(check.githubConfigured, false)
+})
+
+test('install API token missing -> controlled error', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT, false)
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError
+    && error.status === 503
+    && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('rollback disabled when token missing', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT, false)
+  await assert.rejects(() => service.rollback(PREVIOUS, 'admin'), (error: unknown) => (
+    error instanceof UpdateError
+    && error.status === 503
+    && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('token configured keeps normal install behavior', async () => {
+  const service = serviceFor(clientFor({ latest: LATEST }), CURRENT, true)
+  const check = await service.check()
+  const status = await service.status()
+  assert.equal(check.githubConfigured, true)
+  assert.equal(status.githubConfigured, true)
+  const result = await service.install('admin')
+  assert.equal(result.status, 'queued')
+})
+
+test('no page crash when github check fails', async () => {
+  const service = serviceFor({
+    ...clientFor(),
+    async latestMainCommit() {
+      throw new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
+    },
+    async listWorkflowRuns() {
+      throw new UpdateError(UPDATE_CODES.GITHUB_UNAVAILABLE, 'GitHub bilgisi alınamadı.', 502)
+    },
+  }, CURRENT, false)
+  const status = await service.status()
+  const check = await service.check()
+  assert.equal(status.version, '1.1.0')
+  assert.equal(check.currentVersion, '1.1.0')
+})
+
+test('workflow dispatch is blocked without token', async () => {
+  const previous = process.env.GITHUB_DEPLOY_TOKEN
+  delete process.env.GITHUB_DEPLOY_TOKEN
+  assert.equal(hasGithubDeployToken(), false)
+  await assert.rejects(() => githubActions.dispatch(), (error: unknown) => (
+    error instanceof UpdateError
+    && error.status === 503
+    && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
+  ))
+  if (previous === undefined) delete process.env.GITHUB_DEPLOY_TOKEN
+  else process.env.GITHUB_DEPLOY_TOKEN = previous
 })
 
 test('no update', async () => {
