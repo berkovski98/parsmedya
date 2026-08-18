@@ -1,5 +1,6 @@
 import { hasGithubDeployToken, isCommitSha, sameCommit } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
+import { isExplicitConfirmation } from './intent'
 import {
   githubActions,
   type GithubActionsClient,
@@ -157,7 +158,10 @@ export class SystemUpdateService {
     }
   }
 
-  async install(adminUserId?: string) {
+  async install(adminUserId?: string, confirmed = false) {
+    if (!isExplicitConfirmation(confirmed)) {
+      throw new UpdateError(UPDATE_CODES.CONFIRMATION_REQUIRED, 'Kurulum için açık onay gerekli.', 400)
+    }
     this.assertDeployConfigured()
     const runs = await this.github.listWorkflowRuns()
     if (blocksSecondInstall(this.track, runs)) {
@@ -196,7 +200,10 @@ export class SystemUpdateService {
     }
   }
 
-  async rollback(commitSha: string, adminUserId?: string) {
+  async rollback(commitSha: string, adminUserId?: string, confirmed = false) {
+    if (!isExplicitConfirmation(confirmed)) {
+      throw new UpdateError(UPDATE_CODES.CONFIRMATION_REQUIRED, 'Geri alma için açık onay gerekli.', 400)
+    }
     const sha = commitSha.trim().toLowerCase()
     if (!isCommitSha(sha)) {
       throw new UpdateError(UPDATE_CODES.INVALID_SHA, 'Geçersiz commit SHA.', 400)

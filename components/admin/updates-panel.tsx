@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { cancelDeployDialog, confirmDeployDialog, openDeployDialog, type DeployDialog } from '@/lib/system-update/intent'
 import { deploymentPanelState } from '@/lib/system-update/tracking'
 
 type CheckData = {
@@ -130,6 +131,7 @@ export function UpdatesPanel({
   const [installing, setInstalling] = useState(() => Boolean(initialStatus?.isTrackedDeployment && isActiveStatus(initialStatus)))
   const [track, setTrack] = useState<TrackState | null>(() => initialTrack(initialStatus))
   const [outcome, setOutcome] = useState<'success' | 'failure' | 'cancelled' | null>(null)
+  const [dialog, setDialog] = useState<DeployDialog>(null)
   const installLock = useRef(false)
   const trackRef = useRef<TrackState | null>(initialTrack(initialStatus))
 
@@ -214,6 +216,30 @@ export function UpdatesPanel({
     return () => window.clearInterval(timer)
   }, [polling, loadStatus])
 
+  function requestInstall() {
+    if (!githubConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
+    setError('')
+    setDialog(openDeployDialog('install').dialog)
+  }
+
+  function requestRollback() {
+    if (!githubConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
+    setError('')
+    setDialog(openDeployDialog('rollback').dialog)
+  }
+
+  function closeDialog() {
+    setDialog(cancelDeployDialog().dialog)
+  }
+
+  async function confirmDialog() {
+    const next = confirmDeployDialog(dialog)
+    if (!next.dispatch || installLock.current) return
+    setDialog(next.dialog)
+    if (dialog === 'install') await installConfirmed()
+    if (dialog === 'rollback') await rollbackConfirmed()
+  }
+
   async function checkUpdates() {
     setChecking(true)
     setError('')
@@ -230,16 +256,19 @@ export function UpdatesPanel({
     }
   }
 
-  async function install() {
-    if (!githubConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
-    if (!window.confirm('Yeni sürüm production ortamına kurulacak. Devam etmek istiyor musunuz?')) return
+  async function installConfirmed() {
+    if (!githubConfigured || installLock.current || !check?.updateAvailable) return
     installLock.current = true
     setInstalling(true)
     setOutcome(null)
     setError('')
     setMessage('')
     try {
-      const response = await fetch('/api/system/update/install', { method: 'POST' })
+      const response = await fetch('/api/system/update/install', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmed: true }),
+      })
       const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
         setError(json.error.message)
@@ -275,9 +304,8 @@ export function UpdatesPanel({
     }
   }
 
-  async function rollback() {
-    if (!githubConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
-    if (!window.confirm('Önceki başarılı sürüme dönülecek. Devam etmek istiyor musunuz?')) return
+  async function rollbackConfirmed() {
+    if (!githubConfigured || !status?.previousCommit || installLock.current) return
     installLock.current = true
     setInstalling(true)
     setOutcome(null)
@@ -287,7 +315,7 @@ export function UpdatesPanel({
       const response = await fetch('/api/system/update/rollback', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ commitSha: status.previousCommit }),
+        body: JSON.stringify({ commitSha: status.previousCommit, confirmed: true }),
       })
       const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
@@ -364,7 +392,7 @@ export function UpdatesPanel({
             </button>
             <button
               disabled={!githubConfigured || checking || panel.installDisabled || !check?.updateAvailable}
-              onClick={() => void install()}
+              onClick={requestInstall}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {installing || panel.waitingForGithub ? 'Kuruluyor...' : 'Güncellemeyi Kur'}
@@ -423,12 +451,44 @@ export function UpdatesPanel({
         <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
         <button
           disabled={!githubConfigured || checking || panel.installDisabled || !status?.previousCommit}
-          onClick={() => void rollback()}
+          onClick={requestRollback}
           className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
         >
           Önceki Sürüme Dön
         </button>
       </section>
+      {dialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onClick={closeDialog}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="deploy-confirm-title"
+            className="w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="deploy-confirm-title" className="font-display text-xl font-bold">
+              {dialog === 'rollback' ? 'Önceki sürüme dönülsün mü?' : 'Güncelleme kurulsun mu?'}
+            </h2>
+            <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
+              {dialog === 'rollback'
+                ? 'Önceki başarılı sürüme dönülecek.\nDevam etmek istiyor musunuz?'
+                : 'Yeni sürüm production ortamına kurulacak.\nDevam etmek istiyor musunuz?'}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closeDialog} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium">
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDialog()}
+                className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+              >
+                {dialog === 'rollback' ? 'Önceki Sürüme Dön' : 'Güncellemeyi Kur'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

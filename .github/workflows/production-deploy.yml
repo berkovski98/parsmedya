@@ -1,6 +1,7 @@
 name: Production Deploy
 
 on:
+  # Auto-deploy is disabled. Never add push or pull_request triggers.
   workflow_dispatch:
     inputs:
       deploy_sha:

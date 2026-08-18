@@ -18,3 +18,10 @@ export function fail(error: unknown) {
     { status: 500 },
   )
 }
+
+export function methodNotAllowed(message: string) {
+  return NextResponse.json(
+    { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message } },
+    { status: 405 },
+  )
+}

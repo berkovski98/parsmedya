@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { requireAdminApi } from '../lib/system-update/auth'
 import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
 import { githubActions, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
 import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
+import { countDispatches } from '../lib/system-update/intent'
 import { deploymentPanelState } from '../lib/system-update/tracking'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -160,7 +162,7 @@ test('install API token missing -> controlled error', async () => {
     latest: LATEST,
     onDispatch: () => { dispatched += 1 },
   }), CURRENT, false)
-  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
     error instanceof UpdateError
     && error.status === 503
     && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
@@ -173,7 +175,7 @@ test('rollback disabled when token missing', async () => {
   const service = serviceFor(clientFor({
     onDispatch: () => { dispatched += 1 },
   }), CURRENT, false)
-  await assert.rejects(() => service.rollback(PREVIOUS, 'admin'), (error: unknown) => (
+  await assert.rejects(() => service.rollback(PREVIOUS, 'admin', true), (error: unknown) => (
     error instanceof UpdateError
     && error.status === 503
     && error.code === UPDATE_CODES.GITHUB_DEPLOY_NOT_CONFIGURED
@@ -187,7 +189,7 @@ test('token configured keeps normal install behavior', async () => {
   const status = await service.status()
   assert.equal(check.githubConfigured, true)
   assert.equal(status.githubConfigured, true)
-  const result = await service.install('admin')
+  const result = await service.install('admin', true)
   assert.equal(result.status, 'queued')
 })
 
@@ -224,7 +226,7 @@ test('no update', async () => {
   const service = serviceFor(clientFor({ latest: CURRENT }), CURRENT)
   const check = await service.check()
   assert.equal(check.updateAvailable, false)
-  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.NO_UPDATE
   ))
 })
@@ -278,7 +280,7 @@ test('install dispatches once', async () => {
     latest: LATEST,
     onDispatch: (sha) => { dispatched = sha },
   }), CURRENT)
-  const result = await service.install('admin-1')
+  const result = await service.install('admin-1', true)
   assert.equal(result.status, 'queued')
   assert.equal(result.commit, LATEST)
   assert.equal(result.progress, 0)
@@ -304,8 +306,8 @@ test('second install is 409 and does not dispatch again', async () => {
     latest: LATEST,
     onDispatch: () => { dispatched += 1 },
   }), CURRENT)
-  await service.install('admin')
-  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+  await service.install('admin', true)
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
   ))
   assert.equal(dispatched, 1)
@@ -381,7 +383,7 @@ test('duplicate update 409', async () => {
     latest: LATEST,
     runs: [run({ status: 'in_progress', conclusion: null })],
   }), CURRENT)
-  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
   ))
 })
@@ -441,7 +443,7 @@ test('valid rollback', async () => {
   const service = serviceFor(clientFor({
     onDispatch: (sha) => { dispatched = sha || '' },
   }), CURRENT)
-  const result = await service.rollback(PREVIOUS, 'admin')
+  const result = await service.rollback(PREVIOUS, 'admin', true)
   assert.equal(result.status, 'queued')
   assert.equal(result.commit, PREVIOUS)
   assert.equal(dispatched, PREVIOUS)
@@ -449,10 +451,10 @@ test('valid rollback', async () => {
 
 test('invalid rollback SHA', async () => {
   const service = serviceFor(clientFor({ existing: [CURRENT, LATEST, PREVIOUS, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef'] }), CURRENT)
-  await assert.rejects(() => service.rollback('main', 'admin'), (error: unknown) => (
+  await assert.rejects(() => service.rollback('main', 'admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 400 && error.code === UPDATE_CODES.INVALID_SHA
   ))
-  await assert.rejects(() => service.rollback('deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 'admin'), (error: unknown) => (
+  await assert.rejects(() => service.rollback('deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 'admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 404 && error.code === UPDATE_CODES.COMMIT_NOT_FOUND
   ))
 })
@@ -472,7 +474,7 @@ test('install does not report previous successful run as 100 percent', async () 
     latest: LATEST,
     runs: () => runs,
   }), CURRENT)
-  const installed = await service.install('admin')
+  const installed = await service.install('admin', true)
   assert.equal(installed.previousRunId, 100)
   assert.equal(installed.progress, 0)
   const status = await service.status({
@@ -495,7 +497,7 @@ test('status pins the new queued run after dispatch', async () => {
     latest: LATEST,
     runs: () => runs,
   }), CURRENT)
-  const installed = await service.install('admin')
+  const installed = await service.install('admin', true)
   runs.unshift(run({
     id: 101,
     status: 'queued',
@@ -522,7 +524,7 @@ test('tracked in-progress build is 40 not previous success', async () => {
     runs: () => runs,
     steps: () => steps,
   }), CURRENT)
-  const installed = await service.install('admin')
+  const installed = await service.install('admin', true)
   runs.unshift(run({
     id: 101,
     status: 'in_progress',
@@ -547,7 +549,7 @@ test('tracked success is 100 only for the new run', async () => {
     latest: LATEST,
     runs: () => runs,
   }), CURRENT)
-  const installed = await service.install('admin')
+  const installed = await service.install('admin', true)
   runs.unshift(run({
     id: 101,
     status: 'completed',
@@ -573,7 +575,7 @@ test('old successful run is never selected after install', async () => {
     latest: LATEST,
     runs: () => runs,
   }), CURRENT)
-  const installed = await service.install('admin')
+  const installed = await service.install('admin', true)
   const waiting = await service.status({
     previousRunId: installed.previousRunId,
     requestedAt: installed.requestedAt,
@@ -618,8 +620,8 @@ test('install stays locked until tracked run is terminal', async () => {
     latest: LATEST,
     runs: () => runs,
   }), CURRENT)
-  await service.install('admin')
-  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+  await service.install('admin', true)
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
     error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
   ))
   const waiting = deploymentPanelState({
@@ -652,4 +654,94 @@ test('refresh recovers an active run but not an old success', async () => {
   assert.equal(idle.runId, null)
   assert.equal(idle.progress, 0)
   assert.equal(idle.isTrackedDeployment, false)
+})
+
+test('page mount check and status never dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: [OLD_SUCCESS],
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await service.check()
+  await service.status()
+  await service.check()
+  await service.status()
+  assert.equal(dispatched, 0)
+})
+
+test('new GitHub commit does not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  const check = await service.check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(dispatched, 0)
+})
+
+test('install without explicit confirmation does not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 400 && error.code === UPDATE_CODES.CONFIRMATION_REQUIRED
+  ))
+  await assert.rejects(() => service.install('admin', false), (error: unknown) => (
+    error instanceof UpdateError && error.code === UPDATE_CODES.CONFIRMATION_REQUIRED
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('rollback without explicit confirmation does not dispatch', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await assert.rejects(() => service.rollback(PREVIOUS, 'admin'), (error: unknown) => (
+    error instanceof UpdateError && error.code === UPDATE_CODES.CONFIRMATION_REQUIRED
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('modal open and cancel never dispatch', () => {
+  assert.equal(countDispatches(['open-install']).dispatched, 0)
+  assert.equal(countDispatches(['open-install']).progress, false)
+  assert.equal(countDispatches(['open-install', 'cancel']).dispatched, 0)
+  assert.equal(countDispatches(['open-install', 'cancel']).progress, false)
+  assert.equal(countDispatches(['open-rollback', 'cancel']).dispatched, 0)
+})
+
+test('explicit confirm dispatches once and double confirm stays at one', () => {
+  assert.equal(countDispatches(['open-install', 'confirm']).dispatched, 1)
+  assert.equal(countDispatches(['open-install', 'confirm']).progress, true)
+  assert.equal(countDispatches(['open-install', 'confirm', 'confirm']).dispatched, 1)
+  assert.equal(countDispatches(['open-install', 'cancel', 'confirm']).dispatched, 0)
+})
+
+test('GET update routes are read-only and install GET is rejected', () => {
+  const check = readFileSync('app/api/system/update/check/route.ts', 'utf8')
+  const status = readFileSync('app/api/system/update/status/route.ts', 'utf8')
+  const panel = readFileSync('components/admin/updates-panel.tsx', 'utf8')
+  const install = readFileSync('app/api/system/update/install/route.ts', 'utf8')
+  assert.doesNotMatch(check, /\.dispatch\(/)
+  assert.doesNotMatch(status, /\.dispatch\(/)
+  assert.match(check, /Never dispatches/)
+  assert.match(status, /Never dispatches/)
+  assert.match(install, /methodNotAllowed/)
+  const effect = panel.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[polling, loadStatus\]\)/)
+  assert.ok(effect)
+  assert.doesNotMatch(effect[0], /installConfirmed|rollbackConfirmed|\/install|\/rollback/)
+})
+
+test('production-deploy.yml is workflow_dispatch only', () => {
+  const yml = readFileSync('.github/workflows/production-deploy.yml', 'utf8')
+  assert.match(yml, /workflow_dispatch:/)
+  assert.doesNotMatch(yml, /^on:\s*$[\s\S]*^\s+push:/m)
+  assert.doesNotMatch(yml, /^\s+push:\s*$/m)
+  assert.doesNotMatch(yml, /^\s+pull_request:\s*$/m)
+  assert.match(yml, /Auto-deploy is disabled/)
 })
