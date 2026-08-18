@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelDeployDialog, confirmDeployDialog, openDeployDialog, type DeployDialog } from '@/lib/system-update/intent'
+import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress, nextStepProgress, stepToneVisual } from '@/lib/system-update/progress-steps'
 import { deploymentPanelState } from '@/lib/system-update/tracking'
 
 type CheckData = {
@@ -61,18 +62,6 @@ type InstallData = {
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
 
 const STORAGE_KEY = 'parsmedya.deploy-track'
-
-const PROGRESS_STEPS = [
-  { min: 0, label: 'Sıraya alındı' },
-  { min: 5, label: 'Hazırlanıyor' },
-  { min: 15, label: 'Bağımlılıklar hazırlanıyor' },
-  { min: 30, label: 'Testler çalıştırılıyor' },
-  { min: 40, label: 'Build alınıyor' },
-  { min: 75, label: 'Sunucuya aktarılıyor' },
-  { min: 90, label: 'Restart ediliyor' },
-  { min: 95, label: 'Health check' },
-  { min: 100, label: 'Tamamlandı' },
-] as const
 
 function isActiveStatus(status?: StatusData | null) {
   return status?.status === 'queued' || status?.status === 'in_progress'
@@ -339,9 +328,9 @@ export function UpdatesPanel({
     }
   }
 
-  const progress = panel.progress
   const failed = panel.outcome === 'failure' || panel.outcome === 'cancelled'
   const succeeded = panel.outcome === 'success'
+  const progress = displayProgress(panel.progress, succeeded)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -405,7 +394,7 @@ export function UpdatesPanel({
         <section className="mt-8 rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-display text-xl font-bold">
-              {failed ? 'Güncelleme başarısız' : succeeded ? 'Güncelleme başarıyla tamamlandı' : 'Güncelleme kuruluyor'}
+              {failed ? 'Güncelleme başarısız' : succeeded ? 'Güncelleme tamamlandı' : 'Güncelleme kuruluyor'}
             </h2>
             <span className={`text-lg font-bold ${failed ? 'text-destructive' : succeeded ? 'text-green-700' : 'text-accent'}`}>
               {progress}%
@@ -414,7 +403,7 @@ export function UpdatesPanel({
           <div className="mt-4 h-3 overflow-hidden rounded-full bg-secondary">
             <div
               className={`h-full rounded-full transition-all ${failed ? 'bg-destructive' : succeeded ? 'bg-green-600' : 'bg-accent'}`}
-              style={{ width: `${Math.max(0, Math.min(progress, failed ? 95 : 100))}%` }}
+              style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
             />
           </div>
           <p className="mt-3 text-sm font-medium">
@@ -423,14 +412,23 @@ export function UpdatesPanel({
           {failed && status?.errorMessage && (
             <p className="mt-2 text-sm text-destructive">{status.errorMessage}</p>
           )}
-          <ol className="mt-6 space-y-3">
-            {PROGRESS_STEPS.map((item, index) => {
-              const nextMin = PROGRESS_STEPS[index + 1]?.min ?? 101
-              const state = stepVisual(progress, item.min, nextMin, failed, succeeded)
+          <ol className="mt-6 max-w-md space-y-2.5">
+            {DEPLOYMENT_STEPS.map((item, index) => {
+              const tone = deploymentStepTone({
+                progress,
+                stepProgress: item.progress,
+                nextProgress: nextStepProgress(index),
+                failed,
+                succeeded,
+              })
+              const visual = stepToneVisual(tone)
               return (
-                <li key={item.label} className={`flex items-center gap-3 text-sm ${state.className}`}>
-                  <span className="w-4 text-center">{state.mark}</span>
-                  <span>{item.label}</span>
+                <li key={item.key} className={`flex items-center justify-between gap-6 text-sm ${visual.className}`}>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="w-4 shrink-0 text-center">{visual.mark}</span>
+                    <span className="truncate">{item.label}</span>
+                  </span>
+                  <span className="w-12 shrink-0 text-right tabular-nums">{item.progress}%</span>
                 </li>
               )
             })}
@@ -491,23 +489,6 @@ export function UpdatesPanel({
       )}
     </div>
   )
-}
-
-function stepVisual(progress: number, min: number, nextMin: number, failed: boolean, succeeded: boolean) {
-  if (succeeded || (!failed && progress >= nextMin)) {
-    return { mark: '✓', className: 'text-green-700' }
-  }
-  const current = (progress >= min && progress < nextMin) || (progress === 0 && min === 0)
-  if (failed && current) {
-    return { mark: '✕', className: 'text-destructive' }
-  }
-  if (!failed && current) {
-    return { mark: '→', className: 'font-medium text-accent' }
-  }
-  if (!failed && progress >= min) {
-    return { mark: '✓', className: 'text-green-700' }
-  }
-  return { mark: '○', className: 'text-muted-foreground' }
 }
 
 function shortSha(value?: string) {

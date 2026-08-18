@@ -7,6 +7,7 @@ import { githubActions, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunSt
 import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
 import { countDispatches } from '../lib/system-update/intent'
+import { DEPLOYMENT_STEPS, deploymentStepTone, displayProgress } from '../lib/system-update/progress-steps'
 import { deploymentPanelState } from '../lib/system-update/tracking'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
@@ -327,11 +328,11 @@ test('progress queued is 0', async () => {
   assert.equal(mapped.phaseLabel, 'İşlem sıraya alındı')
 })
 
-test('progress build maps to 40', async () => {
+test('progress build maps to 50', async () => {
   const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
     { name: 'Production build', status: 'in_progress', conclusion: null },
   ])
-  assert.equal(mapped.progress, 40)
+  assert.equal(mapped.progress, 50)
   assert.equal(mapped.phase, 'build')
 })
 
@@ -407,7 +408,7 @@ test('status in_progress', async () => {
   const status = await service.status()
   assert.equal(status.status, 'in_progress')
   assert.equal(status.phase, 'build')
-  assert.equal(status.progress, 40)
+  assert.equal(status.progress, 50)
 })
 
 test('idle status does not treat previous successful run as live deployment', async () => {
@@ -516,7 +517,7 @@ test('status pins the new queued run after dispatch', async () => {
   assert.equal(status.isTrackedDeployment, true)
 })
 
-test('tracked in-progress build is 40 not previous success', async () => {
+test('tracked in-progress build is 50 not previous success', async () => {
   const runs = [OLD_SUCCESS]
   const steps = [{ name: 'Production build', status: 'in_progress', conclusion: null }]
   const service = serviceFor(clientFor({
@@ -539,7 +540,7 @@ test('tracked in-progress build is 40 not previous success', async () => {
     runId: 101,
   })
   assert.equal(status.runId, 101)
-  assert.equal(status.progress, 40)
+  assert.equal(status.progress, 50)
   assert.equal(status.phase, 'build')
 })
 
@@ -645,7 +646,7 @@ test('refresh recovers an active run but not an old success', async () => {
     steps: [{ name: 'Production build', status: 'in_progress', conclusion: null }],
   })).status()
   assert.equal(active.runId, 101)
-  assert.equal(active.progress, 40)
+  assert.equal(active.progress, 50)
   assert.equal(active.isTrackedDeployment, true)
 
   const idle = await serviceFor(clientFor({
@@ -744,4 +745,60 @@ test('production-deploy.yml is workflow_dispatch only', () => {
   assert.doesNotMatch(yml, /^\s+push:\s*$/m)
   assert.doesNotMatch(yml, /^\s+pull_request:\s*$/m)
   assert.match(yml, /Auto-deploy is disabled/)
+})
+
+test('deployment steps expose right-aligned percentages', () => {
+  assert.deepEqual(DEPLOYMENT_STEPS.map((step) => [step.label, step.progress]), [
+    ['Sıraya alındı', 0],
+    ['Hazırlanıyor', 5],
+    ['Bağımlılıklar hazırlanıyor', 15],
+    ['Testler çalıştırılıyor', 30],
+    ['Build alınıyor', 50],
+    ['Sunucuya aktarılıyor', 75],
+    ['Restart ediliyor', 85],
+    ['Health check', 95],
+    ['Tamamlandı', 100],
+  ])
+})
+
+test('general progress snaps to the active step percentage', () => {
+  assert.equal(displayProgress(50, false), 50)
+  assert.equal(displayProgress(75, false), 75)
+  assert.equal(displayProgress(85, false), 85)
+  assert.equal(displayProgress(95, false), 95)
+  assert.equal(displayProgress(100, true), 100)
+})
+
+test('failed step keeps previous complete and later pending', () => {
+  const tones = DEPLOYMENT_STEPS.map((step, index) => deploymentStepTone({
+    progress: 75,
+    stepProgress: step.progress,
+    nextProgress: DEPLOYMENT_STEPS[index + 1]?.progress ?? 101,
+    failed: true,
+    succeeded: false,
+  }))
+  assert.equal(tones[4], 'complete')
+  assert.equal(tones[5], 'failed')
+  assert.equal(tones[6], 'pending')
+  assert.equal(tones[8], 'pending')
+})
+
+test('success marks every deployment step complete', () => {
+  for (const [index, step] of DEPLOYMENT_STEPS.entries()) {
+    assert.equal(deploymentStepTone({
+      progress: 100,
+      stepProgress: step.progress,
+      nextProgress: DEPLOYMENT_STEPS[index + 1]?.progress ?? 101,
+      failed: false,
+      succeeded: true,
+    }), 'complete')
+  }
+})
+
+test('progress restart maps to 85', async () => {
+  const mapped = mapDeployProgress(run({ status: 'in_progress', conclusion: null }), [
+    { name: 'Promote, restart Passenger', status: 'in_progress', conclusion: null },
+  ])
+  assert.equal(mapped.progress, 85)
+  assert.equal(mapped.phase, 'restart')
 })

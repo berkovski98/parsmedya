@@ -1,5 +1,6 @@
 import { GITHUB_BRANCH, GITHUB_OWNER, GITHUB_REPO, WORKFLOW_FILE, getGithubDeployToken, hasGithubDeployToken, isCommitSha } from './config'
 import { UPDATE_CODES, UpdateError } from './errors'
+import { DEPLOYMENT_PROGRESS } from './progress-steps'
 
 const API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`
 const WORKFLOW_PATH = `.github/workflows/${WORKFLOW_FILE}`
@@ -200,22 +201,22 @@ const STEP_PROGRESS: Array<{
   phase: DeployPhase
   label: string
 }> = [
-  { test: /health|curl|doğrula|verify/, progress: 95, phase: 'health', label: 'Health check yapılıyor' },
-  { test: /promote.*restart|restart passenger/, progress: 90, phase: 'restart', label: 'Passenger restart ediliyor' },
-  { test: /promote|rsync/, progress: 85, phase: 'deploy', label: 'Dosyalar production\'a alınıyor' },
-  { test: /restart|passenger/, progress: 90, phase: 'restart', label: 'Passenger restart ediliyor' },
-  { test: /upload|scp|sftp|staging/, progress: 75, phase: 'deploy', label: 'Sunucuya aktarılıyor' },
-  { test: /prepare standalone|prepare-deploy|standalone deploy/, progress: 60, phase: 'deploy', label: 'Deployment hazırlanıyor' },
-  { test: /production build|pnpm build/, progress: 40, phase: 'build', label: 'Production build alınıyor' },
-  { test: /run tests|pnpm test/, progress: 30, phase: 'build', label: 'Testler çalıştırılıyor' },
-  { test: /install dependenc|frozen-lockfile|enable pnpm|setup node|write version/, progress: 15, phase: 'preparing', label: 'Bağımlılıklar hazırlanıyor' },
-  { test: /checkout|validate deploy|set up job|setup job/, progress: 5, phase: 'preparing', label: 'Hazırlanıyor' },
+  { test: /health|curl|doğrula|verify/, progress: DEPLOYMENT_PROGRESS.health, phase: 'health', label: 'Health check yapılıyor' },
+  { test: /promote.*restart|restart passenger/, progress: DEPLOYMENT_PROGRESS.restart, phase: 'restart', label: 'Passenger restart ediliyor' },
+  { test: /promote|rsync/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Dosyalar production\'a alınıyor' },
+  { test: /restart|passenger/, progress: DEPLOYMENT_PROGRESS.restart, phase: 'restart', label: 'Passenger restart ediliyor' },
+  { test: /upload|scp|sftp|staging/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Sunucuya aktarılıyor' },
+  { test: /prepare standalone|prepare-deploy|standalone deploy/, progress: DEPLOYMENT_PROGRESS.deploy, phase: 'deploy', label: 'Deployment hazırlanıyor' },
+  { test: /production build|pnpm build/, progress: DEPLOYMENT_PROGRESS.build, phase: 'build', label: 'Production build alınıyor' },
+  { test: /run tests|pnpm test/, progress: DEPLOYMENT_PROGRESS.tests, phase: 'build', label: 'Testler çalıştırılıyor' },
+  { test: /install dependenc|frozen-lockfile|enable pnpm|setup node|write version/, progress: DEPLOYMENT_PROGRESS.dependencies, phase: 'preparing', label: 'Bağımlılıklar hazırlanıyor' },
+  { test: /checkout|validate deploy|set up job|setup job/, progress: DEPLOYMENT_PROGRESS.preparing, phase: 'preparing', label: 'Hazırlanıyor' },
 ]
 
 function mapStep(name: string) {
   const lower = name.toLowerCase()
   return STEP_PROGRESS.find((rule) => rule.test.test(lower))
-    || { progress: 5, phase: 'preparing' as DeployPhase, label: 'Hazırlanıyor' }
+    || { progress: DEPLOYMENT_PROGRESS.preparing, phase: 'preparing' as DeployPhase, label: 'Hazırlanıyor' }
 }
 
 function publicStepError(stepName?: string) {
@@ -240,10 +241,10 @@ export function mapDeployProgress(run: GithubWorkflowRun | null, steps: GithubJo
   }
   const state = mapWorkflowState(run)
   if (state.status === 'queued') {
-    return { phase: 'preparing', phaseLabel: 'İşlem sıraya alındı', progress: 0, errorMessage: null }
+    return { phase: 'preparing', phaseLabel: 'İşlem sıraya alındı', progress: DEPLOYMENT_PROGRESS.queued, errorMessage: null }
   }
   if (state.status === 'completed' && state.conclusion === 'success') {
-    return { phase: 'success', phaseLabel: 'Güncelleme başarıyla tamamlandı', progress: 100, errorMessage: null }
+    return { phase: 'success', phaseLabel: 'Güncelleme başarıyla tamamlandı', progress: DEPLOYMENT_PROGRESS.completed, errorMessage: null }
   }
 
   const step = currentStep(steps)
@@ -252,12 +253,12 @@ export function mapDeployProgress(run: GithubWorkflowRun | null, steps: GithubJo
     return {
       phase: 'failed',
       phaseLabel: mapped.label,
-      progress: Math.min(mapped.progress, 95),
+      progress: Math.min(mapped.progress, DEPLOYMENT_PROGRESS.health),
       errorMessage: publicStepError(step?.name),
     }
   }
   if (!step) {
-    return { phase: 'preparing', phaseLabel: 'Hazırlanıyor', progress: 5, errorMessage: null }
+    return { phase: 'preparing', phaseLabel: 'Hazırlanıyor', progress: DEPLOYMENT_PROGRESS.preparing, errorMessage: null }
   }
   return {
     phase: mapped.phase,
