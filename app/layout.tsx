@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Manrope } from 'next/font/google'
 import { headers } from 'next/headers'
 import { SiteFrame } from '@/components/site-frame'
+import { isAnalyticsEnabled } from '@/lib/analytics-config'
 import { getSiteUrl } from '@/lib/site-url'
 import './globals.css'
 
@@ -23,7 +24,11 @@ export const metadata: Metadata = {
   title: 'ParsMedya | Web ve Yazılım Ajansı',
   description:
     'ParsMedya; web sitesi, mobil uygulama, e-ticaret ve dijital pazarlama çözümleriyle işinizi büyüten kurumsal yazılım ajansıdır.',
-  generator: 'v0.app',
+  icons: {
+    icon: '/favicon.ico?v=2',
+    shortcut: '/favicon.ico?v=2',
+    apple: '/apple-icon.png?v=2',
+  },
 }
 
 export const viewport: Viewport = {
@@ -41,6 +46,7 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
+      data-analytics={isAnalyticsEnabled() ? 'on' : 'off'}
       className={`light ${inter.variable} ${manrope.variable} bg-background`}
     >
       <body className="font-sans antialiased">
