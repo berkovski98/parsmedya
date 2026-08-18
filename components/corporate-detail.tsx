@@ -8,7 +8,7 @@ type Card = { title: string; description: string }
 
 export function CorporateDetail({ locale, title, description, paragraphs, principles, steps, globalText, ctaTitle }: { locale: Locale; title: string; description: string; paragraphs: string[]; principles: Card[]; steps?: string[]; globalText?: string; ctaTitle: string }) {
   const english = locale === 'en'
-  const contactHref = english ? '/en/contact' : '/iletisim'
+  const contactHref = english ? '/en/contact' : '/tr/iletisim'
   return <>
     <PageHeader locale={locale} parent={{ label: english ? 'Corporate' : 'Kurumsal' }} eyebrow={title} title={title} description={description} />
     <section className="bg-background"><div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.4fr_.6fr]">

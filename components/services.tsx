@@ -19,14 +19,14 @@ function ServiceCard({ service }: { service: Service }) {
         <service.icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <h3 className="mt-5 font-display text-lg font-semibold text-foreground">
-        <Link href={`/hizmetler/${service.slug}`} className="transition-colors hover:text-accent focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link href={`/tr/hizmetler/${service.slug}`} className="transition-colors hover:text-accent focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {service.title}
         </Link>
       </h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
         {service.description}
       </p>
-      <Link href={`/hizmetler/${service.slug}`} aria-label={`${service.title} hakkında detaylı bilgi`} className="mt-5 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-accent transition-colors hover:text-accent/80 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link href={`/tr/hizmetler/${service.slug}`} aria-label={`${service.title} hakkında detaylı bilgi`} className="mt-5 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-accent transition-colors hover:text-accent/80 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         Detaylı Bilgi
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
       </Link>
@@ -63,7 +63,7 @@ export function Services({ home = false }: ServicesProps) {
           </div>
         )}
 
-        {home && <div className="mt-10 flex justify-center sm:mt-12"><Link href="/hizmetler" className={buttonVariants({ size: 'lg', className: 'min-h-11 px-5' })}>Tüm Hizmetlerimizi İnceleyin<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></div>}
+        {home && <div className="mt-10 flex justify-center sm:mt-12"><Link href="/tr/hizmetler" className={buttonVariants({ size: 'lg', className: 'min-h-11 px-5' })}>Tüm Hizmetlerimizi İnceleyin<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></div>}
       </div>
     </section>
   )

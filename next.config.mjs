@@ -1,3 +1,5 @@
+import { LEGACY_TR_REDIRECTS } from './lib/locale-redirects.mjs'
+
 const PRODUCTION_SITE_URL = 'https://parsmedya.net'
 
 function resolvePublicSiteUrl() {
@@ -44,6 +46,9 @@ const nextConfig = {
       hostname,
       pathname: '/storage/v1/object/**',
     })),
+  },
+  async redirects() {
+    return LEGACY_TR_REDIRECTS
   },
 }
 

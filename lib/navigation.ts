@@ -7,9 +7,9 @@ export type NavigationGroup = { label: string; links: NavigationLink[] }
 
 const corporate: Record<Locale, NavigationLink[]> = {
   tr: [
-    { label: 'Hakkımızda', href: '/hakkimizda' },
-    { label: 'Vizyonumuz', href: '/vizyonumuz' },
-    { label: 'Misyonumuz', href: '/misyonumuz' },
+    { label: 'Hakkımızda', href: '/tr/hakkimizda' },
+    { label: 'Vizyonumuz', href: '/tr/vizyonumuz' },
+    { label: 'Misyonumuz', href: '/tr/misyonumuz' },
   ],
   en: [
     { label: 'About Us', href: '/en/about' },
@@ -35,7 +35,7 @@ export function getServiceCategoryLabel(category: string | undefined, locale: Lo
 
 export function getServiceGroups(locale: Locale): NavigationGroup[] {
   const source = locale === 'en' ? englishServices : services
-  const prefix = locale === 'en' ? '/en/services' : '/hizmetler'
+  const prefix = locale === 'en' ? '/en/services' : '/tr/hizmetler'
   return categoryOrder.map((category) => ({
     label: categoryLabels[locale][category],
     links: source

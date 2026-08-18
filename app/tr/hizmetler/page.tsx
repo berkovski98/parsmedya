@@ -5,7 +5,7 @@ import { Process } from '@/components/process'
 import { ContactCta } from '@/components/contact-cta'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Yazılım ve Dijital Hizmetler | Pars Medya', description: 'Web yazılım, özel yazılım, CRM, ERP, e-ticaret, SaaS, entegrasyon ve dijital büyüme hizmetleriyle işletmenize özel uçtan uca çözümler.', canonical: '/hizmetler', tr: '/hizmetler', en: '/en/services', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Yazılım ve Dijital Hizmetler | Pars Medya', description: 'Web yazılım, özel yazılım, CRM, ERP, e-ticaret, SaaS, entegrasyon ve dijital büyüme hizmetleriyle işletmenize özel uçtan uca çözümler.', canonical: '/tr/hizmetler', tr: '/tr/hizmetler', en: '/en/services', locale: 'tr' })
 
 export default function HizmetlerPage() {
   return (

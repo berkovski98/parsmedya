@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { CorporateDetail } from '@/components/corporate-detail'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Our Mission | Pars Medya', description: 'Discover Pars Medya’s mission to simplify business operations through custom software, automation and sustainable digital transformation.', canonical: '/en/mission', tr: '/misyonumuz', en: '/en/mission', locale: 'en' })
+export const metadata: Metadata = createPageMetadata({ title: 'Our Mission | Pars Medya', description: 'Discover Pars Medya’s mission to simplify business operations through custom software, automation and sustainable digital transformation.', canonical: '/en/mission', tr: '/tr/misyonumuz', en: '/en/mission', locale: 'en' })
 const paragraphs = [
   'Our mission is to simplify complex digital operations and turn technology investment into measurable business outcomes. Every engagement begins with a clear understanding of goals, users and existing workflows so that the solution addresses real priorities instead of adding unnecessary complexity.',
   'We develop custom software for processes that standard products cannot support effectively. CRM, ERP, web applications, mobile products and system integrations are shaped around each organization’s rules, giving teams a reliable source of data and a consistent way to work.',

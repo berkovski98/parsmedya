@@ -102,8 +102,8 @@ export async function savePost(formData: FormData) {
     const message = error instanceof Error ? error.message : 'İşlem tamamlanamadı.'
     redirect(`${returnPath}?error=${safeMessage(message)}`)
   }
-  revalidatePath('/')
-  revalidatePath('/blog')
+  revalidatePath('/tr')
+  revalidatePath('/tr/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
   revalidatePath('/sitemap.xml')
@@ -119,8 +119,8 @@ export async function deletePost(formData: FormData) {
   const locale = String(formData.get('locale')) === 'en' ? 'en' : 'tr'
   const { error } = await (await createClient()).from('blog_posts').delete().eq('id', id)
   if (error) redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?error=${safeMessage('Yazı silinemedi.')}`)
-  revalidatePath('/')
-  revalidatePath('/blog')
+  revalidatePath('/tr')
+  revalidatePath('/tr/blog')
   revalidatePath('/en')
   revalidatePath('/en/blog')
   revalidatePath('/sitemap.xml')

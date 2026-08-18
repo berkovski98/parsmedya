@@ -31,12 +31,12 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/iletisim" className={buttonVariants({ size: 'lg' })}>
+            <Link href="/tr/iletisim" className={buttonVariants({ size: 'lg' })}>
               Ücretsiz Teklif Al
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/hizmetler"
+              href="/tr/hizmetler"
               className={buttonVariants({ size: 'lg', variant: 'outline' })}
             >
               Hizmetleri İncele

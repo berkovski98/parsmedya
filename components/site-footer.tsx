@@ -26,19 +26,19 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
         <div className="flex flex-col items-center gap-3 sm:items-end">
           <nav aria-label="Alt menü" className="flex items-center gap-5 text-sm">
             <Link
-              href={english ? '/en/services' : '/hizmetler'}
+              href={english ? '/en/services' : '/tr/hizmetler'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               {english ? 'Services' : 'Hizmetler'}
             </Link>
             <Link
-              href={english ? '/en/blog' : '/blog'}
+              href={english ? '/en/blog' : '/tr/blog'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               Blog
             </Link>
             <Link
-              href={english ? '/en/contact' : '/iletisim'}
+              href={english ? '/en/contact' : '/tr/iletisim'}
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               {english ? 'Contact' : 'İletişim'}

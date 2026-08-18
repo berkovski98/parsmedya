@@ -11,7 +11,7 @@ interface BlogCardProps {
 
 export function BlogCard({ post, locale = 'tr' }: BlogCardProps) {
   const english = locale === 'en'
-  const href = english ? `/en/blog/${post.slug}` : `/blog/${post.slug}`
+  const href = english ? `/en/blog/${post.slug}` : `/tr/blog/${post.slug}`
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-lg hover:shadow-primary/5">
       <Link

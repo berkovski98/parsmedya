@@ -19,7 +19,7 @@ export async function generateMetadata({
   if (!service) return { title: 'Hizmet Bulunamadı | ParsMedya' }
   const title = service.seoTitle ?? `${service.title} | Pars Medya`
   const description = service.seoDescription ?? service.description
-  const canonical = `/hizmetler/${service.slug}`
+  const canonical = `/tr/hizmetler/${service.slug}`
   return createPageMetadata({
     title,
     description,

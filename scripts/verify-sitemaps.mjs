@@ -28,6 +28,17 @@ function isEnglishPath(pathname) {
   return pathname === '/en' || pathname.startsWith('/en/')
 }
 
+function isTurkishPath(pathname) {
+  return pathname === '/tr' || pathname.startsWith('/tr/')
+}
+
+function isUnprefixedTurkishPath(pathname) {
+  if (isEnglishPath(pathname) || isTurkishPath(pathname)) return false
+  return [
+    '/', '/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/blog',
+  ].some((marker) => pathname === marker || pathname.startsWith(`${marker}/`))
+}
+
 function containsForbiddenHost(xml) {
   return /localhost|127\.0\.0\.1/i.test(xml)
 }
@@ -62,7 +73,7 @@ async function fetchText(url) {
 
 function sample(urls, extra = []) {
   const blogs = urls.filter((url) => url.includes('/blog/'))
-  const services = urls.filter((url) => url.includes('/hizmetler/') || url.includes('/en/services/'))
+  const services = urls.filter((url) => url.includes('/tr/hizmetler/') || url.includes('/en/services/'))
   return [...new Set([
     ...extra,
     ...urls.slice(0, 8),
@@ -87,25 +98,25 @@ async function verifySitemap(path, locale) {
   const locs = locUrls(text)
   const localhostCount = (text.match(/localhost|127\.0\.0\.1/gi) || []).length
   const enCount = locs.filter((loc) => isEnglishPath(pathnameOf(loc))).length
-  const trCount = locs.filter((loc) => !isEnglishPath(pathnameOf(loc))).length
+  const trCount = locs.filter((loc) => isTurkishPath(pathnameOf(loc))).length
+  const unprefixedCount = locs.filter((loc) => isUnprefixedTurkishPath(pathnameOf(loc))).length
   const foreignHost = locs.filter((loc) => !loc.startsWith(PRODUCTION_SITE_URL))
 
   if (locs.length === 0) fail(`${path} has no URLs`)
   if (localhostCount !== 0) fail(`${path} localhost count is ${localhostCount}`)
   if (foreignHost.length) fail(`${path} has non-canonical hosts: ${foreignHost.join(', ')}`)
+  if (unprefixedCount !== 0) fail(`${path} contains ${unprefixedCount} unprefixed Turkish loc URLs`)
 
   if (locale === 'tr') {
     if (enCount !== 0) fail(`${path} contains ${enCount} English loc URLs`)
     if (trCount === 0) fail(`${path} has no Turkish URLs`)
+    if (locs.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/tr`))) {
+      fail(`${path} has a loc that is not a /tr URL`)
+    }
   } else {
     if (enCount === 0) fail(`${path} has no English /en URLs`)
-    const leaked = locs.some((loc) => {
-      const pathname = pathnameOf(loc)
-      if (isEnglishPath(pathname)) return false
-      return [
-        '/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/blog',
-      ].some((marker) => pathname === marker || pathname.startsWith(`${marker}/`))
-    })
+    if (trCount !== 0) fail(`${path} contains ${trCount} /tr loc URLs`)
+    const leaked = locs.some((loc) => isUnprefixedTurkishPath(pathnameOf(loc)) || isTurkishPath(pathnameOf(loc)))
     if (leaked) fail(`${path} leaked Turkish routes`)
     if (locs.some((loc) => !loc.startsWith(`${PRODUCTION_SITE_URL}/en`))) {
       fail(`${path} has a loc that is not an English URL`)
@@ -113,11 +124,11 @@ async function verifySitemap(path, locale) {
   }
 
   const blogCount = locs.filter((loc) => (
-    locale === 'en' ? loc.includes('/en/blog/') : /parsmedya\.net\/blog\//.test(loc)
+    locale === 'en' ? loc.includes('/en/blog/') : loc.includes('/tr/blog/')
   )).length
 
   const checked = sample(locs, locale === 'tr'
-    ? [PRODUCTION_SITE_URL, `${PRODUCTION_SITE_URL}/hakkimizda`, `${PRODUCTION_SITE_URL}/blog`]
+    ? [`${PRODUCTION_SITE_URL}/tr`, `${PRODUCTION_SITE_URL}/tr/hakkimizda`, `${PRODUCTION_SITE_URL}/tr/blog`]
     : [`${PRODUCTION_SITE_URL}/en`, `${PRODUCTION_SITE_URL}/en/about`, `${PRODUCTION_SITE_URL}/en/blog`])
 
   for (const loc of checked) {
@@ -130,7 +141,7 @@ async function verifySitemap(path, locale) {
     else console.log(`  sample 200 ${loc}`)
   }
 
-  return { locs, blogCount, localhostCount, enCount, trCount, status }
+  return { locs, blogCount, localhostCount, enCount, trCount, unprefixedCount, status }
 }
 
 const tr = await verifySitemap('/sitemap.xml', 'tr')
@@ -143,6 +154,7 @@ if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap-en.xml')) fail
 console.log('\n--- sitemap verification ---')
 console.log(`Turkish URL count: ${tr.trCount}`)
 console.log(`English URL count: ${en.enCount}`)
+console.log(`Unprefixed TR URL count: ${tr.unprefixedCount + en.unprefixedCount}`)
 console.log(`localhost URL: ${tr.localhostCount + en.localhostCount}`)
 console.log(`Blog TR URL count: ${tr.blogCount}`)
 console.log(`Blog EN URL count: ${en.blogCount}`)

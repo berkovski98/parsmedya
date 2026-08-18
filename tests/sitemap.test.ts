@@ -16,6 +16,7 @@ import {
   hasTurkishRouteLeak,
   locUrls,
   turkishLocCount,
+  unprefixedTurkishLocCount,
   urlset,
 } from '../lib/sitemap-xml'
 
@@ -39,8 +40,8 @@ test('production getSiteUrl ignores localhost env leftovers', () => {
 })
 
 test('canonical sitemap URLs always use parsmedya.net', () => {
-  assert.equal(canonicalAbsoluteUrl('/'), PRODUCTION_SITE_URL)
-  assert.equal(canonicalAbsoluteUrl('/blog/ornek'), `${PRODUCTION_SITE_URL}/blog/ornek`)
+  assert.equal(canonicalAbsoluteUrl('/tr'), `${PRODUCTION_SITE_URL}/tr`)
+  assert.equal(canonicalAbsoluteUrl('/tr/blog/ornek'), `${PRODUCTION_SITE_URL}/tr/blog/ornek`)
   assert.equal(canonicalAbsoluteUrl('/en/about'), `${PRODUCTION_SITE_URL}/en/about`)
 })
 
@@ -53,19 +54,24 @@ test('Turkish sitemap contains only Turkish loc URLs', () => {
   const locs = locUrls(xml)
   assert.equal(containsForbiddenHost(xml), false)
   assert.equal(englishLocCount(xml), 0)
+  assert.equal(unprefixedTurkishLocCount(xml), 0)
   assert.ok(turkishLocCount(xml) > 0)
-  assert.ok(locs.includes(PRODUCTION_SITE_URL))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hakkimizda`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/vizyonumuz`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/misyonumuz`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/blog`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/blog/seo-nedir`))
-  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler/web-sitesi-gelistirme`))
+  assert.equal(locs.includes(PRODUCTION_SITE_URL), false)
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hakkimizda`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/vizyonumuz`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/misyonumuz`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/seo-nedir`))
+  assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/tr/hizmetler/web-sitesi-gelistirme`))
+  assert.ok(locs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/tr`)))
   assert.equal(locs.some((url) => url.includes('/en')), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/taslak-yazi`), false)
-  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/english-only`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/taslak-yazi`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/tr/blog/english-only`), false)
   assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/en/blog/english-only`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/blog/seo-nedir`), false)
+  assert.equal(locs.includes(`${PRODUCTION_SITE_URL}/hizmetler`), false)
 })
 
 test('English sitemap contains only English loc URLs', () => {
@@ -77,6 +83,8 @@ test('English sitemap contains only English loc URLs', () => {
   const locs = locUrls(xml)
   assert.equal(containsForbiddenHost(xml), false)
   assert.ok(englishLocCount(xml) > 0)
+  assert.equal(turkishLocCount(xml), 0)
+  assert.equal(unprefixedTurkishLocCount(xml), 0)
   assert.equal(hasTurkishRouteLeak(xml), false)
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/en`))
   assert.ok(locs.includes(`${PRODUCTION_SITE_URL}/en/about`))
@@ -101,16 +109,16 @@ test('hreflang alternates stay on the canonical host and default to Turkish', ()
   const metadata = createPageMetadata({
     title: 'Pars Medya',
     description: 'Test',
-    canonical: '/',
-    tr: '/',
+    canonical: '/tr',
+    tr: '/tr',
     en: '/en',
     locale: 'tr',
   })
-  assert.equal(metadata.alternates?.canonical, PRODUCTION_SITE_URL)
+  assert.equal(metadata.alternates?.canonical, `${PRODUCTION_SITE_URL}/tr`)
   assert.deepEqual(metadata.alternates?.languages, {
-    tr: PRODUCTION_SITE_URL,
+    tr: `${PRODUCTION_SITE_URL}/tr`,
     en: `${PRODUCTION_SITE_URL}/en`,
-    'x-default': PRODUCTION_SITE_URL,
+    'x-default': `${PRODUCTION_SITE_URL}/tr`,
   })
-  assert.equal(metadata.openGraph?.url, PRODUCTION_SITE_URL)
+  assert.equal(metadata.openGraph?.url, `${PRODUCTION_SITE_URL}/tr`)
 })

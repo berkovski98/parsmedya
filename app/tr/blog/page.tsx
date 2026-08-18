@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header'
 import { getPublishedPosts } from '@/lib/blog'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Blog | Pars Medya', description: 'Yazılım geliştirme, dijital pazarlama, web teknolojileri, SEO ve marka yönetimi hakkında güncel ve uygulanabilir Pars Medya içeriklerini keşfedin.', canonical: '/blog', tr: '/blog', en: '/en/blog', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Blog | Pars Medya', description: 'Yazılım geliştirme, dijital pazarlama, web teknolojileri, SEO ve marka yönetimi hakkında güncel ve uygulanabilir Pars Medya içeriklerini keşfedin.', canonical: '/tr/blog', tr: '/tr/blog', en: '/en/blog', locale: 'tr' })
 
 export const revalidate = 300
 

@@ -153,6 +153,7 @@ jobs:
             curl -fsS --retry 10 --retry-delay 3 --retry-all-errors "$1" >/dev/null
           }
           check https://parsmedya.net/
+          check https://parsmedya.net/tr
           check https://parsmedya.net/en
           check https://parsmedya.net/sitemap.xml
           check https://parsmedya.net/sitemap-en.xml
