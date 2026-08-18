@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, UserRound } from 'lucide-react'
 import { formatBlogDate, getPublishedPost, getPublishedPosts, getPublishedTranslation, parseContent } from '@/lib/blog'
 import { BlogCard } from '@/components/blog-card'
+import { BlogCoverImage } from '@/components/blog-cover-image'
+import { resolveBlogImageSrc } from '@/lib/blog-image'
 import { absoluteAlternates, createPageMetadata, safeJsonLd } from '@/lib/seo'
 import { absoluteUrl, getSiteUrl } from '@/lib/site-url'
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: 'Blog Yazısı Bulunamadı | ParsMedya' }
   const title = post.seo_title || `${post.title} | ParsMedya`
   const description = post.seo_description || post.excerpt
-  const image = post.image_url || '/parsmedya-hero.png'
+  const image = resolveBlogImageSrc(post.image_url)
   const translation = await getPublishedTranslation(post.translation_group_id, 'en')
   const canonical = `/blog/${post.slug}`
   const enPath = translation ? `/en/blog/${translation.slug}` : undefined
@@ -35,7 +36,7 @@ export default async function BlogDetailPage({ params }: Props) {
   const post = await getPublishedPost(slug)
   if (!post) notFound()
   const related = (await getPublishedPosts()).filter((item) => item.slug !== slug).slice(0, 3)
-  const image = post.image_url || '/parsmedya-hero.png'
+  const image = resolveBlogImageSrc(post.image_url)
   const canonical = absoluteUrl(`/blog/${post.slug}`)
   const jsonLd = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: post.title, description: post.seo_description || post.excerpt, image: [new URL(image, getSiteUrl()).toString()], datePublished: post.published_at || post.created_at, dateModified: post.updated_at, author: { '@type': 'Person', name: post.author }, publisher: { '@type': 'Organization', name: 'Pars Medya', url: getSiteUrl() }, mainEntityOfPage: { '@type': 'WebPage', '@id': canonical }, inLanguage: 'tr-TR' }
 
@@ -55,7 +56,7 @@ export default async function BlogDetailPage({ params }: Props) {
         </div>
       </header>
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 md:py-16">
-        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-secondary"><Image src={image} alt={post.title} fill priority sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" /></div>
+        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-secondary"><BlogCoverImage src={image} alt={post.title} priority sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" /></div>
         <div className="mx-auto mt-12 max-w-3xl space-y-6 md:mt-16">
           {parseContent(post.content).map((block, index) => block.type === 'heading'
             ? <h2 key={`${block.text}-${index}`} className="pt-4 font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{block.text}</h2>

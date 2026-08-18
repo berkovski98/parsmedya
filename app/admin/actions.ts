@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/supabase/auth'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { BlogPostInput, BlogStatus } from '@/lib/supabase/types'
-import { validateBlogImage } from '@/lib/blog-image'
+import { isPersistentPublicImageUrl, validateBlogImage } from '@/lib/blog-image'
 import { contactStatuses, type ContactStatus } from '@/lib/contact'
 
 const safeMessage = (message: string) => encodeURIComponent(message)
@@ -52,14 +52,17 @@ function toPostInput(formData: FormData, imageUrl: string): BlogPostInput {
 }
 
 async function uploadImage(file: File, currentUrl: string) {
-  if (!file.size) return currentUrl
+  const existingUrl = isPersistentPublicImageUrl(currentUrl) ? currentUrl : ''
+  if (!file.size) return existingUrl
   validateBlogImage(file)
   const supabase = await createClient()
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const path = `${crypto.randomUUID()}.${extension}`
   const { error } = await supabase.storage.from('blog-images').upload(path, file, { contentType: file.type, upsert: false })
   if (error) throw new Error('Görsel yüklenemedi. Lütfen tekrar deneyin.')
-  return supabase.storage.from('blog-images').getPublicUrl(path).data.publicUrl
+  const publicUrl = supabase.storage.from('blog-images').getPublicUrl(path).data.publicUrl
+  if (!isPersistentPublicImageUrl(publicUrl)) throw new Error('Görsel adresi kaydedilemedi. Lütfen tekrar deneyin.')
+  return publicUrl
 }
 
 export async function savePost(formData: FormData) {

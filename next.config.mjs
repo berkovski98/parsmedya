@@ -11,6 +11,22 @@ function resolvePublicSiteUrl() {
 
 process.env.NEXT_PUBLIC_SITE_URL = resolvePublicSiteUrl()
 
+const PRODUCTION_SUPABASE_HOST = 'ndjmelccfsgqckjiovtl.supabase.co'
+
+function supabaseStorageHosts() {
+  const hosts = new Set([PRODUCTION_SUPABASE_HOST])
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (raw) {
+    try {
+      const hostname = new URL(raw).hostname
+      if (hostname) hosts.add(hostname)
+    } catch {
+      // Keep the known production host when the env URL is malformed.
+    }
+  }
+  return [...hosts]
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compress: true,
@@ -23,6 +39,11 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 82],
+    remotePatterns: supabaseStorageHosts().map((hostname) => ({
+      protocol: 'https',
+      hostname,
+      pathname: '/storage/v1/object/**',
+    })),
   },
 }
 

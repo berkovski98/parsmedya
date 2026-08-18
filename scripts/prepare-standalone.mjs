@@ -22,5 +22,6 @@ await cp(path.join(root, 'public'), path.join(standaloneDir, 'public'), {
   recursive: true,
   force: true,
 })
+await cp(path.join(root, 'version.json'), path.join(standaloneDir, 'version.json'), { force: true })
 
 console.log('Standalone runtime assets prepared.')

@@ -1,0 +1,28 @@
+export class UpdateError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly status = 400,
+  ) {
+    super(message)
+    this.name = 'UpdateError'
+  }
+}
+
+export const UPDATE_CODES = {
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  CONFLICT: 'DEPLOYMENT_IN_PROGRESS',
+  INVALID_VERSION: 'INVALID_VERSION',
+  RELEASE_NOT_FOUND: 'RELEASE_NOT_FOUND',
+  ASSET_NOT_FOUND: 'ASSET_NOT_FOUND',
+  CHECKSUM_MISSING: 'CHECKSUM_MISSING',
+  CHECKSUM_MISMATCH: 'CHECKSUM_MISMATCH',
+  ZIP_INVALID: 'ZIP_INVALID',
+  ZIP_SLIP: 'ZIP_SLIP',
+  PACKAGE_INVALID: 'PACKAGE_INVALID',
+  UPDATE_FAILED: 'UPDATE_FAILED',
+  HEALTH_FAILED: 'HEALTH_FAILED',
+  BACKUP_NOT_FOUND: 'BACKUP_NOT_FOUND',
+  INVALID_BACKUP: 'INVALID_BACKUP',
+} as const
