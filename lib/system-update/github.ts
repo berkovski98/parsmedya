@@ -51,6 +51,7 @@ export interface GithubActionsClient {
   latestMainCommit(): Promise<GithubCommit>
   commitExists(sha: string): Promise<boolean>
   listWorkflowRuns(): Promise<GithubWorkflowRun[]>
+  getWorkflowRun(runId: number): Promise<GithubWorkflowRun | null>
   listJobSteps(runId: number): Promise<GithubJobStep[]>
   dispatch(deploySha?: string): Promise<void>
 }
@@ -124,6 +125,16 @@ export const githubActions: GithubActionsClient = {
       return payload.workflow_runs || []
     } catch {
       return []
+    }
+  },
+
+  async getWorkflowRun(runId: number) {
+    try {
+      const response = await githubFetch(`${API}/actions/runs/${runId}`)
+      if (!response.ok) return null
+      return await readJson<GithubWorkflowRun>(response)
+    } catch {
+      return null
     }
   },
 

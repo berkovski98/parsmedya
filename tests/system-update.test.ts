@@ -5,6 +5,7 @@ import { UPDATE_CODES, UpdateError } from '../lib/system-update/errors'
 import { githubActions, isActiveRun, mapDeployPhase, mapDeployProgress, mapRunStatus, mapWorkflowState, type GithubActionsClient, type GithubWorkflowRun } from '../lib/system-update/github'
 import { hasGithubDeployToken } from '../lib/system-update/config'
 import { SystemUpdateService } from '../lib/system-update/service'
+import { deploymentPanelState } from '../lib/system-update/tracking'
 import type { HistoryStore } from '../lib/system-update/history'
 import type { VersionInfo } from '../lib/system-update/version-file'
 
@@ -64,12 +65,13 @@ function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
 
 function clientFor(options: {
   latest?: string
-  runs?: GithubWorkflowRun[]
+  runs?: GithubWorkflowRun[] | (() => GithubWorkflowRun[])
   existing?: string[]
   onDispatch?: (sha?: string) => void
-  steps?: { name: string; status: string; conclusion: string | null }[]
+  steps?: { name: string; status: string; conclusion: string | null }[] | (() => { name: string; status: string; conclusion: string | null }[])
 } = {}): GithubActionsClient {
   const existing = new Set((options.existing || [CURRENT, LATEST, PREVIOUS]).map((sha) => sha.toLowerCase()))
+  const listRuns = () => (typeof options.runs === 'function' ? options.runs() : (options.runs || []))
   return {
     async latestMainCommit() {
       const sha = options.latest || LATEST
@@ -79,10 +81,13 @@ function clientFor(options: {
       return existing.has(sha.toLowerCase())
     },
     async listWorkflowRuns() {
-      return options.runs || []
+      return listRuns()
+    },
+    async getWorkflowRun(runId) {
+      return listRuns().find((item) => item.id === runId) || null
     },
     async listJobSteps() {
-      return options.steps || []
+      return typeof options.steps === 'function' ? options.steps() : (options.steps || [])
     },
     async dispatch(sha) {
       options.onDispatch?.(sha)
@@ -276,6 +281,8 @@ test('install dispatches once', async () => {
   const result = await service.install('admin-1')
   assert.equal(result.status, 'queued')
   assert.equal(result.commit, LATEST)
+  assert.equal(result.progress, 0)
+  assert.equal(result.previousRunId, 0)
   assert.equal(dispatched, undefined)
 })
 
@@ -401,15 +408,17 @@ test('status in_progress', async () => {
   assert.equal(status.progress, 40)
 })
 
-test('status success', async () => {
+test('idle status does not treat previous successful run as live deployment', async () => {
   const service = serviceFor(clientFor({
-    runs: [run({ status: 'completed', conclusion: 'success' })],
+    runs: [run({ id: 100, status: 'completed', conclusion: 'success' })],
   }))
   const status = await service.status()
   assert.equal(status.status, 'completed')
-  assert.equal(status.conclusion, 'success')
-  assert.equal(status.phase, 'success')
-  assert.equal(status.progress, 100)
+  assert.equal(status.conclusion, null)
+  assert.equal(status.phase, 'idle')
+  assert.equal(status.progress, 0)
+  assert.equal(status.runId, null)
+  assert.equal(status.isTrackedDeployment, false)
   assert.equal(mapRunStatus(run({ status: 'completed', conclusion: 'success' })), 'completed')
   assert.equal(mapDeployPhase(run({ status: 'completed', conclusion: 'success' })), 'success')
 })
@@ -446,4 +455,201 @@ test('invalid rollback SHA', async () => {
   await assert.rejects(() => service.rollback('deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', 'admin'), (error: unknown) => (
     error instanceof UpdateError && error.status === 404 && error.code === UPDATE_CODES.COMMIT_NOT_FOUND
   ))
+})
+
+const OLD_SUCCESS = run({
+  id: 100,
+  status: 'completed',
+  conclusion: 'success',
+  created_at: '2026-08-18T12:00:00Z',
+  updated_at: '2026-08-18T12:10:00Z',
+  head_sha: CURRENT,
+})
+
+test('install does not report previous successful run as 100 percent', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+  }), CURRENT)
+  const installed = await service.install('admin')
+  assert.equal(installed.previousRunId, 100)
+  assert.equal(installed.progress, 0)
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+  })
+  assert.equal(status.progress, 0)
+  assert.notEqual(status.progress, 100)
+  assert.equal(status.runId, null)
+  assert.equal(status.phase, 'preparing')
+  assert.equal(status.phaseLabel, 'GitHub Actions başlatılıyor')
+  assert.equal(status.isTrackedDeployment, true)
+  assert.equal(status.status, 'queued')
+})
+
+test('status pins the new queued run after dispatch', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+  }), CURRENT)
+  const installed = await service.install('admin')
+  runs.unshift(run({
+    id: 101,
+    status: 'queued',
+    conclusion: null,
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+  })
+  assert.equal(status.runId, 101)
+  assert.equal(status.progress, 0)
+  assert.equal(status.status, 'queued')
+  assert.equal(status.isTrackedDeployment, true)
+})
+
+test('tracked in-progress build is 40 not previous success', async () => {
+  const runs = [OLD_SUCCESS]
+  const steps = [{ name: 'Production build', status: 'in_progress', conclusion: null }]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+    steps: () => steps,
+  }), CURRENT)
+  const installed = await service.install('admin')
+  runs.unshift(run({
+    id: 101,
+    status: 'in_progress',
+    conclusion: null,
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+    runId: 101,
+  })
+  assert.equal(status.runId, 101)
+  assert.equal(status.progress, 40)
+  assert.equal(status.phase, 'build')
+})
+
+test('tracked success is 100 only for the new run', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+  }), CURRENT)
+  const installed = await service.install('admin')
+  runs.unshift(run({
+    id: 101,
+    status: 'completed',
+    conclusion: 'success',
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const status = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: installed.targetCommit,
+    runId: 101,
+  })
+  assert.equal(status.runId, 101)
+  assert.equal(status.progress, 100)
+  assert.equal(status.conclusion, 'success')
+  assert.notEqual(status.runId, 100)
+})
+
+test('old successful run is never selected after install', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+  }), CURRENT)
+  const installed = await service.install('admin')
+  const waiting = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: LATEST,
+  })
+  assert.notEqual(waiting.runId, 100)
+  runs.unshift(run({
+    id: 101,
+    status: 'queued',
+    conclusion: null,
+    created_at: new Date().toISOString(),
+    head_sha: LATEST,
+  }))
+  const queued = await service.status({
+    previousRunId: installed.previousRunId,
+    requestedAt: installed.requestedAt,
+    targetCommit: LATEST,
+  })
+  assert.equal(queued.runId, 101)
+})
+
+test('success progress panel stays visible after completion', () => {
+  const panel = deploymentPanelState({
+    installing: false,
+    isTrackedDeployment: true,
+    runId: 101,
+    status: 'completed',
+    conclusion: 'success',
+    progress: 100,
+    phaseLabel: 'Güncelleme başarıyla tamamlandı',
+    persistedOutcome: 'success',
+  })
+  assert.equal(panel.show, true)
+  assert.equal(panel.progress, 100)
+  assert.equal(panel.outcome, 'success')
+  assert.match(panel.phaseLabel, /başarıyla tamamlandı/)
+})
+
+test('install stays locked until tracked run is terminal', async () => {
+  const runs = [OLD_SUCCESS]
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: () => runs,
+  }), CURRENT)
+  await service.install('admin')
+  await assert.rejects(() => service.install('admin'), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
+  ))
+  const waiting = deploymentPanelState({
+    installing: true,
+    isTrackedDeployment: true,
+    runId: null,
+    status: 'queued',
+    conclusion: null,
+    progress: 0,
+    phaseLabel: 'GitHub Actions başlatılıyor',
+    persistedOutcome: null,
+  })
+  assert.equal(waiting.installDisabled, true)
+  assert.equal(waiting.progress, 0)
+  assert.equal(waiting.show, true)
+})
+
+test('refresh recovers an active run but not an old success', async () => {
+  const active = await serviceFor(clientFor({
+    runs: [run({ id: 101, status: 'in_progress', conclusion: null }), OLD_SUCCESS],
+    steps: [{ name: 'Production build', status: 'in_progress', conclusion: null }],
+  })).status()
+  assert.equal(active.runId, 101)
+  assert.equal(active.progress, 40)
+  assert.equal(active.isTrackedDeployment, true)
+
+  const idle = await serviceFor(clientFor({
+    runs: [OLD_SUCCESS],
+  })).status()
+  assert.equal(idle.runId, null)
+  assert.equal(idle.progress, 0)
+  assert.equal(idle.isTrackedDeployment, false)
 })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { deploymentPanelState } from '@/lib/system-update/tracking'
 
 type CheckData = {
   currentCommit: string
@@ -32,9 +33,33 @@ type StatusData = {
   nodeVersion: string
   errorMessage: string | null
   githubConfigured: boolean
+  isTrackedDeployment: boolean
+  previousRunId: number | null
+  requestedAt: string | null
+  targetCommit: string | null
+}
+
+type TrackState = {
+  previousRunId: number
+  requestedAt: string
+  targetCommit: string
+  trackedRunId: number | null
+}
+
+type InstallData = {
+  status: string
+  commit: string
+  previousRunId: number
+  requestedAt: string
+  targetCommit: string
+  phaseLabel?: string
+  progress?: number
+  runId?: number | null
 }
 
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
+
+const STORAGE_KEY = 'parsmedya.deploy-track'
 
 const PROGRESS_STEPS = [
   { min: 0, label: 'Sıraya alındı' },
@@ -50,6 +75,39 @@ const PROGRESS_STEPS = [
 
 function isActiveStatus(status?: StatusData | null) {
   return status?.status === 'queued' || status?.status === 'in_progress'
+}
+
+function readStoredTrack(): TrackState | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as TrackState
+    if (!parsed?.requestedAt || typeof parsed.previousRunId !== 'number') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeStoredTrack(track: TrackState | null) {
+  try {
+    if (!track) sessionStorage.removeItem(STORAGE_KEY)
+    else sessionStorage.setItem(STORAGE_KEY, JSON.stringify(track))
+  } catch {
+    // Ignore private-mode storage failures.
+  }
+}
+
+function initialTrack(status: StatusData | null): TrackState | null {
+  if (status?.isTrackedDeployment && isActiveStatus(status)) {
+    return {
+      previousRunId: status.previousRunId ?? 0,
+      requestedAt: status.requestedAt || status.startedAt || new Date().toISOString(),
+      targetCommit: status.targetCommit || status.commit || '',
+      trackedRunId: status.runId,
+    }
+  }
+  return null
 }
 
 export function UpdatesPanel({
@@ -69,12 +127,17 @@ export function UpdatesPanel({
   const [message, setMessage] = useState('')
   const [error, setError] = useState(initialError)
   const [checking, setChecking] = useState(false)
-  const [installing, setInstalling] = useState(false)
-  const [trackedRunId, setTrackedRunId] = useState<number | null>(
-    isActiveStatus(initialStatus) ? initialStatus?.runId || null : null,
-  )
+  const [installing, setInstalling] = useState(() => Boolean(initialStatus?.isTrackedDeployment && isActiveStatus(initialStatus)))
+  const [track, setTrack] = useState<TrackState | null>(() => initialTrack(initialStatus))
+  const [outcome, setOutcome] = useState<'success' | 'failure' | 'cancelled' | null>(null)
   const installLock = useRef(false)
-  const awaitingRun = useRef(false)
+  const trackRef = useRef<TrackState | null>(initialTrack(initialStatus))
+
+  const persistTrack = useCallback((next: TrackState | null) => {
+    trackRef.current = next
+    setTrack(next)
+    writeStoredTrack(next)
+  }, [])
 
   const loadCheck = useCallback(async () => {
     const checkRes = await fetch('/api/system/update/check', { cache: 'no-store' })
@@ -90,7 +153,14 @@ export function UpdatesPanel({
   }, [])
 
   const loadStatus = useCallback(async () => {
-    const statusRes = await fetch('/api/system/update/status', { cache: 'no-store' })
+    const current = trackRef.current || readStoredTrack()
+    const params = new URLSearchParams()
+    if (current?.trackedRunId) params.set('runId', String(current.trackedRunId))
+    if (current && current.previousRunId >= 0) params.set('previousRunId', String(current.previousRunId))
+    if (current?.requestedAt) params.set('requestedAt', current.requestedAt)
+    if (current?.targetCommit) params.set('targetCommit', current.targetCommit)
+    const suffix = params.toString() ? `?${params}` : ''
+    const statusRes = await fetch(`/api/system/update/status${suffix}`, { cache: 'no-store' })
     const statusJson = await statusRes.json() as ApiResponse<StatusData>
     if (!statusJson.ok) {
       if (statusJson.error.code !== 'GITHUB_DEPLOY_NOT_CONFIGURED') setError(statusJson.error.message)
@@ -100,21 +170,44 @@ export function UpdatesPanel({
     const next = statusJson.data
     setStatus(next)
     setGithubConfigured(next.githubConfigured)
-    if (isActiveStatus(next) && next.runId) {
-      setTrackedRunId(next.runId)
-      awaitingRun.current = false
+
+    if (next.isTrackedDeployment && next.runId && current) {
+      persistTrack({ ...current, trackedRunId: next.runId })
+    } else if (next.isTrackedDeployment && isActiveStatus(next) && next.runId && !current) {
+      persistTrack({
+        previousRunId: next.previousRunId ?? 0,
+        requestedAt: next.requestedAt || next.startedAt || new Date().toISOString(),
+        targetCommit: next.targetCommit || next.commit || '',
+        trackedRunId: next.runId,
+      })
     }
-    if (next.status === 'completed' && next.conclusion === 'success' && next.runId && next.runId === trackedRunId) {
-      void loadCheck()
-    }
-    if (!isActiveStatus(next) && !awaitingRun.current) {
+
+    const trackedRunId = next.runId || current?.trackedRunId || null
+    if (next.isTrackedDeployment && next.status === 'completed' && next.runId && next.runId === trackedRunId) {
+      const nextOutcome = next.conclusion === 'success' ? 'success' : next.conclusion === 'cancelled' ? 'cancelled' : 'failure'
+      setOutcome(nextOutcome)
       setInstalling(false)
       installLock.current = false
+      if (nextOutcome === 'success') {
+        setMessage('Yeni sürüm aktif.')
+        void loadCheck()
+      }
     }
     return next
-  }, [loadCheck, trackedRunId])
+  }, [loadCheck, persistTrack])
 
-  const polling = isActiveStatus(status) || installing
+  const panel = deploymentPanelState({
+    installing,
+    isTrackedDeployment: Boolean(status?.isTrackedDeployment || track),
+    runId: status?.runId ?? track?.trackedRunId ?? null,
+    status: status?.status || 'completed',
+    conclusion: status?.conclusion || null,
+    progress: status?.progress ?? 0,
+    phaseLabel: status?.phaseLabel || '',
+    persistedOutcome: outcome,
+  })
+
+  const polling = installing || panel.waitingForGithub || (status?.isTrackedDeployment && isActiveStatus(status))
   useEffect(() => {
     if (!polling) return
     const timer = window.setInterval(() => { void loadStatus() }, 4000)
@@ -125,6 +218,8 @@ export function UpdatesPanel({
     setChecking(true)
     setError('')
     setMessage('')
+    setOutcome(null)
+    persistTrack(null)
     try {
       await loadCheck()
       if (githubConfigured) setMessage('GitHub main kontrol edildi. Deployment başlatılmadı.')
@@ -136,23 +231,42 @@ export function UpdatesPanel({
   }
 
   async function install() {
-    if (!githubConfigured || installLock.current || installing || isActiveStatus(status) || !check?.updateAvailable) return
+    if (!githubConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
     if (!window.confirm('Yeni sürüm production ortamına kurulacak. Devam etmek istiyor musunuz?')) return
     installLock.current = true
     setInstalling(true)
+    setOutcome(null)
     setError('')
     setMessage('')
     try {
       const response = await fetch('/api/system/update/install', { method: 'POST' })
-      const json = await response.json() as ApiResponse<{ status: string }>
+      const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
         setError(json.error.message)
         setInstalling(false)
         installLock.current = false
         return
       }
-      setMessage('GitHub deployment başlatıldı.')
-      awaitingRun.current = true
+      persistTrack({
+        previousRunId: json.data.previousRunId,
+        requestedAt: json.data.requestedAt,
+        targetCommit: json.data.targetCommit,
+        trackedRunId: null,
+      })
+      setStatus((current) => current ? {
+        ...current,
+        status: 'queued',
+        conclusion: null,
+        phase: 'preparing',
+        phaseLabel: json.data.phaseLabel || 'GitHub Actions başlatılıyor',
+        progress: 0,
+        runId: null,
+        isTrackedDeployment: true,
+        previousRunId: json.data.previousRunId,
+        requestedAt: json.data.requestedAt,
+        targetCommit: json.data.targetCommit,
+      } : current)
+      setMessage('GitHub Actions başlatılıyor...')
       await loadStatus()
     } catch {
       setError('Güncelleme başlatılamadı.')
@@ -162,10 +276,11 @@ export function UpdatesPanel({
   }
 
   async function rollback() {
-    if (!githubConfigured || !status?.previousCommit || installLock.current || isActiveStatus(status)) return
+    if (!githubConfigured || !status?.previousCommit || installLock.current || panel.installDisabled) return
     if (!window.confirm('Önceki başarılı sürüme dönülecek. Devam etmek istiyor musunuz?')) return
     installLock.current = true
     setInstalling(true)
+    setOutcome(null)
     setError('')
     setMessage('')
     try {
@@ -174,15 +289,20 @@ export function UpdatesPanel({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ commitSha: status.previousCommit }),
       })
-      const json = await response.json() as ApiResponse<{ status: string }>
+      const json = await response.json() as ApiResponse<InstallData>
       if (!json.ok) {
         setError(json.error.message)
         setInstalling(false)
         installLock.current = false
         return
       }
-      setMessage('Önceki sürüme dönüş başlatıldı.')
-      awaitingRun.current = true
+      persistTrack({
+        previousRunId: json.data.previousRunId,
+        requestedAt: json.data.requestedAt,
+        targetCommit: json.data.targetCommit,
+        trackedRunId: null,
+      })
+      setMessage('GitHub Actions başlatılıyor...')
       await loadStatus()
     } catch {
       setError('Geri alma başlatılamadı.')
@@ -191,11 +311,9 @@ export function UpdatesPanel({
     }
   }
 
-  const active = polling
-  const showProgress = Boolean(active || (trackedRunId && status && status.runId === trackedRunId))
-  const progress = status?.progress ?? 0
-  const failed = Boolean(trackedRunId && status?.status === 'completed' && status.conclusion !== 'success' && status.runId === trackedRunId)
-  const succeeded = Boolean(trackedRunId && status?.status === 'completed' && status.conclusion === 'success' && status.runId === trackedRunId)
+  const progress = panel.progress
+  const failed = panel.outcome === 'failure' || panel.outcome === 'cancelled'
+  const succeeded = panel.outcome === 'success'
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -218,6 +336,9 @@ export function UpdatesPanel({
             <Row label="Commit" value={shortSha(status?.currentCommit || check?.currentCommit)} />
             <Row label="Son dağıtım" value={formatDate(status?.completedAt || status?.startedAt)} />
           </dl>
+          {succeeded && (
+            <p className="mt-4 inline-flex rounded-full border border-green-600/30 bg-green-600/10 px-3 py-1 text-xs font-semibold text-green-800">Yeni sürüm aktif</p>
+          )}
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="font-display text-xl font-bold">GitHub main</h2>
@@ -242,17 +363,17 @@ export function UpdatesPanel({
               {checking ? 'Kontrol ediliyor...' : 'Güncellemeleri Kontrol Et'}
             </button>
             <button
-              disabled={!githubConfigured || checking || installing || active || !check?.updateAvailable}
+              disabled={!githubConfigured || checking || panel.installDisabled || !check?.updateAvailable}
               onClick={() => void install()}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {installing ? 'Kuruluyor...' : 'Güncellemeyi Kur'}
+              {installing || panel.waitingForGithub ? 'Kuruluyor...' : 'Güncellemeyi Kur'}
             </button>
           </div>
         </div>
       </section>
 
-      {showProgress && (
+      {panel.show && (
         <section className="mt-8 rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-display text-xl font-bold">
@@ -269,7 +390,7 @@ export function UpdatesPanel({
             />
           </div>
           <p className="mt-3 text-sm font-medium">
-            {failed ? `İşlem %${progress} aşamasında durdu.` : status?.phaseLabel || 'İşlem sıraya alındı'}
+            {failed ? `İşlem %${progress} aşamasında durdu.` : succeeded ? '✓ Güncelleme başarıyla tamamlandı' : panel.phaseLabel || 'GitHub Actions başlatılıyor'}
           </p>
           {failed && status?.errorMessage && (
             <p className="mt-2 text-sm text-destructive">{status.errorMessage}</p>
@@ -301,7 +422,7 @@ export function UpdatesPanel({
         <p className="mt-2 text-sm text-muted-foreground">ZIP yedek kullanılmaz. Son başarılı commit GitHub Actions ile yeniden derlenir ve dağıtılır.</p>
         <p className="mt-3 text-sm font-medium">{status?.previousCommit ? shortSha(status.previousCommit) : 'Önceki başarılı commit yok.'}</p>
         <button
-          disabled={!githubConfigured || checking || installing || active || !status?.previousCommit}
+          disabled={!githubConfigured || checking || panel.installDisabled || !status?.previousCommit}
           onClick={() => void rollback()}
           className="mt-4 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
         >
