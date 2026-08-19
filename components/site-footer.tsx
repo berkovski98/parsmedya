@@ -31,14 +31,12 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
             >
               {english ? 'Services' : 'Hizmetler'}
             </Link>
-            {!english ? (
-              <Link
-                href="/hizmet-bolgeleri"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Bölgelerimiz
-              </Link>
-            ) : null}
+            <Link
+              href={english ? '/en/service-areas' : '/hizmet-bolgeleri'}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {english ? 'Service Areas' : 'Bölgelerimiz'}
+            </Link>
             <Link
               href={english ? '/en/blog' : '/blog'}
               className="text-muted-foreground transition-colors hover:text-foreground"

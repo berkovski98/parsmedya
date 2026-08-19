@@ -35,10 +35,10 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
   const english = locale === 'en'
   const corporateLinks = getCorporateLinks(locale)
   const serviceGroups = getServiceGroups(locale)
-  const regionLinks = english ? [] : getRegionLinks()
+  const regionLinks = getRegionLinks(locale)
   const homeHref = localeHomePath(locale)
   const servicesHref = english ? '/en/services' : '/hizmetler'
-  const regionsHref = '/hizmet-bolgeleri'
+  const regionsHref = english ? '/en/service-areas' : '/hizmet-bolgeleri'
   const contactHref = english ? '/en/contact' : '/iletisim'
   const simpleLinks = english
     ? [{ label: 'Home', href: '/en' }, { label: 'Blog', href: '/en/blog' }, { label: 'Contact', href: '/en/contact' }]
@@ -74,7 +74,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
               )}
               aria-haspopup="true"
             >
-              Bölgelerimiz
+              {english ? 'Service Areas' : 'Bölgelerimiz'}
               <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180 group-focus-within:rotate-180" />
             </button>
             <div className={cn(
@@ -90,7 +90,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
                   className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <span>{item.label}</span>
-                  <span className="text-xs text-muted-foreground/80">{item.cityCount} il</span>
+                  <span className="text-xs text-muted-foreground/80">{item.cityCount} {english ? 'provinces' : 'il'}</span>
                 </Link>
               ))}
               <Link
@@ -98,7 +98,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
                 onClick={(event) => closeDesktop('regions', event.currentTarget)}
                 className="mt-1 block rounded-lg border-t border-border px-3 py-2.5 text-sm font-semibold text-accent hover:text-accent/80"
               >
-                Tüm bölgeler →
+                {english ? 'All regions →' : 'Tüm bölgeler →'}
               </Link>
             </div>
           </div>
@@ -114,22 +114,20 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
       {mobileSection === 'corporate' && <div className="ml-3 border-l border-border pl-2">{corporateLinks.map((item) => <Link key={item.href} href={item.href} onClick={closeMobile} className="block rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted">{item.label}</Link>)}</div>}
       <button onClick={() => setMobileSection((value) => value === 'services' ? null : 'services')} className="flex min-h-11 items-center justify-between rounded-md px-3 py-3 text-left text-sm font-medium hover:bg-muted" aria-expanded={mobileSection === 'services'}>{english ? 'Services' : 'Hizmetlerimiz'}<ChevronDown className={cn('h-4 w-4 transition-transform', mobileSection === 'services' && 'rotate-180')} /></button>
       {mobileSection === 'services' && <div className="ml-3 space-y-4 border-l border-border py-2 pl-3">{serviceGroups.map((group) => <section key={group.label}><h2 className="px-2 text-xs font-bold uppercase tracking-wider text-accent">{group.label}</h2><div className="mt-1">{group.links.map((item) => <Link key={item.href} href={item.href} onClick={closeMobile} className="block rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-muted">{item.label}</Link>)}</div></section>)}<Link href={servicesHref} onClick={closeMobile} className="block px-2 py-2 text-sm font-semibold text-accent">{english ? 'View All Services' : 'Tüm Hizmetlerimizi İnceleyin'} →</Link></div>}
-      {!english && (
-        <>
-          <button onClick={() => setMobileSection((value) => value === 'regions' ? null : 'regions')} className="flex min-h-11 items-center justify-between rounded-md px-3 py-3 text-left text-sm font-medium hover:bg-muted" aria-expanded={mobileSection === 'regions'}>Bölgelerimiz<ChevronDown className={cn('h-4 w-4 transition-transform', mobileSection === 'regions' && 'rotate-180')} /></button>
+      <>
+          <button onClick={() => setMobileSection((value) => value === 'regions' ? null : 'regions')} className="flex min-h-11 items-center justify-between rounded-md px-3 py-3 text-left text-sm font-medium hover:bg-muted" aria-expanded={mobileSection === 'regions'}>{english ? 'Service Areas' : 'Bölgelerimiz'}<ChevronDown className={cn('h-4 w-4 transition-transform', mobileSection === 'regions' && 'rotate-180')} /></button>
           {mobileSection === 'regions' && (
             <div className="ml-3 border-l border-border pl-2">
               {regionLinks.map((item) => (
                 <Link key={item.href} href={item.href} onClick={closeMobile} className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted">
                   <span>{item.label}</span>
-                  <span className="text-xs">{item.cityCount} il</span>
+                  <span className="text-xs">{item.cityCount} {english ? 'provinces' : 'il'}</span>
                 </Link>
               ))}
-              <Link href={regionsHref} onClick={closeMobile} className="block rounded-md px-3 py-2.5 text-sm font-semibold text-accent">Tüm bölgeler →</Link>
+              <Link href={regionsHref} onClick={closeMobile} className="block rounded-md px-3 py-2.5 text-sm font-semibold text-accent">{english ? 'All regions →' : 'Tüm bölgeler →'}</Link>
             </div>
           )}
         </>
-      )}
       {simpleLinks.slice(1).map((item) => <Link key={item.href} href={item.href} onClick={closeMobile} className="rounded-md px-3 py-3 text-sm font-medium hover:bg-muted">{item.label}</Link>)}
       <Link href={contactHref} onClick={closeMobile} className={buttonVariants({ size: 'lg', className: 'mt-2' })}>{english ? 'Get a Quote' : 'Teklif Al'}</Link><Link href={switchHref} onClick={closeMobile} className="mt-2 rounded-md border border-border px-3 py-2.5 text-center text-sm font-semibold">{english ? 'TR — Türkçe' : 'EN — English'}</Link>
     </nav></div>}

@@ -3,6 +3,7 @@ import { englishServices } from '@/lib/services-en'
 import type { Locale } from '@/lib/i18n'
 import { getTurkeyRegions } from '@/lib/locations/turkey'
 import { localRegionPath } from '@/lib/local-seo/resolve'
+import { enRegionName, enRegionPath } from '@/lib/local-seo/en-resolve'
 
 export type NavigationLink = { label: string; href: string }
 export type NavigationGroup = { label: string; links: NavigationLink[] }
@@ -35,10 +36,10 @@ export function getServiceCategoryLabel(category: string | undefined, locale: Lo
   return categoryLabels[locale][key] || key
 }
 
-export function getRegionLinks() {
+export function getRegionLinks(locale: Locale = 'tr') {
   return getTurkeyRegions().map((item) => ({
-    label: item.name,
-    href: localRegionPath(item.name),
+    label: locale === 'en' ? enRegionName(item.name) : item.name,
+    href: locale === 'en' ? enRegionPath(item.name) : localRegionPath(item.name),
     cityCount: item.cities.length,
   }))
 }
