@@ -7,6 +7,10 @@ export const CHILD_SITEMAP_FILES = [
   'local-services-1.xml',
   'local-services-2.xml',
   'local-services-3.xml',
+  'en-local-cities.xml',
+  'en-local-services-1.xml',
+  'en-local-services-2.xml',
+  'en-local-services-3.xml',
 ] as const
 
 export const FALLBACK_CHILD_SITEMAP_FILES = [

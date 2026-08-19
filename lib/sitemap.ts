@@ -8,6 +8,10 @@ import {
   buildLocalServiceSitemapChunk,
   localServiceSitemapNames,
 } from '@/lib/local-seo/sitemap'
+import {
+  buildEnLocalCitySitemapEntries,
+  buildEnLocalServiceSitemapChunk,
+} from '@/lib/local-seo/en-sitemap'
 import { CHILD_SITEMAP_FILES, FALLBACK_CHILD_SITEMAP_FILES } from '@/lib/sitemap-index'
 import {
   buildEnglishBlogSitemapEntries,
@@ -186,6 +190,13 @@ export async function childSitemapEntries(file: string): Promise<SitemapEntry[] 
     if (file === 'en-pages.xml') return await englishPageSitemapEntries()
     if (file === 'en-blog.xml') return await englishBlogSitemapEntries()
     if (file === 'local-cities.xml') return await localCitySitemapEntries()
+    if (file === 'en-local-cities.xml') return buildEnLocalCitySitemapEntries()
+    const enMatch = file.match(/^en-local-services-(\d+)\.xml$/)
+    if (enMatch) {
+      const enIdx = Number(enMatch[1]) - 1
+      if (!Number.isInteger(enIdx) || enIdx < 0) return []
+      return buildEnLocalServiceSitemapChunk(enIdx)
+    }
     const match = file.match(/^local-services-(\d+)\.xml$/)
     if (!match) return null
     const index = Number(match[1]) - 1

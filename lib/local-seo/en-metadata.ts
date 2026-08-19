@@ -1,36 +1,36 @@
 import { createPageMetadata } from '@/lib/seo'
 import { canonicalAbsoluteUrl } from '@/lib/site-url'
-import { trLocalPathToEn } from '@/lib/local-seo/en-resolve'
 import type { Metadata } from 'next'
 
-export function createLocalPageMetadata({
+export function createEnLocalPageMetadata({
   title,
   description,
   canonical,
+  trCanonical,
   indexable = true,
 }: {
   title: string
   description: string
   canonical: string
+  trCanonical: string
   indexable?: boolean
 }): Metadata {
-  const enEquivalent = trLocalPathToEn(canonical)
   const metadata = createPageMetadata({
     title,
     description,
     canonical,
-    tr: canonical,
-    en: enEquivalent || canonical,
-    locale: 'tr',
+    tr: trCanonical,
+    en: canonical,
+    locale: 'en',
   })
   return {
     ...metadata,
     alternates: {
-      canonical: metadata.alternates?.canonical,
+      canonical: canonicalAbsoluteUrl(canonical),
       languages: {
-        tr: canonicalAbsoluteUrl(canonical),
-        ...(enEquivalent ? { en: canonicalAbsoluteUrl(enEquivalent) } : {}),
-        'x-default': canonicalAbsoluteUrl(canonical),
+        en: canonicalAbsoluteUrl(canonical),
+        tr: canonicalAbsoluteUrl(trCanonical),
+        'x-default': canonicalAbsoluteUrl(trCanonical),
       },
     },
     robots: indexable ? { index: true, follow: true } : { index: false, follow: false },

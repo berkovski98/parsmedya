@@ -1,4 +1,5 @@
-import { services } from '@/lib/services'
+import { trLocalPathToEn, enLocalPathToTr } from '@/lib/local-seo/en-resolve'
+import { serviceSlugPairs, toEnglishServiceSlug, toTurkishServiceSlug } from '@/lib/i18n/service-slugs'
 
 export type Locale = 'tr' | 'en'
 
@@ -34,23 +35,7 @@ export const paths = {
   contact: (locale: Locale) => locale === 'en' ? '/en/contact' : '/iletisim',
 }
 
-const serviceSlugMap: Record<string, string> = {
-  'web-sitesi-gelistirme': 'website-development', 'mobil-uygulama': 'mobile-apps',
-  'e-ticaret-cozumleri': 'e-commerce-solutions', 'seo-dijital-pazarlama': 'seo-digital-marketing',
-  'ui-ux-tasarim': 'ui-ux-design', 'yazilim-danismanligi': 'software-consulting',
-  'web-yazilim-gelistirme': 'web-software-development', 'ozel-yazilim-gelistirme': 'custom-software-development',
-  'crm-yazilim-cozumleri': 'crm-software-solutions', 'erp-yazilim-cozumleri': 'erp-software-solutions',
-  'e-ticaret-yazilimi': 'e-commerce-development', 'kurumsal-web-uygulamalari': 'enterprise-web-applications',
-  'mobil-uygulama-gelistirme': 'mobile-app-development', 'api-sistem-entegrasyonlari': 'api-system-integrations',
-  'is-surecleri-otomasyonu': 'business-process-automation', 'b2b-b2c-platform-gelistirme': 'b2b-b2c-platform-development',
-  'saas-yazilim-gelistirme': 'saas-development', 'dashboard-raporlama-sistemleri': 'dashboard-reporting-systems',
-  'musteri-bayi-portali': 'customer-dealer-portals', 'stok-siparis-yonetim-sistemleri': 'inventory-order-management',
-  'yapay-zeka-destekli-yazilim': 'ai-powered-software-solutions', 'yazilim-modernizasyonu': 'software-modernization',
-}
-
-export const serviceSlugPairs = services.map((service) => ({ tr: service.slug, en: serviceSlugMap[service.slug] }))
-export const toEnglishServiceSlug = (slug: string) => serviceSlugMap[slug]
-export const toTurkishServiceSlug = (slug: string) => serviceSlugPairs.find((pair) => pair.en === slug)?.tr
+export { serviceSlugPairs, toEnglishServiceSlug, toTurkishServiceSlug }
 
 const staticPairs: Record<string, string> = {
   '/': '/en',
@@ -79,6 +64,15 @@ function canonicalizeSwitchPath(pathname: string) {
 export function alternatePath(pathname: string): string {
   const current = canonicalizeSwitchPath(pathname)
 
+  if (current.startsWith('/en/service-areas')) {
+    const trPath = enLocalPathToTr(current)
+    return trPath || '/'
+  }
+  if (current === '/hizmet-bolgeleri' || current.startsWith('/hizmet-bolgeleri/')) {
+    const enPath = trLocalPathToEn(current)
+    return enPath || '/en'
+  }
+
   if (current.startsWith('/en/services/')) {
     const slug = toTurkishServiceSlug(current.split('/').pop() || '')
     return slug ? `/hizmetler/${slug}` : '/hizmetler'
@@ -89,6 +83,11 @@ export function alternatePath(pathname: string): string {
   }
   if (current.startsWith('/en/blog/')) return '/blog'
   if (current.startsWith('/blog/')) return '/en/blog'
+
+  if (!current.startsWith('/en') && !Object.keys(staticPairs).includes(current)) {
+    const enPath = trLocalPathToEn(current)
+    if (enPath) return enPath
+  }
 
   if (current.startsWith('/en')) {
     return Object.entries(staticPairs).find(([, en]) => en === current)?.[0] || '/'
