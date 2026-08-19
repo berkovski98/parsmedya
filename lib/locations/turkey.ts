@@ -1,4 +1,5 @@
 import turkeyData from '@/lib/locations/turkey-data.json'
+import { toLocationSlug } from '@/lib/locations/slug'
 
 // Official 2025 administrative dataset: 81 provinces and 973 districts.
 // Source: TurkiyeAPI v2 / 2025 provinces + districts JSON (api.turkiyeapi.dev).
@@ -39,6 +40,28 @@ export const TURKEY_REGION_ORDER: TurkeyRegion[] = [
 
 export const TURKEY_CITIES = turkeyData as TurkeyCity[]
 
+export function toRegionSlug(region: TurkeyRegion) {
+  return toLocationSlug(region)
+}
+
+const regionBySlug = new Map(TURKEY_REGION_ORDER.map((region) => [toRegionSlug(region), region]))
+
+export function getTurkeyRegion(slugOrName: string): TurkeyRegion | null {
+  return regionBySlug.get(slugOrName) ?? TURKEY_REGION_ORDER.find((region) => region === slugOrName) ?? null
+}
+
+export function getTurkeyRegions() {
+  return TURKEY_REGION_ORDER.map((region) => ({
+    name: region,
+    slug: toRegionSlug(region),
+    cities: TURKEY_CITIES.filter((city) => city.region === region),
+  }))
+}
+
+export function getCitiesForRegion(region: TurkeyRegion) {
+  return TURKEY_CITIES.filter((city) => city.region === region)
+}
+
 const cityBySlug = new Map(TURKEY_CITIES.map((city) => [city.slug, city]))
 const districtByCitySlug = new Map(
   TURKEY_CITIES.map((city) => [city.slug, new Map(city.districts.map((district) => [district.slug, district]))]),
@@ -59,9 +82,10 @@ export function getTurkeyDistrict(city: TurkeyCity | string, districtSlug: strin
 }
 
 export function getCitiesByRegion() {
-  return TURKEY_REGION_ORDER.map((region) => ({
-    region,
-    cities: TURKEY_CITIES.filter((city) => city.region === region),
+  return getTurkeyRegions().map((item) => ({
+    region: item.name,
+    slug: item.slug,
+    cities: item.cities,
   }))
 }
 

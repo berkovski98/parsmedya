@@ -2,8 +2,23 @@ import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSupabaseConfig, hasSupabaseConfig } from '@/lib/supabase/config'
 
+const reservedPrefixes = new Set([
+  'hizmetler', 'blog', 'hakkimizda', 'iletisim', 'misyonumuz', 'vizyonumuz', 'hizmet-bolgeleri',
+  'en', 'admin', 'api', 'tr', 'sitemaps', 'geo', '_next',
+])
+
 function withPathname(request: NextRequest, headers: Headers) {
   return NextResponse.next({ request: { headers } })
+}
+
+function rewriteLocalSeo(request: NextRequest, pathname: string) {
+  const parts = pathname.split('/').filter(Boolean)
+  if (parts.length < 1 || parts.length > 3) return null
+  const city = parts[0]
+  if (!city || reservedPrefixes.has(city) || city.includes('.')) return null
+  const url = request.nextUrl.clone()
+  url.pathname = `/geo${pathname}`
+  return NextResponse.rewrite(url)
 }
 
 export async function proxy(request: NextRequest) {
@@ -15,6 +30,9 @@ export async function proxy(request: NextRequest) {
     const destination = pathname === '/tr' ? '/' : pathname.slice(3) || '/'
     return NextResponse.redirect(new URL(destination, request.url), 308)
   }
+
+  const localSeo = rewriteLocalSeo(request, pathname)
+  if (localSeo) return localSeo
 
   const passthrough = () => withPathname(request, requestHeaders)
   try {

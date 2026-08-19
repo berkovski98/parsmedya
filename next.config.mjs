@@ -50,15 +50,6 @@ const nextConfig = {
   async redirects() {
     return TR_PREFIX_REDIRECTS
   },
-  async rewrites() {
-    return {
-      afterFiles: [
-        { source: '/:city', destination: '/geo/:city' },
-        { source: '/:city/:slug', destination: '/geo/:city/:slug' },
-        { source: '/:city/:slug/:service', destination: '/geo/:city/:slug/:service' },
-      ],
-    }
-  },
 }
 
 export default nextConfig

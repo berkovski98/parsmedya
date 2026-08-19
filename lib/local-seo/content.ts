@@ -1,5 +1,6 @@
 import { getServicePageExtras } from '@/lib/service-page-copy'
 import {
+  getCitiesForRegion,
   getRelatedCities,
   getSiblingDistricts,
   type TurkeyCity,
@@ -7,6 +8,7 @@ import {
   type TurkeyRegion,
 } from '@/lib/locations/turkey'
 import { getRelatedLocalServices, type LocalServiceRecord } from '@/lib/services/service-registry'
+import { localRegionPath } from '@/lib/local-seo/resolve'
 import type { LocalSeoFaq, LocalSeoOverride } from '@/lib/local-seo/types'
 
 export type LocalBreadcrumb = {
@@ -301,7 +303,7 @@ export function buildLocalServicePage(
 }
 
 export type LocalHubModel = {
-  kind: 'city-hub' | 'district-hub' | 'national-hub'
+  kind: 'city-hub' | 'district-hub' | 'national-hub' | 'region-hub'
   canonicalPath: string
   title: string
   description: string
@@ -322,8 +324,8 @@ export function buildCityHub(city: TurkeyCity): LocalHubModel {
     intro: `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan işletmeler için yazılım ve dijital çözümler geliştirdiğimiz bir hizmet bölgesidir. Hazır paket dayatmadan, mevcut süreçlerinize uygun web, özel yazılım, entegrasyon ve büyüme projeleri kurgularız.`,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
-      { name: 'Hizmetler', href: '/hizmetler' },
-      { name: 'Hizmet Bölgeleri', href: '/hizmet-bolgeleri' },
+      { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
+      { name: city.region, href: localRegionPath(city.region) },
       { name: city.name, href: `/${city.slug}` },
     ],
     faqs: [
@@ -349,7 +351,8 @@ export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): Lo
     intro: `${district.name} ve ${city.name} genelindeki işletmeler için web, özel yazılım, entegrasyon ve dijital büyüme ihtiyaçlarını aynı ekip içinde planlıyoruz. İlçe sayfası, o bölgedeki hizmetlere giden net bir başlangıç noktasıdır.`,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
-      { name: 'Hizmetler', href: '/hizmetler' },
+      { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
+      { name: city.region, href: localRegionPath(city.region) },
       { name: city.name, href: `/${city.slug}` },
       { name: district.name, href: `/${city.slug}/${district.slug}` },
     ],
@@ -377,7 +380,7 @@ export function buildNationalHub(): LocalHubModel {
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
       { name: 'Hizmetler', href: '/hizmetler' },
-      { name: 'Hizmet Bölgeleri', href: '/hizmet-bolgeleri' },
+      { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
     ],
     faqs: [
       {
@@ -387,6 +390,35 @@ export function buildNationalHub(): LocalHubModel {
       {
         question: 'Her ilçede ofisiniz mi var?',
         answer: 'Hayır. İlçe sayfaları hizmet bölgesi sayfalarıdır; her ilçede fiziksel ofis olduğu anlamına gelmez.',
+      },
+    ],
+  }
+}
+
+export function buildRegionHub(region: TurkeyRegion): LocalHubModel {
+  const cities = getCitiesForRegion(region)
+  const canonicalPath = localRegionPath(region)
+  return {
+    kind: 'region-hub',
+    canonicalPath,
+    title: `${region} Yazılım ve Dijital Hizmetler | Pars Medya`,
+    description: clipMeta(`${region} bölgesinde ${cities.length} il için web, özel yazılım, CRM, ERP ve dijital büyüme hizmetleri. ${region} illerinden hizmet sayfalarına Pars Medya ile ulaşın.`),
+    h1: `${region} Yazılım ve Dijital Hizmetler`,
+    intro: `${region} bölgesindeki ${cities.length} il için yazılım ve dijital çözüm sayfaları yayınlıyoruz. Aşağıdaki illerden kendi şehrinize ve ilçe bazlı hizmet sayfalarına geçebilirsiniz.`,
+    breadcrumbs: [
+      { name: 'Ana Sayfa', href: '/' },
+      { name: 'Hizmetler', href: '/hizmetler' },
+      { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
+      { name: region, href: canonicalPath },
+    ],
+    faqs: [
+      {
+        question: `${region} bölgesinde hangi illere hizmet veriyorsunuz?`,
+        answer: `${region} bölgesindeki ${cities.length} ilin tamamı için il ve ilçe bazlı hizmet sayfaları yayınlıyoruz.`,
+      },
+      {
+        question: `${region} dışındaki illerle de çalışıyor musunuz?`,
+        answer: 'Evet. Bölgelerimiz sayfaları hizmet kapsamını gösterir; proje koordinasyonu Türkiye genelinde yürütülür.',
       },
     ],
   }

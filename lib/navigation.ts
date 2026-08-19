@@ -1,6 +1,8 @@
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 import type { Locale } from '@/lib/i18n'
+import { getTurkeyRegions } from '@/lib/locations/turkey'
+import { localRegionPath } from '@/lib/local-seo/resolve'
 
 export type NavigationLink = { label: string; href: string }
 export type NavigationGroup = { label: string; links: NavigationLink[] }
@@ -31,6 +33,14 @@ export function getCorporateLinks(locale: Locale) {
 export function getServiceCategoryLabel(category: string | undefined, locale: Locale) {
   const key = category || 'Dijital Büyüme'
   return categoryLabels[locale][key] || key
+}
+
+export function getRegionLinks() {
+  return getTurkeyRegions().map((item) => ({
+    label: item.name,
+    href: localRegionPath(item.name),
+    cityCount: item.cities.length,
+  }))
 }
 
 export function getServiceGroups(locale: Locale): NavigationGroup[] {

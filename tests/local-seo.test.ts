@@ -4,7 +4,7 @@ import { toLocationSlug } from '../lib/locations/slug'
 import { getDistrictCount, getTurkeyCity, getTurkeyCities } from '../lib/locations/turkey'
 import { buildCityHub, buildDistrictHub, buildLocalServicePage, buildNationalHub } from '../lib/local-seo/content'
 import { localHubJsonLd, localServiceJsonLd } from '../lib/local-seo/schema'
-import { isValidLocalPath, resolveCityChild, resolveDistrictService } from '../lib/local-seo/resolve'
+import { isValidLocalPath, resolveCityChild, resolveDistrictService, resolveRegionHub } from '../lib/local-seo/resolve'
 import { getLocalSeoInventory } from '../lib/local-seo/stats'
 import { buildLocalCitySitemapEntries, buildLocalServiceSitemapChunk, buildLocalServiceSitemapEntries, localServiceSitemapNames } from '../lib/local-seo/sitemap'
 import { getLocalService, getLocalServices } from '../lib/services/service-registry'
@@ -36,6 +36,19 @@ test('location slug utility converts Turkish characters to ASCII kebab-case', ()
   assert.equal(toLocationSlug('Çankaya'), 'cankaya')
   assert.equal(toLocationSlug('Kâğıthane'), 'kagithane')
   assert.equal(toLocationSlug('Kağıthane'), 'kagithane')
+})
+
+test('region slugs and hub routes resolve for all geographic regions', () => {
+  assert.equal(toLocationSlug('Marmara'), 'marmara')
+  assert.equal(toLocationSlug('İç Anadolu'), 'ic-anadolu')
+  assert.equal(toLocationSlug('Doğu Anadolu'), 'dogu-anadolu')
+  assert.equal(toLocationSlug('Güneydoğu Anadolu'), 'guneydogu-anadolu')
+  assert.equal(isValidLocalPath('/hizmet-bolgeleri/marmara'), true)
+  assert.equal(isValidLocalPath('/hizmet-bolgeleri/ic-anadolu'), true)
+  assert.equal(isValidLocalPath('/hizmet-bolgeleri/olmayan-bolge'), false)
+  const route = resolveRegionHub('marmara')
+  assert.equal(route?.type, 'region-hub')
+  assert.equal(route?.region, 'Marmara')
 })
 
 test('valid and invalid local paths resolve correctly', () => {

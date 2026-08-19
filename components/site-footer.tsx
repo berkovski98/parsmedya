@@ -36,7 +36,7 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
                 href="/hizmet-bolgeleri"
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
-                Hizmet Bölgeleri
+                Bölgelerimiz
               </Link>
             ) : null}
             <Link

@@ -1,8 +1,11 @@
 import {
   getTurkeyCity,
   getTurkeyDistrict,
+  getTurkeyRegion,
+  toRegionSlug,
   type TurkeyCity,
   type TurkeyDistrict,
+  type TurkeyRegion,
 } from '@/lib/locations/turkey'
 import { getLocalService, type LocalServiceRecord } from '@/lib/services/service-registry'
 
@@ -28,6 +31,7 @@ export const RESERVED_TR_CITY_SEGMENTS = [
 const reserved = new Set<string>(RESERVED_TR_CITY_SEGMENTS)
 
 export type NationalHubRoute = { type: 'national-hub' }
+export type RegionHubRoute = { type: 'region-hub'; region: TurkeyRegion; slug: string }
 export type CityHubRoute = { type: 'city-hub'; city: TurkeyCity }
 export type DistrictHubRoute = { type: 'district-hub'; city: TurkeyCity; district: TurkeyDistrict }
 export type CityServiceRoute = { type: 'city-service'; city: TurkeyCity; service: LocalServiceRecord }
@@ -35,6 +39,7 @@ export type DistrictServiceRoute = { type: 'district-service'; city: TurkeyCity;
 
 export type LocalRoute =
   | NationalHubRoute
+  | RegionHubRoute
   | CityHubRoute
   | DistrictHubRoute
   | CityServiceRoute
@@ -46,6 +51,17 @@ export function isReservedTrCitySegment(slug: string) {
 
 export function localNationalHubPath() {
   return '/hizmet-bolgeleri'
+}
+
+export function localRegionPath(region: TurkeyRegion | string) {
+  const match = getTurkeyRegion(region)
+  return `/hizmet-bolgeleri/${match ? toRegionSlug(match) : region}`
+}
+
+export function resolveRegionHub(slug: string): RegionHubRoute | null {
+  const region = getTurkeyRegion(slug)
+  if (!region) return null
+  return { type: 'region-hub', region, slug: toRegionSlug(region) }
 }
 
 export function localCityPath(city: string) {
@@ -101,6 +117,10 @@ export function isValidLocalPath(pathname: string) {
   const raw = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname
   const path = stripLegacyTrPrefix(raw)
   if (path === '/hizmet-bolgeleri') return true
+  if (path.startsWith('/hizmet-bolgeleri/')) {
+    const slug = path.slice('/hizmet-bolgeleri/'.length)
+    return Boolean(resolveRegionHub(slug))
+  }
   const parts = path.split('/').filter(Boolean)
   if (parts.length < 1 || parts.length > 3) return false
   if (parts.length === 1) return Boolean(resolveCityHub(parts[0]))

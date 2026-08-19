@@ -6,7 +6,9 @@ import {
   localDistrictPath,
   localDistrictServicePath,
   localNationalHubPath,
+  localRegionPath,
 } from '@/lib/local-seo/resolve'
+import { getTurkeyRegions } from '@/lib/locations/turkey'
 import { CHILD_SITEMAP_FILES } from '@/lib/sitemap-index'
 import { toSitemapEntry, type SitemapEntry } from '@/lib/sitemap-xml'
 
@@ -52,6 +54,7 @@ export function buildLocalCitySitemapEntries(now = new Date()): SitemapEntry[] {
     const cities = getTurkeyCities()
     const entries = compactLocalEntries([
       toSitemapEntry(localNationalHubPath(), now),
+      ...getTurkeyRegions().map((region) => toSitemapEntry(localRegionPath(region.name), now)),
       ...cities.flatMap((city) => {
         if (!city?.slug) return []
         return [

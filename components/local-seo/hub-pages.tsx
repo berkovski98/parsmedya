@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { LocalBreadcrumbs } from '@/components/local-seo/breadcrumbs'
-import { getCitiesByRegion, getSiblingDistricts, type TurkeyCity, type TurkeyDistrict } from '@/lib/locations/turkey'
+import { getCitiesByRegion, getCitiesForRegion, getSiblingDistricts, type TurkeyCity, type TurkeyDistrict, type TurkeyRegion } from '@/lib/locations/turkey'
+import { localRegionPath } from '@/lib/local-seo/resolve'
 import type { LocalHubModel } from '@/lib/local-seo/content'
 import { getLocalServices, getLocalServicesByCategory } from '@/lib/services/service-registry'
 
@@ -74,11 +75,33 @@ export function LocalNationalHub({ model }: { model: LocalHubModel }) {
   const regions = getCitiesByRegion()
   return (
     <article>
-      <HubHero model={model} kicker="Türkiye • Hizmet bölgeleri" />
+      <HubHero model={model} kicker="Türkiye • Bölgelerimiz" />
+      <section className="border-b border-border py-10 sm:py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="font-display text-2xl font-bold">Coğrafi bölgeler</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {regions.map((group) => (
+              <Link
+                key={group.region}
+                href={localRegionPath(group.region)}
+                className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-secondary"
+              >
+                <p className="font-display text-lg font-semibold">{group.region}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{group.cities.length} il</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
       {regions.map((group) => (
         <section key={group.region} className="border-b border-border py-10 sm:py-12">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="font-display text-2xl font-bold">{group.region}</h2>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h2 className="font-display text-2xl font-bold">{group.region}</h2>
+              <Link href={localRegionPath(group.region)} className="text-sm font-medium text-primary hover:underline">
+                Bölge sayfasına git
+              </Link>
+            </div>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {group.cities.map((city) => (
                 <Link
@@ -93,6 +116,32 @@ export function LocalNationalHub({ model }: { model: LocalHubModel }) {
           </div>
         </section>
       ))}
+      <FaqAndCta model={model} />
+    </article>
+  )
+}
+
+export function LocalRegionHub({ model, region }: { model: LocalHubModel; region: TurkeyRegion }) {
+  const cities = getCitiesForRegion(region)
+  return (
+    <article>
+      <HubHero model={model} kicker={`Türkiye • ${region}`} />
+      <section className="border-b border-border py-10 sm:py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="font-display text-2xl font-bold">{region} illeri</h2>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {cities.map((city) => (
+              <Link
+                key={city.slug}
+                href={`/${city.slug}`}
+                className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary"
+              >
+                {city.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
       <FaqAndCta model={model} />
     </article>
   )
