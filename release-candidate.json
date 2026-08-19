@@ -1,11 +1,11 @@
 {
-  "version": "1.1.7",
-  "title": "Site haritası düzeltmesi ve Bölgelerimiz menüsü",
-  "releaseTitle": "Site haritası düzeltmesi ve Bölgelerimiz menüsü",
-  "summary": "Alt site haritası adresleri yeniden açılır. Üst menüde Türkiye bölgelerine hızlı erişim eklenir.",
+  "version": "1.1.8",
+  "title": "Yerel SEO sayfalarında içerik derinliği",
+  "releaseTitle": "Yerel SEO sayfalarında içerik derinliği",
+  "summary": "Hizmet bölgeleri, il ve ilçe sayfalarına bölüme özel zengin içerik, SSS ve hizmet kartları eklendi.",
   "releaseNotes": [
-    "Alt site haritası dosyaları (tr-pages, en-pages, yerel sayfalar) yeniden doğru adreslerden sunulur.",
-    "Güncelleme sırasındaki site haritası doğrulama adımı bu düzeltmeyle tamamlanabilir.",
-    "Üst menüde Bölgelerimiz açılır menüsü ile yedi coğrafi bölgeye ve şehir listelerine gidilebilir."
+    "Hizmet bölgeleri ana sayfası; hizmet kartları, süreç adımları, bölge özeti ve genişletilmiş SSS ile güçlendirildi.",
+    "Bölge, il ve ilçe sayfalarında farklı içerik yapıları kullanılır; aynı metin tüm lokasyonlara kopyalanmaz.",
+    "Hizmet + lokasyon sayfalarına ek açıklama paragrafları ve entegrasyon bölümü eklendi."
   ]
 }

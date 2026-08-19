@@ -32,8 +32,15 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
     <article className="overflow-x-hidden bg-background">
       <LocalServiceHero model={model} />
 
-      <Section id="hizmet-ozeti" title={`${model.service.title} özeti`}>
-        <p className="max-w-3xl text-pretty leading-relaxed text-muted-foreground">{model.serviceSummary}</p>
+      <Section id="hizmet-ozeti" title={`${model.service.title} nedir?`}>
+        <div className="max-w-3xl space-y-4">
+          <p className="text-pretty leading-relaxed text-muted-foreground">{model.serviceSummary}</p>
+          {model.detailParagraphs.map((paragraph) => (
+            <p key={paragraph.slice(0, 48)} className="text-pretty leading-relaxed text-muted-foreground">
+              {paragraph}
+            </p>
+          ))}
+        </div>
       </Section>
 
       <Section title={`${model.district?.name || model.city.name} için yaklaşımımız`} className="bg-secondary/40">
@@ -84,6 +91,17 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
             <span key={tech} className="rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium">
               {tech}
             </span>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Entegrasyonlar">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {model.integrations.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-border bg-card p-5">
+              <p className="font-display font-semibold">{item.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+            </div>
           ))}
         </div>
       </Section>

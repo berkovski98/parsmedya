@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { toLocationSlug } from '../lib/locations/slug'
 import { getDistrictCount, getTurkeyCity, getTurkeyCities } from '../lib/locations/turkey'
-import { buildCityHub, buildDistrictHub, buildLocalServicePage, buildNationalHub } from '../lib/local-seo/content'
+import { buildCityHub, buildDistrictHub, buildLocalServicePage, buildNationalHub, buildRegionHub } from '../lib/local-seo/content'
 import { localHubJsonLd, localServiceJsonLd } from '../lib/local-seo/schema'
 import { isValidLocalPath, resolveCityChild, resolveDistrictService, resolveRegionHub } from '../lib/local-seo/resolve'
 import { getLocalSeoInventory } from '../lib/local-seo/stats'
@@ -167,6 +167,48 @@ test('JSON-LD includes BreadcrumbList, Service, FAQPage and no fake LocalBusines
   const hub = localHubJsonLd(buildNationalHub())
   assert.ok(hub.includes('BreadcrumbList'))
   assert.equal(hub.includes('LocalBusiness'), false)
+})
+
+test('hub pages include expanded sections, unique overviews and sufficient FAQs', () => {
+  const national = buildNationalHub()
+  assert.ok(national.sections.overviewParagraphs.length >= 3)
+  assert.ok(national.sections.serviceCards.length >= 6)
+  assert.ok(national.sections.processSteps.length >= 5)
+  assert.ok(national.sections.regionCards?.length === 7)
+  assert.ok(national.faqs.length >= 6)
+
+  const marmara = buildRegionHub('Marmara')
+  const ege = buildRegionHub('Ege')
+  assert.notEqual(marmara.sections.overviewParagraphs[0], ege.sections.overviewParagraphs[0])
+  assert.ok((marmara.sections.solutionCards?.length ?? 0) >= 6)
+  assert.ok(marmara.faqs.length >= 5)
+
+  const balikesir = buildCityHub(getTurkeyCity('balikesir')!)
+  const istanbul = buildCityHub(getTurkeyCity('istanbul')!)
+  assert.notEqual(balikesir.sections.overviewParagraphs.join(' '), istanbul.sections.overviewParagraphs.join(' '))
+  assert.ok(balikesir.h1.includes('Balıkesir'))
+  assert.ok((balikesir.sections.locationCards?.length ?? 0) >= 10)
+  assert.ok(balikesir.faqs.length >= 6)
+
+  const erdek = buildDistrictHub(getTurkeyCity('balikesir')!, getTurkeyCity('balikesir')!.districts.find((d) => d.slug === 'erdek')!)
+  const kadikoy = buildDistrictHub(getTurkeyCity('istanbul')!, getTurkeyCity('istanbul')!.districts.find((d) => d.slug === 'kadikoy')!)
+  assert.notEqual(erdek.sections.overviewParagraphs[0], kadikoy.sections.overviewParagraphs[0])
+  assert.ok((erdek.sections.digitalizationAreas?.length ?? 0) >= 6)
+  assert.ok((erdek.sections.popularServices?.length ?? 0) >= 4)
+  assert.ok(erdek.faqs.length >= 6)
+})
+
+test('local service pages include detail paragraphs, integrations and expanded FAQs', () => {
+  const city = getTurkeyCity('balikesir')!
+  const district = city.districts.find((d) => d.slug === 'erdek')!
+  const service = getLocalService('ozel-yazilim-gelistirme')!
+  const cityModel = buildLocalServicePage(city, service)
+  const districtModel = buildLocalServicePage(city, service, district)
+  assert.ok(cityModel.detailParagraphs.length >= 3)
+  assert.ok(cityModel.integrations.length >= 4)
+  assert.ok(cityModel.faqs.length >= 6)
+  assert.ok(districtModel.detailParagraphs.length >= 3)
+  assert.notEqual(cityModel.detailParagraphs[0], districtModel.detailParagraphs[0])
 })
 
 test('local sitemaps contain only valid canonical Turkish URLs and skip English', () => {

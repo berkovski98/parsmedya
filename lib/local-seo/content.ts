@@ -1,15 +1,30 @@
 import { getServicePageExtras } from '@/lib/service-page-copy'
 import {
-  getCitiesForRegion,
   getRelatedCities,
   getSiblingDistricts,
   type TurkeyCity,
   type TurkeyDistrict,
   type TurkeyRegion,
 } from '@/lib/locations/turkey'
-import { getRelatedLocalServices, type LocalServiceRecord } from '@/lib/services/service-registry'
+import {
+  cityHubFaqs,
+  cityHubMeta,
+  cityHubSections,
+  districtHubFaqs,
+  districtHubMeta,
+  districtHubSections,
+  nationalHubFaqs,
+  nationalHubMeta,
+  nationalHubSections,
+  regionHubFaqs,
+  regionHubMeta,
+  regionHubSections,
+  type HubSections,
+} from '@/lib/local-seo/hub-content'
 import { localRegionPath } from '@/lib/local-seo/resolve'
+import { clipMeta, hash, locative, pick, pickMany, possessive } from '@/lib/local-seo/text-utils'
 import type { LocalSeoFaq, LocalSeoOverride } from '@/lib/local-seo/types'
+import { getRelatedLocalServices, type LocalServiceRecord } from '@/lib/services/service-registry'
 
 export type LocalBreadcrumb = {
   name: string
@@ -44,6 +59,8 @@ export type LocalServicePageModel = {
   relatedLocations: { name: string; href: string }[]
   ctaTitle: string
   ctaText: string
+  detailParagraphs: string[]
+  integrations: { title: string; description: string }[]
   city: TurkeyCity
   district: TurkeyDistrict | null
   service: LocalServiceRecord
@@ -58,50 +75,6 @@ const REGION_BUSINESS: Record<TurkeyRegion, string> = {
   Karadeniz: 'üretim, ticaret ve bölgesel hizmet işletmeleri',
   'Doğu Anadolu': 'kamu, ticaret ve yerel hizmet işletmeleri',
   'Güneydoğu Anadolu': 'ticaret, üretim ve bölgesel hizmet işletmeleri',
-}
-
-function hash(value: string) {
-  let result = 2166136261
-  for (let index = 0; index < value.length; index += 1) {
-    result ^= value.charCodeAt(index)
-    result = Math.imul(result, 16777619)
-  }
-  return result >>> 0
-}
-
-function pick<T>(items: readonly T[], seed: string, salt = 0) {
-  return items[(hash(`${seed}:${salt}`) + salt) % items.length]
-}
-
-function clipMeta(text: string) {
-  const normalized = text.replace(/\s+/g, ' ').trim()
-  if (normalized.length >= 140 && normalized.length <= 160) return normalized
-  if (normalized.length > 160) {
-    const sliced = normalized.slice(0, 159)
-    const cut = Math.max(sliced.lastIndexOf(' '), 120)
-    return `${sliced.slice(0, cut).replace(/[,:;.-]+$/, '')}.`
-  }
-  const filler = ' Pars Medya ile kapsamı birlikte netleştirin.'
-  const padded = `${normalized}${filler}`
-  if (padded.length <= 160) return padded
-  return `${normalized} Pars Medya ile planlayın.`
-}
-
-function lastVowel(name: string) {
-  const vowels = name.toLocaleLowerCase('tr-TR').match(/[aeıioöuü]/g)
-  return vowels?.[vowels.length - 1] || 'e'
-}
-
-function locativeSuffix(name: string) {
-  return 'aıou'.includes(lastVowel(name)) ? 'da' : 'de'
-}
-
-function possessive(name: string) {
-  return `${name}'${locativeSuffix(name)}`
-}
-
-function locative(name: string) {
-  return `${name}'${locativeSuffix(name)}ki`
 }
 
 function featureNouns(service: LocalServiceRecord) {
@@ -192,6 +165,22 @@ function locationFaqs(service: LocalServiceRecord, city: TurkeyCity, district: T
       question: `${place} dışında da aynı sistemi kullanabilir miyiz?`,
       answer: `Evet. ${service.title} çözümlerini ${district ? `${district.name} ve ${city.name}` : city.name} ile sınırlamayız. Yetki, şube ve lokasyon kırılımları analiz sırasında belirlenir.`,
     },
+    {
+      question: 'Mevcut sistemlerimize entegrasyon yapılır mı?',
+      answer: 'Evet. Muhasebe, ERP, ödeme, kargo ve harici API servisleriyle entegrasyon katmanı proje kapsamına dahil edilebilir.',
+    },
+    {
+      question: 'Proje süresi ne kadar?',
+      answer: 'Kapsam, entegrasyon sayısı ve kullanıcı rollerine göre değişir. Analiz sonrası fazlı teslimat planı ve tahmini takvim paylaşılır.',
+    },
+    {
+      question: 'Canlıya alma sonrası destek veriyor musunuz?',
+      answer: 'Bakım, güvenlik güncellemesi, hata giderme ve yeni modül geliştirme için destek planları sunuyoruz.',
+    },
+    {
+      question: 'Teklif süreci nasıl işler?',
+      answer: 'Kısa bir keşif görüşmesi sonrası kapsam, fazlar ve tahmini takvim yazılı olarak paylaşılır.',
+    },
   ]
   return [...serviceFaqs, ...local]
 }
@@ -207,6 +196,37 @@ function relatedLocationLinks(city: TurkeyCity, district: TurkeyDistrict | null,
     name: item.name,
     href: `/${item.slug}/${service.slug}`,
   }))
+}
+
+function serviceDetailParagraphs(service: LocalServiceRecord, city: TurkeyCity, district: TurkeyDistrict | null, seed: string) {
+  const place = locationLabel(city, district)
+  const extras = getServicePageExtras(service.slug)
+  const long = service.source.longDescription || []
+  const frames = [
+    `${service.title}, ${businessScope(city, district)} için tasarlanır. ${service.description}`,
+    `${locative(place)} ekiplerin günlük operasyonlarında ${featureNouns(service).join(', ') || 'süreç yönetimi'} ihtiyaçlarını karşılamak üzere modüler bir mimari kurulur.`,
+    extras.why[0]?.text.tr || `${service.shortDescription} Pars Medya ekibiyle kapsam analizi sonrası netleştirilir.`,
+    ...long.slice(0, 2),
+  ]
+  return pickMany(frames.filter(Boolean), seed, 4, 50) as string[]
+}
+
+function serviceIntegrations(service: LocalServiceRecord, city: TurkeyCity, district: TurkeyDistrict | null) {
+  const place = locationLabel(city, district)
+  const labels = service.source.technologies.slice(0, 6)
+  const defaults = [
+    { title: 'Muhasebe entegrasyonu', description: `${place} operasyonlarında fatura ve cari verilerinin senkronize aktarımı.` },
+    { title: 'Ödeme altyapısı', description: 'Sanal POS, havale takibi ve taksit senaryoları için güvenli bağlantılar.' },
+    { title: 'Kargo ve lojistik', description: 'Sevkiyat durumu, barkod ve takip numarası entegrasyonları.' },
+    { title: 'E-posta ve SMS', description: 'Bildirim, doğrulama ve pazarlama otomasyonu kanalları.' },
+  ]
+  if (labels.length >= 4) {
+    return labels.slice(0, 6).map((tech, index) => ({
+      title: tech,
+      description: defaults[index % defaults.length]?.description || `${place} projelerinde ${tech} altyapısı kullanılır.`,
+    }))
+  }
+  return defaults
 }
 
 function fitMeta(service: LocalServiceRecord, city: TurkeyCity, district: TurkeyDistrict | null, seed: string) {
@@ -295,6 +315,8 @@ export function buildLocalServicePage(
     relatedLocations: relatedLocationLinks(city, district, service),
     ctaTitle: 'Projenizi Birlikte Planlayalım',
     ctaText: `${place} özelinde yazılım, web, otomasyon veya dijital büyüme ihtiyacınızı Pars Medya ekibiyle değerlendirin.`,
+    detailParagraphs: serviceDetailParagraphs(service, city, district, seed),
+    integrations: serviceIntegrations(service, city, district),
     city,
     district,
     service,
@@ -311,44 +333,38 @@ export type LocalHubModel = {
   intro: string
   breadcrumbs: LocalBreadcrumb[]
   faqs: LocalSeoFaq[]
+  sections: HubSections
 }
 
 export function buildCityHub(city: TurkeyCity): LocalHubModel {
-  const districtCount = city.districts.length
+  const meta = cityHubMeta(city)
   return {
     kind: 'city-hub',
     canonicalPath: `/${city.slug}`,
-    title: `${city.name} Dijital Ajans ve Yazılım Hizmetleri | Pars Medya`,
-    description: clipMeta(`${city.name} yazılım, web, CRM, ERP, e-ticaret ve dijital büyüme hizmetleri. ${districtCount} ilçedeki işletmeler için özel çözümleri Pars Medya ile planlayın.`),
-    h1: `${city.name} Dijital Ajans ve Yazılım Hizmetleri`,
-    intro: `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan işletmeler için yazılım ve dijital çözümler geliştirdiğimiz bir hizmet bölgesidir. Hazır paket dayatmadan, mevcut süreçlerinize uygun web, özel yazılım, entegrasyon ve büyüme projeleri kurgularız.`,
+    title: meta.title,
+    description: meta.description,
+    h1: meta.h1,
+    intro: meta.intro,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
       { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
       { name: city.region, href: localRegionPath(city.region) },
       { name: city.name, href: `/${city.slug}` },
     ],
-    faqs: [
-      {
-        question: `${city.name} içinde hangi ilçelere hizmet veriyorsunuz?`,
-        answer: `${city.name} ilindeki ${districtCount} ilçenin tamamı için ilgili hizmet sayfalarını yayınlıyoruz. Proje kapsamı ilçe sınırına kilitlenmez; ${city.name} genelindeki ekipler aynı sistemde çalışabilir.`,
-      },
-      {
-        question: `${city.name} için ofisiniz var mı?`,
-        answer: `${city.name} için ayrı bir şube adresi yayınlamıyoruz. Keşif ve teslimatı uzaktan, gerektiğinde yüz yüze koordinasyonla yürütürüz.`,
-      },
-    ],
+    faqs: cityHubFaqs(city),
+    sections: cityHubSections(city),
   }
 }
 
 export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): LocalHubModel {
+  const meta = districtHubMeta(city, district)
   return {
     kind: 'district-hub',
     canonicalPath: `/${city.slug}/${district.slug}`,
-    title: `${district.name} Yazılım ve Dijital Çözümler | Pars Medya`,
-    description: clipMeta(`${district.name} yazılım ve dijital çözümler: web, özel yazılım, CRM, ERP ve e-ticaret. ${city.name} genelindeki işletmeler için Pars Medya ile projenizi planlayın.`),
-    h1: `${district.name} Yazılım ve Dijital Çözümler`,
-    intro: `${district.name} ve ${city.name} genelindeki işletmeler için web, özel yazılım, entegrasyon ve dijital büyüme ihtiyaçlarını aynı ekip içinde planlıyoruz. İlçe sayfası, o bölgedeki hizmetlere giden net bir başlangıç noktasıdır.`,
+    title: meta.title,
+    description: meta.description,
+    h1: meta.h1,
+    intro: meta.intro,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
       { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
@@ -356,70 +372,47 @@ export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): Lo
       { name: city.name, href: `/${city.slug}` },
       { name: district.name, href: `/${city.slug}/${district.slug}` },
     ],
-    faqs: [
-      {
-        question: `${district.name} sayfasından hangi hizmetlere ulaşırım?`,
-        answer: `Web yazılım, özel yazılım, CRM, ERP, e-ticaret, entegrasyon ve dijital büyüme dahil tüm aktif hizmetler ${district.name} için ayrı sayfalarda listelenir.`,
-      },
-      {
-        question: `Yalnızca ${district.name} içindeki şirketlerle mi çalışıyorsunuz?`,
-        answer: `Hayır. ${district.name} bir hizmet bölgesidir; ${city.name} ve Türkiye genelindeki işletmelerle de aynı süreçle çalışırız.`,
-      },
-    ],
+    faqs: districtHubFaqs(city, district),
+    sections: districtHubSections(city, district),
   }
 }
 
 export function buildNationalHub(): LocalHubModel {
+  const meta = nationalHubMeta()
   return {
     kind: 'national-hub',
     canonicalPath: '/hizmet-bolgeleri',
-    title: 'Türkiye Geneli Yazılım ve Dijital Hizmetler | Pars Medya',
-    description: clipMeta('Türkiye geneli yazılım ve dijital hizmetler. 81 il ve tüm ilçeler için web, özel yazılım, CRM, ERP ve dijital büyüme çözümlerini Pars Medya ile planlayın.'),
-    h1: 'Türkiye Geneli Yazılım ve Dijital Hizmetler',
-    intro: 'Pars Medya; web, özel yazılım, kurumsal sistemler ve dijital büyüme projelerini Türkiye genelindeki işletmeler için planlar. Aşağıdaki illerden kendi bölgenize ve ilgili hizmet sayfalarına ulaşabilirsiniz.',
+    title: meta.title,
+    description: meta.description,
+    h1: meta.h1,
+    intro: meta.intro,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
       { name: 'Hizmetler', href: '/hizmetler' },
       { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
     ],
-    faqs: [
-      {
-        question: 'Hangi illerde hizmet sayfanız var?',
-        answer: 'Türkiye’nin 81 ili ve bu illerin resmi ilçeleri için hizmet bölgesi sayfaları yayınlıyoruz. Her il ve ilçe, aktif hizmet listesine bağlanır.',
-      },
-      {
-        question: 'Her ilçede ofisiniz mi var?',
-        answer: 'Hayır. İlçe sayfaları hizmet bölgesi sayfalarıdır; her ilçede fiziksel ofis olduğu anlamına gelmez.',
-      },
-    ],
+    faqs: nationalHubFaqs(),
+    sections: nationalHubSections(),
   }
 }
 
 export function buildRegionHub(region: TurkeyRegion): LocalHubModel {
-  const cities = getCitiesForRegion(region)
+  const meta = regionHubMeta(region)
   const canonicalPath = localRegionPath(region)
   return {
     kind: 'region-hub',
     canonicalPath,
-    title: `${region} Yazılım ve Dijital Hizmetler | Pars Medya`,
-    description: clipMeta(`${region} bölgesinde ${cities.length} il için web, özel yazılım, CRM, ERP ve dijital büyüme hizmetleri. ${region} illerinden hizmet sayfalarına Pars Medya ile ulaşın.`),
-    h1: `${region} Yazılım ve Dijital Hizmetler`,
-    intro: `${region} bölgesindeki ${cities.length} il için yazılım ve dijital çözüm sayfaları yayınlıyoruz. Aşağıdaki illerden kendi şehrinize ve ilçe bazlı hizmet sayfalarına geçebilirsiniz.`,
+    title: meta.title,
+    description: meta.description,
+    h1: meta.h1,
+    intro: meta.intro,
     breadcrumbs: [
       { name: 'Ana Sayfa', href: '/' },
       { name: 'Hizmetler', href: '/hizmetler' },
       { name: 'Bölgelerimiz', href: '/hizmet-bolgeleri' },
       { name: region, href: canonicalPath },
     ],
-    faqs: [
-      {
-        question: `${region} bölgesinde hangi illere hizmet veriyorsunuz?`,
-        answer: `${region} bölgesindeki ${cities.length} ilin tamamı için il ve ilçe bazlı hizmet sayfaları yayınlıyoruz.`,
-      },
-      {
-        question: `${region} dışındaki illerle de çalışıyor musunuz?`,
-        answer: 'Evet. Bölgelerimiz sayfaları hizmet kapsamını gösterir; proje koordinasyonu Türkiye genelinde yürütülür.',
-      },
-    ],
+    faqs: regionHubFaqs(region),
+    sections: regionHubSections(region),
   }
 }
