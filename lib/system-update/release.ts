@@ -26,18 +26,42 @@ export function nextBuildNumber(installedBuild: string | number | undefined | nu
   return String(parseBuildNumber(installedBuild) + 1)
 }
 
+/** Production truth is the installed commit in version.json. */
+export function isAlreadyInstalled(
+  installed: { version?: string; commit?: string },
+  candidate: { version?: string; commit?: string },
+) {
+  const installedCommit = installed.commit?.trim() || ''
+  const candidateCommit = candidate.commit?.trim() || ''
+  if (!installedCommit || !candidateCommit) return false
+  return sameCommit(installedCommit, candidateCommit)
+}
+
+/**
+ * Update is available only when the candidate commit differs from production.
+ * Same version string with a new commit still counts as an update.
+ * Same commit with a different version string is treated as already installed.
+ */
 export function isUpdateAvailable(
   installed: { version?: string; commit?: string },
   candidate: { version?: string; commit?: string },
 ) {
   const installedCommit = installed.commit?.trim() || ''
   const candidateCommit = candidate.commit?.trim() || ''
+  if (!candidateCommit) return false
+  if (!installedCommit) return true
+  return !sameCommit(installedCommit, candidateCommit)
+}
+
+/** Same release-candidate version number, but different code on main. */
+export function isSameVersionDifferentCommit(
+  installed: { version?: string; commit?: string },
+  candidate: { version?: string; commit?: string },
+) {
   const installedVersion = installed.version?.trim() || ''
   const candidateVersion = candidate.version?.trim() || ''
-  if (candidateCommit && installedCommit && !sameCommit(installedCommit, candidateCommit)) return true
-  if (candidateVersion && installedVersion && candidateVersion !== installedVersion) return true
-  if (candidateCommit && !installedCommit) return true
-  return false
+  if (!installedVersion || !candidateVersion || installedVersion !== candidateVersion) return false
+  return isUpdateAvailable(installed, candidate)
 }
 
 export function confirmInstalledVersion(

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { appendSuccessfulUpdate, mergeUpdateLog } from '../lib/system-update/updates-log'
-import { confirmInstalledVersion, isUpdateAvailable, nextBuildNumber, parseBuildNumber, parseReleaseCandidate } from '../lib/system-update/release'
+import { confirmInstalledVersion, isAlreadyInstalled, isSameVersionDifferentCommit, isUpdateAvailable, nextBuildNumber, parseBuildNumber, parseReleaseCandidate } from '../lib/system-update/release'
 
 test('F build number increments only on successful production confirm', () => {
   assert.equal(parseBuildNumber('12'), 12)
@@ -36,7 +36,7 @@ test('F build number increments only on successful production confirm', () => {
   assert.equal(afterThreeUndeployedCommits, '13')
 })
 
-test('updateAvailable compares installed production against the GitHub candidate', () => {
+test('updateAvailable is commit-based; same commit is already installed', () => {
   assert.equal(isUpdateAvailable(
     { version: '1.1.3', commit: 'aaa' },
     { version: '1.1.4', commit: 'bbb' },
@@ -45,11 +45,24 @@ test('updateAvailable compares installed production against the GitHub candidate
     { version: '1.1.3', commit: 'aaa' },
     { version: '1.1.3', commit: 'aaa' },
   ), false)
+  assert.equal(isAlreadyInstalled(
+    { version: '1.1.3', commit: 'aaa' },
+    { version: '1.1.3', commit: 'aaa' },
+  ), true)
   assert.equal(isUpdateAvailable(
     { version: '1.1.3', commit: 'aaa' },
     { version: '1.1.3', commit: 'bbb' },
   ), true)
+  assert.equal(isSameVersionDifferentCommit(
+    { version: '1.1.3', commit: 'aaa' },
+    { version: '1.1.3', commit: 'bbb' },
+  ), true)
+  // Same commit with a different version label is still already installed.
   assert.equal(isUpdateAvailable(
+    { version: '1.1.3', commit: 'aaa' },
+    { version: '1.1.4', commit: 'aaa' },
+  ), false)
+  assert.equal(isAlreadyInstalled(
     { version: '1.1.3', commit: 'aaa' },
     { version: '1.1.4', commit: 'aaa' },
   ), true)

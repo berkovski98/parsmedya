@@ -231,6 +231,7 @@ jobs:
                 return {
                     "version": source.get("version") or "",
                     "build": str(source.get("build") or ""),
+                    "commit": str(source.get("commit") or "").strip().lower(),
                     "releasedAt": source.get("releasedAt") or source.get("createdAt") or "",
                     "releaseTitle": source.get("releaseTitle") or source.get("title") or "",
                     "summary": source.get("summary") or "",
@@ -248,8 +249,12 @@ jobs:
             previous = log_entry(installed)
             if previous["version"] and previous["version"] != "0.0.0":
                 if not any(
-                    str(item.get("version") or "") == previous["version"]
-                    and str(item.get("build") or "") == previous["build"]
+                    (previous["commit"] and str(item.get("commit") or "").strip().lower() == previous["commit"])
+                    or (
+                        not previous["commit"]
+                        and str(item.get("version") or "") == previous["version"]
+                        and str(item.get("build") or "") == previous["build"]
+                    )
                     for item in existing
                 ):
                     existing.append(previous)
@@ -258,8 +263,11 @@ jobs:
             existing = [
                 item for item in existing
                 if not (
-                    str(item.get("version") or "") == new_entry["version"]
-                    and str(item.get("build") or "") == new_entry["build"]
+                    (new_entry["commit"] and str(item.get("commit") or "").strip().lower() == new_entry["commit"])
+                    or (
+                        str(item.get("version") or "") == new_entry["version"]
+                        and str(item.get("build") or "") == new_entry["build"]
+                    )
                 )
             ]
             existing.insert(0, new_entry)

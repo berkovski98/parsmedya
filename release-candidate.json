@@ -1,11 +1,11 @@
 {
-  "version": "1.1.10",
-  "title": "Türkçe SEO blog içerikleri",
-  "releaseTitle": "Türkçe SEO blog içerikleri",
-  "summary": "Beş kapsamlı Türkçe blog yazısı ve zengin içerik gösterimi (başlık, liste, tablo, iç bağlantı) eklendi.",
+  "version": "1.1.11",
+  "title": "Aynı sürümün tekrar kurulmasını engelleme",
+  "releaseTitle": "Aynı sürümün tekrar kurulmasını engelleme",
+  "summary": "Kurulu commit ile aday commit aynıysa güncelleme kurulamaz; çift kayıt ve aktif kurulum koruması eklendi.",
   "releaseNotes": [
-    "İstanbul yazılım şirketleri, özel yazılım, CRM, ERP ve web yazılım konularında yayınlanabilir Türkçe blog içerikleri hazırlandı.",
-    "Blog içerik gösterimi H3, madde listesi, tablo ve iç bağlantı destekleyecek şekilde genişletildi.",
-    "Blog sayfalarına breadcrumb ve SSS yapılandırılmış verisi eklendi."
+    "Production’da kurulu commit, aday commit ile aynıysa Güncellemeyi Kur devre dışı kalır ve API 409 döner.",
+    "Aynı sürüm numarasında farklı kod varsa uyarı gösterilir; commit karşılaştırması esas alınır.",
+    "Aktif kurulum varken ve aynı commit için ikinci dispatch engellenir; deployment geçmişine action_type eklendi."
   ]
 }

@@ -15,7 +15,7 @@ import {
   type DeploymentTrack,
   type StatusQuery,
 } from './tracking'
-import { emptyReleaseCandidate, isUpdateAvailable } from './release'
+import { emptyReleaseCandidate, isAlreadyInstalled, isSameVersionDifferentCommit, isUpdateAvailable } from './release'
 import { mergeUpdateLog, readUpdatesLogFile, type UpdateLogEntry } from './updates-log'
 import { readVersionFile, type VersionInfo } from './version-file'
 
@@ -56,19 +56,28 @@ export class SystemUpdateService {
       const latest = await this.github.latestMainCommit()
       const candidate = await this.github.releaseCandidate()
       const candidateVersion = candidate.version || current.version
+      const installed = { version: current.version, commit: current.commit }
+      const target = { version: candidateVersion, commit: latest.sha }
+      const alreadyInstalled = isAlreadyInstalled(installed, target)
+      const updateAvailable = isUpdateAvailable(installed, target)
+      const sameVersionDifferentCommit = isSameVersionDifferentCommit(installed, target)
       return {
         currentCommit: current.commit,
         latestCommit: latest.sha,
-        updateAvailable: isUpdateAvailable(
-          { version: current.version, commit: current.commit },
-          { version: candidateVersion, commit: latest.sha },
-        ),
+        installedVersion: current.version,
+        installedCommit: current.commit,
+        latestVersion: candidateVersion,
+        updateAvailable,
+        alreadyInstalled,
+        sameVersionDifferentCommit,
+        versionMismatchWarning: sameVersionDifferentCommit
+          ? 'Aynı sürüm numarası altında farklı kod mevcut.'
+          : null as string | null,
         latestMessage: latest.message,
         latestDate: latest.date,
         latestAuthor: latest.author,
         currentVersion: current.version,
         currentBuild: current.build,
-        latestVersion: candidateVersion,
         candidateVersion,
         candidateTitle: candidate.releaseTitle || '',
         releaseTitle: candidate.releaseTitle || '',
@@ -87,13 +96,18 @@ export class SystemUpdateService {
         return {
           currentCommit: current.commit,
           latestCommit: '',
+          installedVersion: current.version,
+          installedCommit: current.commit,
+          latestVersion: '',
           updateAvailable: false,
+          alreadyInstalled: false,
+          sameVersionDifferentCommit: false,
+          versionMismatchWarning: null as string | null,
           latestMessage: '',
           latestDate: '',
           latestAuthor: '',
           currentVersion: current.version,
           currentBuild: current.build,
-          latestVersion: '',
           candidateVersion: '',
           candidateTitle: '',
           releaseTitle: '',
@@ -272,8 +286,17 @@ export class SystemUpdateService {
       throw new UpdateError(UPDATE_CODES.UPDATE_IN_PROGRESS, 'Bir güncelleme zaten çalışıyor.', 409)
     }
     const check = await this.check()
-    if (!check.updateAvailable) {
+    if (check.alreadyInstalled || sameCommit(check.installedCommit || check.currentCommit, check.latestCommit)) {
+      throw new UpdateError(UPDATE_CODES.VERSION_ALREADY_INSTALLED, 'Bu sürüm zaten kurulu.', 409)
+    }
+    if (!check.updateAvailable || !check.latestCommit) {
       throw new UpdateError(UPDATE_CODES.NO_UPDATE, 'Yeni bir güncelleme yok.', 409)
+    }
+    if (runs.some((run) => (
+      (run.status === 'queued' || run.status === 'in_progress')
+      && sameCommit(run.head_sha, check.latestCommit)
+    ))) {
+      throw new UpdateError(UPDATE_CODES.UPDATE_IN_PROGRESS, 'Bu sürüm için kurulum zaten devam ediyor.', 409)
     }
     const previousRunId = runs.reduce((max, run) => Math.max(max, run.id), 0)
     const requestedAt = new Date().toISOString()
@@ -285,10 +308,11 @@ export class SystemUpdateService {
       trackedRunId: null,
     }
     await this.history.start({
-      version: check.currentVersion,
+      version: check.candidateVersion || check.latestVersion || check.currentVersion,
       build: '',
       commit_sha: check.latestCommit,
       status: 'queued',
+      action_type: 'install',
       admin_user_id: adminUserId,
     })
     return {
@@ -329,7 +353,7 @@ export class SystemUpdateService {
     }
     const current = await this.readVersion()
     if (sameCommit(current.commit, sha)) {
-      throw new UpdateError(UPDATE_CODES.NO_UPDATE, 'Seçilen sürüm zaten yüklü.', 409)
+      throw new UpdateError(UPDATE_CODES.VERSION_ALREADY_INSTALLED, 'Bu sürüm zaten kurulu.', 409)
     }
     const previousRunId = runs.reduce((max, run) => Math.max(max, run.id), 0)
     const requestedAt = new Date().toISOString()
@@ -345,6 +369,7 @@ export class SystemUpdateService {
       build: '',
       commit_sha: sha,
       status: 'queued',
+      action_type: 'rollback',
       admin_user_id: adminUserId,
     })
     return {

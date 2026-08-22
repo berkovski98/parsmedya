@@ -8,9 +8,15 @@ import { DeploymentProgressPanel } from '@/components/admin/deployment-progress'
 
 type CheckData = {
   updateAvailable: boolean
+  alreadyInstalled?: boolean
+  sameVersionDifferentCommit?: boolean
+  versionMismatchWarning?: string | null
+  installedVersion?: string
+  installedCommit?: string
   currentVersion: string
   currentBuild?: string
   latestVersion?: string
+  latestCommit?: string
   candidateVersion?: string
   candidateTitle?: string
   releaseTitle?: string
@@ -273,7 +279,7 @@ export function UpdatesPanel({
   }, [polling, loadStatus])
 
   function requestInstall() {
-    if (!deployConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable) return
+    if (!deployConfigured || installLock.current || panel.installDisabled || !check?.updateAvailable || check?.alreadyInstalled) return
     setError('')
     setShowChanges(false)
     setDialog(openDeployDialog('install').dialog)
@@ -313,7 +319,7 @@ export function UpdatesPanel({
   }
 
   async function installConfirmed() {
-    if (!deployConfigured || installLock.current || !check?.updateAvailable) return
+    if (!deployConfigured || installLock.current || !check?.updateAvailable || check?.alreadyInstalled) return
     installLock.current = true
     setInstalling(true)
     setOutcome(null)
@@ -365,7 +371,8 @@ export function UpdatesPanel({
   const progress = displayProgress(panel.progress, succeeded)
   const currentVersion = status?.version || check?.currentVersion || '—'
   const latestVersion = check?.latestVersion || check?.candidateVersion || ''
-  const updateAvailable = Boolean(check?.updateAvailable)
+  const updateAvailable = Boolean(check?.updateAvailable) && !check?.alreadyInstalled
+  const alreadyInstalled = Boolean(check?.alreadyInstalled) || (!updateAvailable && Boolean(check))
   const candidateTitle = check?.releaseTitle || check?.candidateTitle || status?.installingTitle || ''
   const candidateSummary = check?.releaseSummary || ''
   const candidateNotes = check?.releaseNotes?.length ? check.releaseNotes : (status?.installingNotes || [])
@@ -373,6 +380,11 @@ export function UpdatesPanel({
   const showPendingNotes = Boolean(updateAvailable || installing || panel.waitingForGithub || isActiveStatus(status))
   const installedStatus = !check ? '—' : updateAvailable ? 'Yeni sürüm mevcut' : 'Güncel'
   const updateCardTitle = updateAvailable || installing || panel.waitingForGithub ? 'Yeni Güncelleme' : 'Güncel Sürüm'
+  const installButtonLabel = installing || panel.waitingForGithub
+    ? 'Kuruluyor...'
+    : alreadyInstalled
+      ? 'Bu sürüm kurulu'
+      : 'Güncellemeyi Kur'
   const successVersion = succeeded
     ? (status?.version && !updateAvailable ? status.version : latestVersion || status?.version)
     : null
@@ -429,6 +441,11 @@ export function UpdatesPanel({
               </ul>
             </div>
           )}
+          {check?.sameVersionDifferentCommit && check.versionMismatchWarning && (
+            <p role="status" className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900">
+              {check.versionMismatchWarning}
+            </p>
+          )}
           {panel.show && (status?.installingVersion || latestVersion) && (installing || panel.waitingForGithub || isActiveStatus(status)) && (
             <p className="mt-4 text-sm font-medium text-accent">
               Kurulan sürüm: {status?.installingVersion || latestVersion}
@@ -443,11 +460,11 @@ export function UpdatesPanel({
               {checking ? 'Kontrol ediliyor...' : 'Güncellemeleri Kontrol Et'}
             </button>
             <button
-              disabled={!deployConfigured || checking || panel.installDisabled || !check?.updateAvailable}
+              disabled={!deployConfigured || checking || panel.installDisabled || !updateAvailable || alreadyInstalled}
               onClick={requestInstall}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {installing || panel.waitingForGithub ? 'Kuruluyor...' : 'Güncellemeyi Kur'}
+              {installButtonLabel}
             </button>
           </div>
         </div>

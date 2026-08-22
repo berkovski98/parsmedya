@@ -36,16 +36,26 @@ function run(partial: Partial<GithubWorkflowRun>): GithubWorkflowRun {
 }
 
 function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
-  const rows: { id: string; status: string; commit_sha: string; completed_at: string | null }[] = successful.map((sha, index) => ({
+  const rows: { id: string; status: string; commit_sha: string; action_type: string; completed_at: string | null }[] = successful.map((sha, index) => ({
     id: `success-${index + 1}`,
     status: 'success',
     commit_sha: sha,
+    action_type: 'install',
     completed_at: '2026-08-18T11:00:00.000Z',
   }))
   return {
     async start(record) {
+      const actionType = record.action_type || 'install'
+      if (actionType === 'install') {
+        const existing = rows.find((item) => (
+          item.commit_sha.toLowerCase() === record.commit_sha.toLowerCase()
+          && item.action_type === 'install'
+          && (item.status === 'success' || item.status === 'queued' || item.status === 'in_progress' || item.status === 'started')
+        ))
+        if (existing) return existing.id
+      }
       const id = String(rows.length + 1)
-      rows.push({ id, status: record.status, commit_sha: record.commit_sha, completed_at: null })
+      rows.push({ id, status: record.status, commit_sha: record.commit_sha, action_type: actionType, completed_at: null })
       return id
     },
     async finish(id, patch) {
@@ -65,6 +75,13 @@ function memoryHistory(successful: string[] = [PREVIOUS]): HistoryStore {
     },
     async hasSuccessfulCommit(sha) {
       return rows.some((item) => item.status === 'success' && item.commit_sha.toLowerCase() === sha.toLowerCase())
+    },
+    async hasSuccessfulInstall(sha) {
+      return rows.some((item) => (
+        item.status === 'success'
+        && item.action_type === 'install'
+        && item.commit_sha.toLowerCase() === sha.toLowerCase()
+      ))
     },
   }
 }
@@ -193,7 +210,8 @@ test('install disabled when token missing', async () => {
   assert.equal(check.githubDeployConfigured, false)
   assert.equal(check.githubConfigured, false)
   const panel = readFileSync('components/admin/updates-panel.tsx', 'utf8')
-  assert.match(panel, /disabled=\{!deployConfigured \|\| checking \|\| panel\.installDisabled \|\| !check\?\.updateAvailable\}/)
+  assert.match(panel, /disabled=\{!deployConfigured \|\| checking \|\| panel\.installDisabled \|\| !updateAvailable \|\| alreadyInstalled\}/)
+  assert.match(panel, /installButtonLabel|Bu sürüm kurulu/)
   assert.doesNotMatch(panel, /GitHub bağlantısı yapılandırılmadı/)
   assert.match(panel, /Otomatik kurulum yapılandırılmadı/)
 })
@@ -357,8 +375,9 @@ test('no update', async () => {
   const service = serviceFor(clientFor({ latest: CURRENT }), CURRENT)
   const check = await service.check()
   assert.equal(check.updateAvailable, false)
+  assert.equal(check.alreadyInstalled, true)
   await assert.rejects(() => service.install('admin', true), (error: unknown) => (
-    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.NO_UPDATE
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.VERSION_ALREADY_INSTALLED
   ))
 })
 
@@ -1300,7 +1319,7 @@ test('success panel shows version and Turkish notes without GitHub jargon', () =
   assert.doesNotMatch(html, /fix:/)
 })
 
-test('installed version appears in the customer update log without commit SHA', async () => {
+test('installed version appears in the customer update log without exposing commit in UI fields', async () => {
   const service = serviceFor(clientFor({ latest: CURRENT }), CURRENT, true, {
     version: '1.1.1',
     build: '13',
@@ -1315,5 +1334,135 @@ test('installed version appears in the customer update log without commit SHA', 
   assert.equal(check.updateLog[0].releaseTitle, 'Yönetim Paneli ve Hizmet Sayfaları Güncellemesi')
   assert.deepEqual(check.updateLog[0].releaseNotes, ['Hizmet sayfalarının görsel yapısı yenilendi.'])
   assert.equal(status.updateLog[0].version, '1.1.1')
-  assert.equal(JSON.stringify(check.updateLog).includes(CURRENT), false)
+  const panel = readFileSync(new URL('../components/admin/updates-panel.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(panel, /entry\.commit/)
+})
+
+test('already installed same commit returns VERSION_ALREADY_INSTALLED and never dispatches', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: CURRENT,
+    candidateVersion: '1.1.9',
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT, true, { version: '1.1.9', build: '2' })
+  const check = await service.check()
+  assert.equal(check.alreadyInstalled, true)
+  assert.equal(check.updateAvailable, false)
+  assert.equal(check.installedCommit, CURRENT)
+  assert.equal(check.latestCommit, CURRENT)
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.VERSION_ALREADY_INSTALLED
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('same version different commit is available with warning', async () => {
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    candidateVersion: '1.1.9',
+  }), CURRENT, true, { version: '1.1.9', build: '1' })
+  const check = await service.check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(check.alreadyInstalled, false)
+  assert.equal(check.sameVersionDifferentCommit, true)
+  assert.match(check.versionMismatchWarning || '', /Aynı sürüm numarası/)
+})
+
+test('new version and commit dispatches once', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    candidateVersion: '1.1.10',
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT, true, { version: '1.1.9', build: '1' })
+  const check = await service.check()
+  assert.equal(check.updateAvailable, true)
+  assert.equal(check.alreadyInstalled, false)
+  await service.install('admin', true)
+  assert.equal(dispatched, 1)
+})
+
+test('active run for target commit returns UPDATE_IN_PROGRESS', async () => {
+  let dispatched = 0
+  const service = serviceFor(clientFor({
+    latest: LATEST,
+    runs: [run({ id: 99, status: 'in_progress', conclusion: null, head_sha: LATEST })],
+    onDispatch: () => { dispatched += 1 },
+  }), CURRENT)
+  await assert.rejects(() => service.install('admin', true), (error: unknown) => (
+    error instanceof UpdateError && error.status === 409 && error.code === UPDATE_CODES.UPDATE_IN_PROGRESS
+  ))
+  assert.equal(dispatched, 0)
+})
+
+test('history start skips duplicate successful install for same commit', async () => {
+  const history = memoryHistory([LATEST])
+  const first = await history.start({
+    version: '1.1.9',
+    build: '',
+    commit_sha: LATEST,
+    status: 'queued',
+    action_type: 'install',
+  })
+  const second = await history.start({
+    version: '1.1.9',
+    build: '',
+    commit_sha: LATEST,
+    status: 'queued',
+    action_type: 'install',
+  })
+  assert.equal(first, second)
+  assert.equal(await history.hasSuccessfulInstall(LATEST), true)
+})
+
+test('rollback to previous commit is allowed and uses action_type rollback', async () => {
+  let dispatchedSha: string | undefined
+  const history = memoryHistory([PREVIOUS])
+  let startedAction: string | undefined
+  const wrapped: HistoryStore = {
+    ...history,
+    async start(record) {
+      startedAction = record.action_type
+      return history.start(record)
+    },
+  }
+  const service = new SystemUpdateService({
+    github: clientFor({
+      latest: CURRENT,
+      existing: [PREVIOUS],
+      onDispatch: (sha) => { dispatchedSha = sha },
+    }),
+    history: wrapped,
+    readVersion: async () => ({
+      version: '1.1.9',
+      build: '2',
+      commit: CURRENT,
+      createdAt: '',
+      releasedAt: '',
+      releaseTitle: '',
+      summary: '',
+      releaseNotes: [],
+    }),
+    isConfigured: () => true,
+  })
+  await service.rollback(PREVIOUS, 'admin', true)
+  assert.equal(dispatchedSha, PREVIOUS)
+  assert.equal(startedAction, 'rollback')
+})
+
+test('after successful install refresh marks update unavailable when commits match', async () => {
+  const service = serviceFor(clientFor({ latest: LATEST, candidateVersion: '1.1.10' }), CURRENT, true, {
+    version: '1.1.9',
+    build: '1',
+  })
+  assert.equal((await service.check()).updateAvailable, true)
+  await service.install('admin', true)
+
+  const after = serviceFor(clientFor({ latest: LATEST, candidateVersion: '1.1.10' }), LATEST, true, {
+    version: '1.1.10',
+    build: '2',
+  })
+  const check = await after.check()
+  assert.equal(check.updateAvailable, false)
+  assert.equal(check.alreadyInstalled, true)
 })
