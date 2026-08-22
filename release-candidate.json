@@ -1,11 +1,10 @@
 {
-  "version": "1.1.12",
-  "title": "Blog listesi ve sitemap önbellek yenileme",
-  "releaseTitle": "Blog listesi ve sitemap önbellek yenileme",
-  "summary": "Yeni yayınlanan blog yazıları birkaç dakika bekletmeden listede ve sitemap'te görünür; admin kaydı anında önbelleği temizler.",
+  "version": "1.1.13",
+  "title": "Production build düzeltmesi",
+  "releaseTitle": "Production build düzeltmesi",
+  "summary": "Blog önbelleği production build sırasında hata vermez; yayınlanan yazılar güvenle derlenir.",
   "releaseNotes": [
-    "Blog listesi ve detay sayfaları en geç bir dakika içinde güncellenir.",
-    "Admin panelden kaydedilen veya silinen yazılar anında sitede yansır.",
-    "Sitemap blog adresleri aynı önbellek kurallarıyla güncel kalır."
+    "Production build adımı blog sayfalarında cookies hatası vermeden tamamlanır.",
+    "Blog listesi ve detay önbelleği önceki sürümdeki gibi çalışmaya devam eder."
   ]
 }

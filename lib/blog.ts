@@ -1,7 +1,7 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
+import { createPublicSupabaseClient } from '@/lib/supabase/public'
 import type { BlogPost } from '@/lib/supabase/types'
 import {
   BLOG_CACHE_ROOT_TAG,
@@ -15,7 +15,7 @@ const legacyListColumns = 'id,title,slug,excerpt,image_url,category,author,seo_t
 
 async function queryPublishedPosts(limit: number | undefined, locale: 'tr' | 'en'): Promise<BlogPost[]> {
   if (!hasSupabaseConfig()) return []
-  const supabase = await createClient()
+  const supabase = createPublicSupabaseClient()
   let query = supabase
     .from('blog_posts')
     .select(listColumns)
@@ -36,7 +36,7 @@ async function queryPublishedPosts(limit: number | undefined, locale: 'tr' | 'en
 
 async function queryPublishedPost(slug: string, locale: 'tr' | 'en'): Promise<BlogPost | null> {
   if (!hasSupabaseConfig()) return null
-  const supabase = await createClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('blog_posts')
     .select('*')
@@ -54,7 +54,7 @@ async function queryPublishedPost(slug: string, locale: 'tr' | 'en'): Promise<Bl
 
 async function queryPublishedTranslation(translationGroupId: string, locale: 'tr' | 'en'): Promise<BlogPost | null> {
   if (!hasSupabaseConfig()) return null
-  const { data, error } = await (await createClient())
+  const { data, error } = await createPublicSupabaseClient()
     .from('blog_posts')
     .select(listColumns)
     .eq('translation_group_id', translationGroupId)
