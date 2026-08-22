@@ -59,9 +59,5 @@ export function formatBlogDate(date: string | null, locale: 'tr' | 'en' = 'tr'):
   }).format(new Date(date))
 }
 
-export function parseContent(content: string) {
-  return content.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean).map((block) => {
-    const heading = block.match(/^##\s+(.+)$/)
-    return heading ? { type: 'heading' as const, text: heading[1] } : { type: 'paragraph' as const, text: block.replace(/^#\s+/, '') }
-  })
-}
+export { parseContent, extractFaqs, countWords } from '@/lib/blog-content'
+export type { ContentBlock, InlineNode } from '@/lib/blog-content'

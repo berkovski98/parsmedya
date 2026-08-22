@@ -3,13 +3,116 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, CalendarDays, UserRound } from 'lucide-react'
 import { BlogCard } from '@/components/blog-card'
+import { BlogContent } from '@/components/blog-content'
 import { BlogCoverImage } from '@/components/blog-cover-image'
-import { formatBlogDate, getPublishedPost, getPublishedPosts, getPublishedTranslation, parseContent } from '@/lib/blog'
+import { extractFaqs, formatBlogDate, getPublishedPost, getPublishedPosts, getPublishedTranslation, parseContent } from '@/lib/blog'
 import { resolveBlogImageSrc } from '@/lib/blog-image'
 import { absoluteAlternates, createPageMetadata, safeJsonLd } from '@/lib/seo'
 import { absoluteUrl, getSiteUrl } from '@/lib/site-url'
 
 type Props = { params: Promise<{ slug: string }> }
 export const revalidate = 300
-export async function generateMetadata({ params }: Props): Promise<Metadata> { const post = await getPublishedPost((await params).slug, 'en'); if (!post) return { title: 'Article Not Found | Pars Medya' }; const translation = await getPublishedTranslation(post.translation_group_id, 'tr'); const title = post.seo_title || `${post.title} | Pars Medya`; const description = post.seo_description || post.excerpt; const canonical = `/en/blog/${post.slug}`; const trPath = translation ? `/blog/${translation.slug}` : '/blog'; const image = resolveBlogImageSrc(post.image_url); const metadata = createPageMetadata({ title, description, canonical, tr: trPath || canonical, en: canonical, locale: 'en', image, type: 'article' }); return { ...metadata, alternates: absoluteAlternates(canonical, { tr: trPath, en: canonical, 'x-default': trPath }), openGraph: { type: 'article', locale: 'en_US', title, description, url: absoluteUrl(canonical), images: [{ url: image, alt: post.title }], publishedTime: post.published_at || undefined, modifiedTime: post.updated_at, authors: [post.author] } } }
-export default async function EnglishBlogDetail({ params }: Props) { const { slug } = await params; const post = await getPublishedPost(slug, 'en'); if (!post) notFound(); const related = (await getPublishedPosts(undefined, 'en')).filter((item) => item.slug !== slug).slice(0, 3); const image = resolveBlogImageSrc(post.image_url); const canonical = absoluteUrl(`/en/blog/${post.slug}`); const jsonLd = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: post.title, description: post.seo_description || post.excerpt, image: [new URL(image, getSiteUrl()).toString()], datePublished: post.published_at || post.created_at, dateModified: post.updated_at, author: { '@type': 'Person', name: post.author }, publisher: { '@type': 'Organization', name: 'Pars Medya', url: getSiteUrl() }, mainEntityOfPage: { '@type': 'WebPage', '@id': canonical }, inLanguage: 'en-US' }; return <article><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} /><header className="border-b border-border bg-secondary/40"><div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20"><Link href="/en/blog" className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Back to Blog</Link><div className="mt-8 flex flex-wrap gap-3 text-sm"><span className="rounded-full bg-accent/10 px-3 py-1.5 font-semibold text-accent">{post.category}</span><time dateTime={post.published_at || undefined} className="inline-flex items-center gap-1.5 text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatBlogDate(post.published_at, 'en')}</time><span className="inline-flex items-center gap-1.5 text-muted-foreground"><UserRound className="h-4 w-4" />{post.author}</span></div><h1 className="mt-5 text-balance font-display text-4xl font-bold sm:text-5xl">{post.title}</h1><p className="mt-5 text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p></div></header><div className="mx-auto max-w-5xl px-4 py-12 sm:px-6"><div className="relative aspect-video overflow-hidden rounded-2xl bg-secondary"><BlogCoverImage src={image} alt={post.title} priority sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" /></div><div className="mx-auto mt-12 max-w-3xl space-y-6">{parseContent(post.content).map((block,index) => block.type === 'heading' ? <h2 key={index} className="pt-4 font-display text-3xl font-bold">{block.text}</h2> : <p key={index} className="whitespace-pre-line text-lg leading-8 text-muted-foreground">{block.text}</p>)}</div></div>{related.length > 0 && <aside className="border-t border-border bg-secondary/40"><div className="mx-auto max-w-6xl px-4 py-16 sm:px-6"><h2 className="font-display text-2xl font-bold">Related Articles</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{related.map((item) => <BlogCard key={item.id} post={item} locale="en" />)}</div></div></aside>}</article> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const post = await getPublishedPost((await params).slug, 'en')
+  if (!post) return { title: 'Article Not Found | Pars Medya' }
+  const translation = await getPublishedTranslation(post.translation_group_id, 'tr')
+  const title = post.seo_title || `${post.title} | Pars Medya`
+  const description = post.seo_description || post.excerpt
+  const canonical = `/en/blog/${post.slug}`
+  const trPath = translation ? `/blog/${translation.slug}` : '/blog'
+  const image = resolveBlogImageSrc(post.image_url)
+  const metadata = createPageMetadata({ title, description, canonical, tr: trPath || canonical, en: canonical, locale: 'en', image, type: 'article' })
+  return {
+    ...metadata,
+    alternates: absoluteAlternates(canonical, { tr: trPath, en: canonical, 'x-default': trPath }),
+    openGraph: {
+      type: 'article',
+      locale: 'en_US',
+      title,
+      description,
+      url: absoluteUrl(canonical),
+      images: [{ url: image, alt: post.title }],
+      publishedTime: post.published_at || undefined,
+      modifiedTime: post.updated_at,
+      authors: [post.author],
+    },
+  }
+}
+
+export default async function EnglishBlogDetail({ params }: Props) {
+  const { slug } = await params
+  const post = await getPublishedPost(slug, 'en')
+  if (!post) notFound()
+  const related = (await getPublishedPosts(undefined, 'en')).filter((item) => item.slug !== slug).slice(0, 3)
+  const image = resolveBlogImageSrc(post.image_url)
+  const canonical = absoluteUrl(`/en/blog/${post.slug}`)
+  const blocks = parseContent(post.content)
+  const faqs = extractFaqs(post.content)
+
+  const graph: unknown[] = [
+    {
+      '@type': 'BlogPosting',
+      headline: post.title,
+      description: post.seo_description || post.excerpt,
+      image: [new URL(image, getSiteUrl()).toString()],
+      datePublished: post.published_at || post.created_at,
+      dateModified: post.updated_at,
+      author: { '@type': 'Person', name: post.author },
+      publisher: { '@type': 'Organization', name: 'Pars Medya', url: getSiteUrl() },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+      inLanguage: 'en-US',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteUrl('/en') },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: absoluteUrl('/en/blog') },
+        { '@type': 'ListItem', position: 3, name: post.title, item: canonical },
+      ],
+    },
+  ]
+
+  if (faqs.length > 0) {
+    graph.push({
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+      })),
+    })
+  }
+
+  return (
+    <article>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd({ '@context': 'https://schema.org', '@graph': graph }) }} />
+      <header className="border-b border-border bg-secondary/40">
+        <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
+          <Link href="/en/blog" className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" />Back to Blog</Link>
+          <div className="mt-8 flex flex-wrap gap-3 text-sm">
+            <span className="rounded-full bg-accent/10 px-3 py-1.5 font-semibold text-accent">{post.category}</span>
+            <time dateTime={post.published_at || undefined} className="inline-flex items-center gap-1.5 text-muted-foreground"><CalendarDays className="h-4 w-4" />{formatBlogDate(post.published_at, 'en')}</time>
+            <span className="inline-flex items-center gap-1.5 text-muted-foreground"><UserRound className="h-4 w-4" />{post.author}</span>
+          </div>
+          <h1 className="mt-5 text-balance font-display text-4xl font-bold sm:text-5xl">{post.title}</h1>
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{post.excerpt}</p>
+        </div>
+      </header>
+      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+        <div className="relative aspect-video overflow-hidden rounded-2xl bg-secondary">
+          <BlogCoverImage src={image} alt={post.title} priority sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" />
+        </div>
+        <BlogContent blocks={blocks} />
+      </div>
+      {related.length > 0 && (
+        <aside className="border-t border-border bg-secondary/40">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <h2 className="font-display text-2xl font-bold">Related Articles</h2>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{related.map((item) => <BlogCard key={item.id} post={item} locale="en" />)}</div>
+          </div>
+        </aside>
+      )}
+    </article>
+  )
+}

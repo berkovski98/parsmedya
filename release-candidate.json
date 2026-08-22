@@ -1,13 +1,11 @@
 {
-  "version": "1.1.9",
-  "title": "İngilizce Yerel SEO Altyapısı",
-  "releaseTitle": "İngilizce Yerel SEO Altyapısı",
-  "summary": "Tüm Türkiye genelindeki bölge, il, ilçe ve hizmet+lokasyon sayfalarının İngilizce eşdeğerleri oluşturuldu.",
+  "version": "1.1.10",
+  "title": "Türkçe SEO blog içerikleri",
+  "releaseTitle": "Türkçe SEO blog içerikleri",
+  "summary": "Beş kapsamlı Türkçe blog yazısı ve zengin içerik gösterimi (başlık, liste, tablo, iç bağlantı) eklendi.",
   "releaseNotes": [
-    "/en/service-areas altında tam İngilizce yerel SEO mimarisi eklendi: ulusal merkez, 7 bölge, 81 il, tüm ilçeler ve hizmet+lokasyon sayfaları.",
-    "Her İngilizce sayfa için benzersiz başlık, açıklama, H1, canonical ve breadcrumb üretilir.",
-    "TR ↔ EN sayfalar arası hreflang bağlantıları kuruldu; dil değiştirici aynı sayfaya yönlendirir.",
-    "İngilizce yerel SEO URL'leri sitemap-en.xml sitemap indexine eklendi (en-local-cities, en-local-services-*).",
-    "Yapılandırılmış veri: BreadcrumbList, Service, FAQPage ve Organization şemaları İngilizce sayfalar için üretilir."
+    "İstanbul yazılım şirketleri, özel yazılım, CRM, ERP ve web yazılım konularında yayınlanabilir Türkçe blog içerikleri hazırlandı.",
+    "Blog içerik gösterimi H3, madde listesi, tablo ve iç bağlantı destekleyecek şekilde genişletildi.",
+    "Blog sayfalarına breadcrumb ve SSS yapılandırılmış verisi eklendi."
   ]
 }

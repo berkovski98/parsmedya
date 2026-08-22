@@ -31,7 +31,7 @@ export function BlogForm({ post, error, initialLocale = 'tr', translationSource 
       <label className="text-sm font-medium">Yazar *<input required name="author" defaultValue={post?.author || (locale === 'en' ? 'Pars Medya Team' : 'Pars Medya Ekibi')} className={input} /></label>
     </div>
     <label className="block text-sm font-medium">Kısa açıklama *<textarea required name="excerpt" defaultValue={post?.excerpt} rows={3} className={input} /></label>
-    <label className="block text-sm font-medium">İçerik *<span className="ml-2 font-normal text-muted-foreground">Başlıklar için ## kullanabilirsiniz.</span><textarea required name="content" defaultValue={post?.content} rows={16} className={input} /></label>
+    <label className="block text-sm font-medium">İçerik *<span className="ml-2 font-normal text-muted-foreground">## / ### başlık, - liste, | tablo | ve [metin](/yol) bağlantısı desteklenir.</span><textarea required name="content" defaultValue={post?.content} rows={16} className={input} /></label>
     <div className="grid gap-5 lg:grid-cols-2">
       <label className="text-sm font-medium">Kapak görseli<input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className={input} /><span className="mt-1 block text-xs font-normal text-muted-foreground">JPG, PNG, WebP veya GIF — en fazla 5 MB</span></label>
       <label className="text-sm font-medium">Yayın tarihi<input name="published_at" type="datetime-local" defaultValue={post?.published_at?.slice(0, 16)} className={input} /></label>
