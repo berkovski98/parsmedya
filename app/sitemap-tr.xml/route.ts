@@ -2,7 +2,7 @@ import { turkishSitemapEntries, urlset, xmlResponse } from '@/lib/sitemap'
 import { buildTurkishSitemapEntries } from '@/lib/sitemap-xml'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 3600
+export const revalidate = 60
 
 export async function GET() {
   try {

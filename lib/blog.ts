@@ -1,13 +1,19 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { BlogPost } from '@/lib/supabase/types'
-import { cache } from 'react'
+import {
+  BLOG_CACHE_ROOT_TAG,
+  BLOG_REVALIDATE_SECONDS,
+  blogPostCacheTag,
+  blogPostsCacheTag,
+} from '@/lib/blog-cache'
 
 const listColumns = 'id,title,slug,excerpt,image_url,category,author,seo_title,seo_description,status,published_at,created_at,updated_at,locale,translation_group_id'
 const legacyListColumns = 'id,title,slug,excerpt,image_url,category,author,seo_title,seo_description,status,published_at,created_at,updated_at'
 
-export const getPublishedPosts = cache(async (limit?: number, locale: 'tr' | 'en' = 'tr'): Promise<BlogPost[]> => {
+async function queryPublishedPosts(limit: number | undefined, locale: 'tr' | 'en'): Promise<BlogPost[]> {
   if (!hasSupabaseConfig()) return []
   const supabase = await createClient()
   let query = supabase
@@ -26,9 +32,9 @@ export const getPublishedPosts = cache(async (limit?: number, locale: 'tr' | 'en
   }
   if (error) return []
   return data as BlogPost[]
-})
+}
 
-export const getPublishedPost = cache(async (slug: string, locale: 'tr' | 'en' = 'tr'): Promise<BlogPost | null> => {
+async function queryPublishedPost(slug: string, locale: 'tr' | 'en'): Promise<BlogPost | null> {
   if (!hasSupabaseConfig()) return null
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -44,13 +50,54 @@ export const getPublishedPost = cache(async (slug: string, locale: 'tr' | 'en' =
   }
   if (error || !data) return null
   return data as BlogPost
-})
+}
 
-export const getPublishedTranslation = cache(async (translationGroupId: string | null, locale: 'tr' | 'en'): Promise<BlogPost | null> => {
-  if (!translationGroupId || !hasSupabaseConfig()) return null
-  const { data, error } = await (await createClient()).from('blog_posts').select(listColumns).eq('translation_group_id', translationGroupId).eq('locale', locale).eq('status', 'published').maybeSingle()
+async function queryPublishedTranslation(translationGroupId: string, locale: 'tr' | 'en'): Promise<BlogPost | null> {
+  if (!hasSupabaseConfig()) return null
+  const { data, error } = await (await createClient())
+    .from('blog_posts')
+    .select(listColumns)
+    .eq('translation_group_id', translationGroupId)
+    .eq('locale', locale)
+    .eq('status', 'published')
+    .maybeSingle()
   return error || !data ? null : data as BlogPost
-})
+}
+
+export async function getPublishedPosts(limit?: number, locale: 'tr' | 'en' = 'tr'): Promise<BlogPost[]> {
+  const limitKey = limit === undefined ? 'all' : String(limit)
+  return unstable_cache(
+    () => queryPublishedPosts(limit, locale),
+    ['published-posts', locale, limitKey],
+    {
+      tags: [BLOG_CACHE_ROOT_TAG, blogPostsCacheTag(locale)],
+      revalidate: BLOG_REVALIDATE_SECONDS,
+    },
+  )()
+}
+
+export async function getPublishedPost(slug: string, locale: 'tr' | 'en' = 'tr'): Promise<BlogPost | null> {
+  return unstable_cache(
+    () => queryPublishedPost(slug, locale),
+    ['published-post', locale, slug],
+    {
+      tags: [BLOG_CACHE_ROOT_TAG, blogPostsCacheTag(locale), blogPostCacheTag(locale, slug)],
+      revalidate: BLOG_REVALIDATE_SECONDS,
+    },
+  )()
+}
+
+export async function getPublishedTranslation(translationGroupId: string | null, locale: 'tr' | 'en'): Promise<BlogPost | null> {
+  if (!translationGroupId) return null
+  return unstable_cache(
+    () => queryPublishedTranslation(translationGroupId, locale),
+    ['published-translation', translationGroupId, locale],
+    {
+      tags: [BLOG_CACHE_ROOT_TAG, blogPostsCacheTag(locale)],
+      revalidate: BLOG_REVALIDATE_SECONDS,
+    },
+  )()
+}
 
 export function formatBlogDate(date: string | null, locale: 'tr' | 'en' = 'tr'): string {
   if (!date) return locale === 'en' ? 'Not published yet' : 'Henüz yayınlanmadı'

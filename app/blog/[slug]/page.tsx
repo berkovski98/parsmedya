@@ -12,7 +12,7 @@ import { absoluteUrl, getSiteUrl } from '@/lib/site-url'
 
 interface Props { params: Promise<{ slug: string }> }
 
-export const revalidate = 300
+export const revalidate = 60
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params

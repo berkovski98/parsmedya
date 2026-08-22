@@ -6,7 +6,7 @@ import { createPageMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = createPageMetadata({ title: 'Blog | Pars Medya', description: 'Yazılım geliştirme, dijital pazarlama, web teknolojileri, SEO ve marka yönetimi hakkında güncel ve uygulanabilir Pars Medya içeriklerini keşfedin.', canonical: '/blog', tr: '/blog', en: '/en/blog', locale: 'tr' })
 
-export const revalidate = 300
+export const revalidate = 60
 
 export default async function BlogPage() {
   const posts = await getPublishedPosts()

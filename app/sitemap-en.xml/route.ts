@@ -3,7 +3,7 @@ import { buildEnglishSitemapEntries } from '@/lib/sitemap-xml'
 import { buildEnLocalCitySitemapEntries } from '@/lib/local-seo/en-sitemap'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 3600
+export const revalidate = 60
 
 export async function GET() {
   try {

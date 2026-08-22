@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { revalidateBlogContent } from '@/lib/blog-cache'
 import { requireAdmin } from '@/lib/supabase/auth'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { BlogPostInput, BlogStatus } from '@/lib/supabase/types'
@@ -72,10 +73,12 @@ export async function savePost(formData: FormData) {
   const newQuery = translationSourceId ? `?translateFrom=${encodeURIComponent(translationSourceId)}` : ''
   const returnPath = id ? `/admin/blog/${id}/edit` : `/admin/blog/new${newQuery}`
   let savedLocale: 'tr' | 'en' = 'tr'
+  let savedSlug = ''
   try {
     const imageUrl = await uploadImage(formData.get('image') as File, String(formData.get('current_image_url') || ''))
     const post = toPostInput(formData, imageUrl)
     savedLocale = post.locale
+    savedSlug = post.slug
     if (!post.title || !post.slug || !post.excerpt || !post.content || !post.category || !post.author) throw new Error('Zorunlu alanları doldurun.')
     const supabase = await createClient()
     if (translationSourceId && !id) {
@@ -102,17 +105,7 @@ export async function savePost(formData: FormData) {
     const message = error instanceof Error ? error.message : 'İşlem tamamlanamadı.'
     redirect(`${returnPath}?error=${safeMessage(message)}`)
   }
-  revalidatePath('/')
-  revalidatePath('/blog')
-  revalidatePath('/en')
-  revalidatePath('/en/blog')
-  revalidatePath('/sitemap.xml')
-  revalidatePath('/sitemap-tr.xml')
-  revalidatePath('/sitemap-en.xml')
-  revalidatePath('/sitemaps/tr-pages.xml')
-  revalidatePath('/sitemaps/tr-blog.xml')
-  revalidatePath('/sitemaps/en-pages.xml')
-  revalidatePath('/sitemaps/en-blog.xml')
+  revalidateBlogContent({ locale: savedLocale, slug: savedSlug })
   const listPath = savedLocale === 'en' ? '/admin/blog/en' : '/admin/blog'
   redirect(`${listPath}?success=${safeMessage(id ? 'Yazı güncellendi.' : 'Yazı oluşturuldu.')}`)
 }
@@ -121,19 +114,10 @@ export async function deletePost(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id') || '')
   const locale = String(formData.get('locale')) === 'en' ? 'en' : 'tr'
+  const slug = String(formData.get('slug') || '').trim()
   const { error } = await (await createClient()).from('blog_posts').delete().eq('id', id)
   if (error) redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?error=${safeMessage('Yazı silinemedi.')}`)
-  revalidatePath('/')
-  revalidatePath('/blog')
-  revalidatePath('/en')
-  revalidatePath('/en/blog')
-  revalidatePath('/sitemap.xml')
-  revalidatePath('/sitemap-tr.xml')
-  revalidatePath('/sitemap-en.xml')
-  revalidatePath('/sitemaps/tr-pages.xml')
-  revalidatePath('/sitemaps/tr-blog.xml')
-  revalidatePath('/sitemaps/en-pages.xml')
-  revalidatePath('/sitemaps/en-blog.xml')
+  revalidateBlogContent({ locale, slug: slug || undefined })
   redirect(`${locale === 'en' ? '/admin/blog/en' : '/admin/blog'}?success=${safeMessage('Yazı silindi.')}`)
 }
 

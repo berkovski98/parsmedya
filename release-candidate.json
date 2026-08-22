@@ -1,11 +1,11 @@
 {
-  "version": "1.1.11",
-  "title": "Aynı sürümün tekrar kurulmasını engelleme",
-  "releaseTitle": "Aynı sürümün tekrar kurulmasını engelleme",
-  "summary": "Kurulu commit ile aday commit aynıysa güncelleme kurulamaz; çift kayıt ve aktif kurulum koruması eklendi.",
+  "version": "1.1.12",
+  "title": "Blog listesi ve sitemap önbellek yenileme",
+  "releaseTitle": "Blog listesi ve sitemap önbellek yenileme",
+  "summary": "Yeni yayınlanan blog yazıları birkaç dakika bekletmeden listede ve sitemap'te görünür; admin kaydı anında önbelleği temizler.",
   "releaseNotes": [
-    "Production’da kurulu commit, aday commit ile aynıysa Güncellemeyi Kur devre dışı kalır ve API 409 döner.",
-    "Aynı sürüm numarasında farklı kod varsa uyarı gösterilir; commit karşılaştırması esas alınır.",
-    "Aktif kurulum varken ve aynı commit için ikinci dispatch engellenir; deployment geçmişine action_type eklendi."
+    "Blog listesi ve detay sayfaları en geç bir dakika içinde güncellenir.",
+    "Admin panelden kaydedilen veya silinen yazılar anında sitede yansır.",
+    "Sitemap blog adresleri aynı önbellek kurallarıyla güncel kalır."
   ]
 }

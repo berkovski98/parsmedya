@@ -11,7 +11,7 @@ import { absoluteAlternates, createPageMetadata, safeJsonLd } from '@/lib/seo'
 import { absoluteUrl, getSiteUrl } from '@/lib/site-url'
 
 type Props = { params: Promise<{ slug: string }> }
-export const revalidate = 300
+export const revalidate = 60
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPublishedPost((await params).slug, 'en')

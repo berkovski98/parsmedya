@@ -1,6 +1,12 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import { englishServices } from '@/lib/services-en'
 import { services } from '@/lib/services'
+import {
+  BLOG_CACHE_ROOT_TAG,
+  BLOG_REVALIDATE_SECONDS,
+  blogPostsCacheTag,
+} from '@/lib/blog-cache'
 import { hasSupabaseConfig, getSupabaseConfig } from '@/lib/supabase/config'
 import { getNonIndexableLocalPaths } from '@/lib/local-seo/overrides'
 import {
@@ -36,7 +42,7 @@ function publicSupabase() {
   return createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-async function publishedPosts(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
+async function queryPublishedPostsForSitemap(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
   if (!hasSupabaseConfig()) {
     console.warn('[sitemap] Supabase config missing; blog URLs omitted')
     return []
@@ -71,6 +77,17 @@ async function publishedPosts(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
     console.error('[sitemap] blog query threw', error)
     return []
   }
+}
+
+async function publishedPosts(locale: 'tr' | 'en'): Promise<SitemapPost[]> {
+  return unstable_cache(
+    () => queryPublishedPostsForSitemap(locale),
+    ['sitemap-posts', locale],
+    {
+      tags: [BLOG_CACHE_ROOT_TAG, blogPostsCacheTag(locale)],
+      revalidate: BLOG_REVALIDATE_SECONDS,
+    },
+  )()
 }
 
 export async function turkishSitemapEntries(): Promise<SitemapEntry[]> {
