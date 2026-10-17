@@ -28,13 +28,13 @@ export function About() {
         <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
           <div data-reveal>
             <span className="eyebrow">
-              Kısaca ParsMedya
+              Kısaca Pars Medya
             </span>
             <h2 className="text-display mt-5 text-balance text-[2rem] text-foreground sm:text-[2.75rem]">
               Teknolojiyi işinizin hizmetine sunuyoruz
             </h2>
             <p className="mt-5 text-pretty leading-relaxed text-muted-foreground">
-              ParsMedya; web, mobil ve kurumsal yazılım alanında uzmanlaşmış bir dijital
+              Pars Medya; web, mobil ve kurumsal yazılım alanında uzmanlaşmış bir dijital
               çözüm ortağıdır. Bir panter kadar hızlı, bir o kadar da kararlı bir yaklaşımla,
               fikirlerinizi ölçeklenebilir ve güvenli teknolojilere dönüştürüyoruz.
             </p>
@@ -71,7 +71,7 @@ export function About() {
             <div data-reveal="scale" className="relative flex items-center justify-center overflow-hidden rounded-3xl bg-ink px-8 py-14"><div aria-hidden="true" className="bg-grid absolute inset-0 text-white [mask-image:radial-gradient(ellipse_at_center,#000,transparent_75%)]" />
               <Image
                 src="/parsmedya-logo.png"
-                alt="ParsMedya logosu"
+                alt="Pars Medya logosu"
                 width={384}
                 height={77}
                 sizes="(min-width: 640px) 384px, 280px"

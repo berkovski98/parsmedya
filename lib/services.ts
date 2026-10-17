@@ -7,6 +7,7 @@ import {
   ServerCog,
   type LucideIcon,
 } from 'lucide-react'
+import { withLegacySeo } from '@/lib/service-seo'
 import { softwareServices } from '@/lib/software-services'
 
 export type ServiceCategory =
@@ -812,7 +813,7 @@ const legacyServices: Service[] = [
   },
 ]
 
-export const services: Service[] = [...legacyServices, ...softwareServices]
+export const services: Service[] = [...legacyServices.map(withLegacySeo), ...softwareServices]
 
 export const serviceCategoryOrder: ServiceCategory[] = [
   'Web ve Dijital',

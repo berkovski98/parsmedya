@@ -5,7 +5,7 @@ import { stagger } from '@/lib/motion'
 
 const content = {
   tr: {
-    eyebrow: 'Neden ParsMedya?',
+    eyebrow: 'Neden Pars Medya?',
     title: 'Güvenle çalışabileceğiniz bir ekip',
     text: 'Sadece kod yazmıyor, işinizi anlıyoruz. Hedeflerinize ulaşmanız için teknolojiyi doğru şekilde kullanmanıza yardımcı oluyoruz. Uzun soluklu iş ortaklıkları kuruyoruz.',
     cta: { label: 'Bizi daha yakından tanıyın', href: '/hakkimizda' },
