@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { ArrowRight, Check, Globe2 } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown } from 'lucide-react'
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 import type { Locale } from '@/lib/i18n'
-import { GuideIndex } from '@/components/home/guide-index'
+import { stagger } from '@/lib/motion'
 
 type GuideSection = { serviceKey: string; title: string; paragraphs: string[]; points?: string[]; anchor: string }
 
@@ -63,34 +63,49 @@ const enSections: GuideSection[] = trSections.map((section, index) => ({ service
   ['Modernizing Existing Software','Modernization improves legacy systems through a renewed frontend, service-based backend, APIs, database optimization and responsive interfaces. A phased plan protects critical rules, data and continuity. Testing, monitoring and controlled migration reduce risk while creating a more secure, maintainable foundation for future development.','Review our software modernization approach'],
 ][index].reduce((result, value, valueIndex) => valueIndex === 0 ? { ...result, title: value } : valueIndex === 1 ? { ...result, paragraphs: [value] } : { ...result, anchor: value }, {} as Partial<GuideSection>) })) as GuideSection[]
 
-const processTr = ['İhtiyaç ve İş Analizi','Teknik Planlama','UI/UX Tasarımı','Yazılım Geliştirme','Entegrasyonlar','Test ve Güvenlik Kontrolleri','Canlıya Alma ve Sürekli Geliştirme']
-const processEn = ['Needs & Business Analysis','Technical Planning','UI/UX Design','Software Development','Integrations','Testing & Security Review','Launch & Continuous Improvement']
+const copy = {
+  tr: {
+    eyebrow: 'Dijital Dönüşüm ve Yazılım Çözümleri',
+    title: 'İşletmenize Özel Web, Yazılım ve Dijital Çözümler',
+    intro: ['Pars Medya yalnızca kurumsal web sitesi hazırlayan bir ajans değildir. İşletmenin hedeflerini, kullanıcılarını, verisini ve günlük operasyonlarını analiz ederek tasarım, yazılım geliştirme ve ölçülebilir dijital büyüme süreçlerini bütüncül biçimde ele alırız. Web yazılım, özel yazılım geliştirme, CRM ve ERP yazılımı, SaaS, mobil uygulama, e-ticaret ve API entegrasyonu aynı iş hedefi çevresinde planlanır.', 'İş süreçleri otomasyonu ve yapay zekayı yalnız açık bir operasyonel fayda sağladığı yerde kullanırız. Performans, güvenlik, sürdürülebilir bakım ve kullanıcı deneyimi her teknik kararın parçasıdır. SEO ve dijital pazarlama ise geliştirilen dijital ürünün doğru kitleye ulaşmasını ve görünürlüğün ölçülebilir aksiyona dönüşmesini destekler.'],
+    more: 'Kapsam ve kazanımlar',
+    deliver: 'Neler Sunuyoruz?',
+    value: 'İşletmenize Ne Kazandırır?',
+  },
+  en: {
+    eyebrow: 'Digital Transformation & Software Solutions',
+    title: 'Web, Software and Digital Solutions Built for Your Business',
+    intro: ['Pars Medya is more than a team that builds corporate websites. We examine business goals, users, data and daily operations before connecting product design, software engineering and measurable digital growth. This integrated approach covers web software, custom development, CRM and ERP platforms, SaaS products, mobile applications, e-commerce and API integrations.', 'We use process automation and responsible AI where they create a clear operational advantage, while performance, security, maintainability and user experience guide every technical decision. SEO and digital marketing help the resulting product reach the right audience and turn attention into measurable action.'],
+    more: 'Scope and benefits',
+    deliver: 'What We Deliver',
+    value: 'Value for Your Business',
+  },
+} as const
 
+/**
+ * Service guide: every card shows the essentials; the long copy sits in a native <details>,
+ * so it stays in the server-rendered HTML (indexable, find-in-page) without client JS.
+ */
 export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
   const english = locale === 'en'
+  const t = copy[locale]
   const sections = english ? enSections : trSections
   const source = english ? englishServices : services
   const prefix = english ? '/en/services' : '/hizmetler'
-  const processes = english ? processEn : processTr
   const categories = english ? categoryLabels.en : categoryLabels.tr
   const highlights = english ? editorialHighlights.en : editorialHighlights.tr
-  const industries = english
-    ? ['SMEs', 'Enterprise', 'E-Commerce', 'Manufacturing', 'Logistics', 'Services', 'Foreign Trade', 'Field Operations', 'Startups']
-    : ['KOBİ', 'Kurumsal Şirketler', 'E-Ticaret', 'Üretim', 'Lojistik', 'Hizmet', 'Dış Ticaret', 'Saha Operasyonları', 'Girişimler']
 
-  const indexItems = sections.map((item) => ({ id: `rehber-${item.serviceKey}`, title: item.title }))
-
-  return <section aria-labelledby="services-guide-heading" className="border-t border-border bg-background">
+  return <section aria-labelledby="services-guide-heading" className="bg-background">
     <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28">
-      <header className="max-w-4xl" data-reveal>
-        <p className="eyebrow">{english ? 'Digital Transformation & Software Solutions' : 'Dijital Dönüşüm ve Yazılım Çözümleri'}</p>
-        <h2 id="services-guide-heading" className="text-display mt-5 text-balance text-[2.1rem] sm:text-5xl">{english ? 'Web, Software and Digital Solutions Built for Your Business' : 'İşletmenize Özel Web, Yazılım ve Dijital Çözümler'}</h2>
-        <div className="mt-6 space-y-4 text-lg leading-8 text-muted-foreground"><p>{english ? 'Pars Medya is more than a team that builds corporate websites. We examine business goals, users, data and daily operations before connecting product design, software engineering and measurable digital growth. This integrated approach covers web software, custom development, CRM and ERP platforms, SaaS products, mobile applications, e-commerce and API integrations.' : 'Pars Medya yalnızca kurumsal web sitesi hazırlayan bir ajans değildir. İşletmenin hedeflerini, kullanıcılarını, verisini ve günlük operasyonlarını analiz ederek tasarım, yazılım geliştirme ve ölçülebilir dijital büyüme süreçlerini bütüncül biçimde ele alırız. Web yazılım, özel yazılım geliştirme, CRM ve ERP yazılımı, SaaS, mobil uygulama, e-ticaret ve API entegrasyonu aynı iş hedefi çevresinde planlanır.'}</p><p>{english ? 'We use process automation and responsible AI where they create a clear operational advantage, while performance, security, maintainability and user experience guide every technical decision. SEO and digital marketing help the resulting product reach the right audience and turn attention into measurable action.' : 'İş süreçleri otomasyonu ve yapay zekayı yalnız açık bir operasyonel fayda sağladığı yerde kullanırız. Performans, güvenlik, sürdürülebilir bakım ve kullanıcı deneyimi her teknik kararın parçasıdır. SEO ve dijital pazarlama ise geliştirilen dijital ürünün doğru kitleye ulaşmasını ve görünürlüğün ölçülebilir aksiyona dönüşmesini destekler.'}</p></div>
+      <header className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:gap-16" data-reveal>
+        <div>
+          <p className="eyebrow">{t.eyebrow}</p>
+          <h2 id="services-guide-heading" className="text-display mt-5 text-balance text-[2.1rem] text-foreground sm:text-5xl">{t.title}</h2>
+        </div>
+        <div className="space-y-4 text-pretty leading-7 text-muted-foreground lg:pt-12">{t.intro.map((paragraph) => <p key={paragraph.slice(0, 32)}>{paragraph}</p>)}</div>
       </header>
 
-      <div className="mt-16 grid gap-12 md:mt-24 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16">
-        <GuideIndex items={indexItems} label={english ? 'Contents' : 'İçindekiler'} />
-        <div className="space-y-8 md:space-y-10">
+      <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {sections.map((item, index) => {
           const service = source.find((candidate) => english ? 'trSlug' in candidate && candidate.trSlug === item.serviceKey : candidate.slug === item.serviceKey)
           if (!service) return null
@@ -100,45 +115,38 @@ export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
           const benefits = service.benefits?.slice(0, 4) ?? []
           const number = String(index + 1).padStart(2, '0')
 
-          return <article key={item.serviceKey} id={`rehber-${item.serviceKey}`} data-reveal className={`relative isolate scroll-mt-28 overflow-hidden rounded-3xl border border-border px-5 py-12 sm:px-8 md:px-12 md:py-16 ${index % 2 === 0 ? 'bg-card' : 'bg-secondary/35'}`}>
-            <div aria-hidden="true" className="absolute -right-2 -top-10 -z-10 font-display text-[8rem] font-bold leading-none text-primary/[0.035] sm:right-8 sm:text-[11rem]">{number}</div>
-            <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-accent/35 to-transparent" />
-            <div className="max-w-4xl">
-              <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-accent-strong sm:text-sm">
-                <span>{number}</span><span className="h-px w-8 bg-accent/50" /><span>{categories[index]}</span>
-              </div>
-              <div className="mt-6 flex items-start gap-4">
-                <span className="hidden rounded-2xl border border-accent/20 bg-accent/10 p-3 text-accent sm:inline-flex"><Icon className="h-6 w-6" aria-hidden="true" /></span>
-                <div><h3 className="text-balance font-display text-2xl font-bold sm:text-3xl md:text-4xl">{item.title}</h3><p className="mt-4 max-w-3xl text-pretty text-lg font-medium leading-8 text-foreground/80">{service.description}</p></div>
-              </div>
-              <div className="mt-8 max-w-3xl space-y-4 border-t border-border pt-7">{item.paragraphs.map((paragraph) => <p key={paragraph.slice(0, 48)} className="text-pretty leading-7 text-muted-foreground">{paragraph}</p>)}</div>
+          return <article key={item.serviceKey} id={`rehber-${item.serviceKey}`} data-reveal style={stagger(index % 3)} className="flex scroll-mt-28 flex-col rounded-2xl border border-border bg-card p-6 transition-colors duration-500 hover:border-foreground/20 sm:p-7">
+            <div className="flex items-center justify-between gap-4">
+              <p className="flex items-center gap-3 text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-accent-strong">
+                <span className="tabular-nums">{number}</span><span className="h-px w-6 bg-accent/50" aria-hidden="true" /><span>{categories[index]}</span>
+              </p>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary"><Icon className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" /></span>
             </div>
+            <h3 className="mt-5 text-balance font-display text-xl font-bold tracking-tight text-foreground sm:text-[1.375rem]">{item.title}</h3>
+            <p className="mb-5 mt-3 text-pretty text-[0.9375rem] leading-relaxed text-muted-foreground">{service.description}</p>
 
-            <div className="mt-10">
-              <h4 className="font-display text-lg font-semibold">{english ? 'What We Deliver' : 'Neler Sunuyoruz?'}</h4>
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{featureNames.map((feature) => <li key={feature} className="flex min-w-0 items-center gap-3 rounded-xl border border-border/80 bg-background/80 px-4 py-3 text-sm font-medium shadow-sm"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span><span>{feature}</span></li>)}</ul>
-            </div>
+            <details className="group/details mt-auto border-t border-border pt-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-sm text-sm font-semibold text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                {t.more}<ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-300 group-open/details:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="mt-4 space-y-4 text-[0.9375rem] leading-7 text-muted-foreground">
+                {item.paragraphs.map((paragraph) => <p key={paragraph.slice(0, 48)} className="text-pretty">{paragraph}</p>)}
+                {highlight && <p className="text-balance font-display text-lg font-bold leading-snug text-foreground">{highlight}</p>}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">{t.deliver}</h4>
+                  <ul className="mt-3 grid gap-2">{featureNames.map((feature) => <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground/80"><Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden="true" />{feature}</li>)}</ul>
+                </div>
+                {benefits.length > 0 && <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">{t.value}</h4>
+                  <ul className="mt-3 flex flex-wrap gap-2">{benefits.map((benefit) => <li key={benefit} className="rounded-full border border-border bg-background px-3 py-1 text-[0.8125rem] text-foreground/80">{benefit}</li>)}</ul>
+                </div>}
+              </div>
+            </details>
 
-            {(highlight || benefits.length > 0) && <div className="mt-8 rounded-2xl border border-accent/15 bg-accent/[0.055] p-5 sm:p-6">
-              {highlight && <p className="max-w-4xl text-balance font-display text-xl font-bold text-foreground sm:text-2xl">{highlight}</p>}
-              {benefits.length > 0 && <><h4 className={`${highlight ? 'mt-5' : ''} text-sm font-semibold uppercase tracking-wider text-muted-foreground`}>{english ? 'Value for Your Business' : 'İşletmenize Ne Kazandırır?'}</h4><ul className="mt-3 flex flex-wrap gap-2">{benefits.map((benefit) => <li key={benefit} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground/80">{benefit}</li>)}</ul></>}
-            </div>}
-
-            <Link href={`${prefix}/${service.slug}`} className="group mt-9 inline-flex items-center gap-2 font-semibold text-accent-strong transition-colors hover:text-foreground">{item.anchor}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></Link>
+            <Link href={`${prefix}/${service.slug}`} className="group mt-5 inline-flex w-fit items-center gap-2 text-sm font-semibold text-accent-strong transition-colors hover:text-foreground">{item.anchor}<ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" aria-hidden="true" /></Link>
           </article>
         })}
-        </div>
       </div>
-
-      <section data-reveal="scale" className="relative mt-20 overflow-hidden rounded-3xl bg-ink px-5 py-10 text-primary-foreground sm:px-8 md:mt-28 md:px-12 md:py-16">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{english ? 'Delivery Model' : 'Çalışma Süreci'}</p>
-        <h3 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl">{english ? 'How We Bring a Software Project to Life' : 'Bir Yazılım Projesini Nasıl Hayata Geçiriyoruz?'}</h3>
-        <ol className="relative mt-10 ml-3 border-l border-accent/40 sm:ml-4">{processes.map((step,index) => <li key={step} className="relative pb-9 pl-8 last:pb-0 sm:pl-12"><span className="absolute -left-[17px] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-accent/50 bg-primary text-xs font-bold text-accent">{String(index + 1).padStart(2,'0')}</span><h4 className="font-display text-lg font-semibold">{step}</h4><p className="mt-2 max-w-2xl text-sm leading-6 text-primary-foreground/70">{english ? 'We define decisions, responsibilities and measurable review points for this stage before moving forward.' : 'Bu aşamanın kararlarını, sorumlularını ve ölçülebilir kontrol noktalarını şeffaf biçimde belirleriz.'}</p></li>)}</ol>
-      </section>
-
-      <section className="mt-16 md:mt-24" data-reveal><h3 className="font-display text-2xl font-bold sm:text-3xl">{english ? 'Who Are Pars Medya Software Solutions For?' : 'Pars Medya Yazılım Çözümleri Kimler İçin Uygun?'}</h3><p className="mt-4 max-w-3xl leading-7 text-muted-foreground">{english ? 'Our approach can support SMEs, enterprise organizations, startups, e-commerce businesses and teams in manufacturing, logistics, services, foreign trade, field operations and professional services. Suitability depends on the workflow and objective—not an unverified claim of sector experience.' : 'Yaklaşımımız KOBİ’ler, kurumsal şirketler, girişimler, e-ticaret işletmeleri ile üretim, lojistik, hizmet, dış ticaret, saha operasyonları ve profesyonel hizmet ekiplerinin farklı ihtiyaçlarına uyarlanabilir. Uygunluğu doğrulanmamış sektör referanslarıyla değil, gerçek süreç ve hedef analiziyle değerlendiririz.'}</p><ul className="mt-7 flex flex-wrap gap-3">{industries.map((industry) => <li key={industry} className="rounded-full border border-border bg-secondary/40 px-4 py-2 text-sm font-semibold">{industry}</li>)}</ul></section>
-
-      <section data-reveal="scale" className="relative mt-16 overflow-hidden rounded-3xl bg-ink p-7 text-primary-foreground sm:p-10 md:mt-24 md:p-14"><Globe2 className="h-8 w-8 text-accent" aria-hidden="true" /><h3 className="mt-5 max-w-2xl font-display text-3xl font-bold sm:text-4xl">{english ? 'From Türkiye to Global Digital Projects' : 'Türkiye’den Global Dijital Projelere'}</h3><p className="mt-5 max-w-3xl leading-7 text-primary-foreground/75">{english ? 'Our Istanbul-based perspective is enriched by business connections and project experience linked to Dubai, Moscow and Switzerland. We design multilingual, scalable products that can adapt to different markets without making unverified physical-office claims.' : 'İstanbul merkezli bakış açımızı Dubai, Moskova ve İsviçre bağlantılı iş ağları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel ofis iddiası oluşturmadan, farklı pazarların diline ve operasyon ihtiyacına uyarlanabilen çok dilli ve ölçeklenebilir yazılımlar geliştiriyoruz.'}</p><ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-4">{['İstanbul', 'Dubai', 'Moskova', english ? 'Switzerland' : 'İsviçre'].map((location) => <li key={location} className="bg-ink px-4 py-5 text-center font-display text-lg font-semibold">{location}</li>)}</ul></section>
     </div>
   </section>
 }
