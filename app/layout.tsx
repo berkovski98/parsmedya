@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { SiteFrame } from '@/components/site-frame'
 import { isAnalyticsEnabled } from '@/lib/analytics-config'
 import { getSiteUrl } from '@/lib/site-url'
+import { MOTION_BOOT_SCRIPT } from '@/lib/motion'
 import './globals.css'
 
 const inter = Inter({
@@ -53,7 +54,11 @@ export default async function RootLayout({
       lang={lang}
       data-analytics={isAnalyticsEnabled() ? 'on' : 'off'}
       className={`light ${inter.variable} ${manrope.variable} bg-background`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased">
         <SiteFrame>{children}</SiteFrame>
         {process.env.NODE_ENV === 'production' && <Analytics />}
