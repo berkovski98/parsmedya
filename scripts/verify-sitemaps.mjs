@@ -212,7 +212,9 @@ const en = await verifySitemap('/sitemap-en.xml', 'en')
 const robots = await fetchText(`${base}/robots.txt`)
 console.log(`/robots.txt: HTTP ${robots.status}`)
 if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap.xml')) fail('robots.txt missing Turkish sitemap')
-if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap-en.xml')) fail('robots.txt missing English sitemap')
+// English sitemaps may be listed separately or reached through the main index (en-pages is required there above).
+const englishInIndex = index.children.includes(`${PRODUCTION_SITE_URL}/sitemaps/en-pages.xml`)
+if (!robots.text.includes('Sitemap: https://parsmedya.net/sitemap-en.xml') && !englishInIndex) fail('robots.txt missing English sitemap')
 
 console.log('\n--- sitemap verification ---')
 console.log(`Index child count: ${index.children.length}`)

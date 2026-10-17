@@ -1,33 +1,28 @@
-# parsmedya
+# Pars Medya
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Pars Medya web sitesi (https://parsmedya.net): Next.js (App Router), TypeScript, Tailwind CSS ve Supabase.
 
-## Built with v0
+- Türkçe sayfalar `/`, İngilizce sayfalar `/en` altında.
+- Yönetim paneli `/admin`; blog, iletişim mesajları, analitik ve yerel SEO verileri Supabase'de.
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
-
-[Continue working on v0 →](https://v0.app/chat/projects/prj_UibifO9XDB3V5KA0lVb91L5ePoZi)
-
-## Getting Started
-
-First, run the development server:
+## Geliştirme
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.example` dosyasını `.env.local` olarak kopyalayıp Supabase bilgilerini girin. Supabase anahtarları yoksa site çalışır ama blog boş görünür.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kontroller
 
-## Learn More
+```bash
+pnpm exec tsc --noEmit
+pnpm lint
+pnpm test
+pnpm build
+```
 
-To learn more, take a look at the following resources:
+## Yayın
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+Site cPanel (Alastyr) üzerinde Phusion Passenger ile çalışır. `main` dalına merge etmek yayın başlatmaz. Yayın, GitHub Actions'taki **Production Deploy** iş akışıyla (`workflow_dispatch`) ya da admin panelindeki "Güncellemeyi Kur" ile elle başlatılır. İş akışı build alır, `.next/standalone` çıktısını sunucuya yükler, Passenger'ı yeniden başlatır ve sağlık kontrollerini çalıştırır. Sunucu bilgileri GitHub Actions secret'larında tutulur.
