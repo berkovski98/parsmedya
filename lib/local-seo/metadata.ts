@@ -1,6 +1,7 @@
 import { createPageMetadata } from '@/lib/seo'
 import { canonicalAbsoluteUrl } from '@/lib/site-url'
 import { trLocalPathToEn } from '@/lib/local-seo/en-resolve'
+import { localRobots } from '@/lib/local-seo/index-policy'
 import type { Metadata } from 'next'
 
 export function createLocalPageMetadata({
@@ -33,6 +34,6 @@ export function createLocalPageMetadata({
         'x-default': canonicalAbsoluteUrl(canonical),
       },
     },
-    robots: indexable ? { index: true, follow: true } : { index: false, follow: false },
+    robots: localRobots(indexable),
   }
 }

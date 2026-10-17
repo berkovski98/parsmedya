@@ -6,17 +6,25 @@ import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
 import { createPageMetadata } from '@/lib/seo'
 import { ServicesSeoContent } from '@/components/home/services-seo-content'
+import { EdiSpotlight } from '@/components/edi/edi-spotlight'
+import { HomeMarkets } from '@/components/home/markets'
+import { HomeFaq } from '@/components/home/home-faq'
+import { Process } from '@/components/process'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Pars Medya | Web, Yazılım ve Dijital Dönüşüm', description: 'Web yazılım, özel yazılım, CRM, ERP, SaaS, e-ticaret ve dijital büyüme çözümleriyle işletmenizin süreçlerini güvenle dönüştürün.', canonical: '/', tr: '/', en: '/en', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Pars Medya | Web, Yazılım ve Dijital Dönüşüm Ajansı', description: 'Web yazılım, özel yazılım, CRM, ERP, SaaS, e-ticaret ve dijital büyüme çözümleriyle işletmenizin süreçlerini güvenle dönüştürün.', canonical: '/', tr: '/', en: '/en', locale: 'tr' })
 
 export default function Home() {
   return (
     <>
       <Hero />
       <Services home />
+      <EdiSpotlight />
       <WhyUs />
-      <LatestBlogPosts />
+      <Process />
       <ServicesSeoContent />
+      <HomeMarkets />
+      <HomeFaq />
+      <LatestBlogPosts />
       <ContactCta />
     </>
   )

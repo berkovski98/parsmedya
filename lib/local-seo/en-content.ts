@@ -11,7 +11,8 @@ import { getEnglishService, type EnglishService } from '@/lib/services-en'
 import { getRelatedLocalServices, getLocalServices, type LocalServiceRecord } from '@/lib/services/service-registry'
 import { enServiceSlug, enCityPath, enCityServicePath, enDistrictPath, enDistrictServicePath, enNationalHubPath, enRegionName, enRegionPath, ENGLISH_REGION_NAMES } from '@/lib/local-seo/en-resolve'
 import { toEnglishServiceSlug } from '@/lib/i18n'
-import { hash, pick, pickMany, clipMeta } from '@/lib/local-seo/text-utils'
+import { pick, pickMany, clipMeta } from '@/lib/local-seo/text-utils'
+import { isLocalPageIndexable, type LocalIndexOverride } from '@/lib/local-seo/index-policy'
 import type { LocalSeoFaq } from '@/lib/local-seo/types'
 import type { LocalBreadcrumb } from '@/lib/local-seo/content'
 
@@ -62,16 +63,7 @@ const REGION_ECONOMY: Record<TurkeyRegion, string> = {
   'Güneydoğu Anadolu': 'agriculture, trade, manufacturing and regional services',
 }
 
-function enClipMeta(text: string) {
-  const normalized = text.replace(/\s+/g, ' ').trim()
-  if (normalized.length >= 140 && normalized.length <= 160) return normalized
-  if (normalized.length > 160) {
-    const sliced = normalized.slice(0, 159)
-    const cut = Math.max(sliced.lastIndexOf(' '), 120)
-    return `${sliced.slice(0, cut).replace(/[,:;.-]+$/, '')}.`
-  }
-  return `${normalized} Plan your project with Pars Medya.`.slice(0, 160)
-}
+const enClipMeta = (text: string) => clipMeta(text, 'en')
 
 function enServiceTitle(service: LocalServiceRecord) {
   const en = getEnglishService(toEnglishServiceSlug(service.slug))
@@ -192,6 +184,7 @@ export function buildEnLocalServicePage(
   city: TurkeyCity,
   service: LocalServiceRecord,
   district: TurkeyDistrict | null = null,
+  trOverride: LocalIndexOverride = null,
 ): EnLocalServicePageModel {
   const seed = `en:${city.slug}:${district?.slug || ''}:${service.slug}`
   const en = getEnglishService(toEnglishServiceSlug(service.slug))!
@@ -204,7 +197,8 @@ export function buildEnLocalServicePage(
     ? `/${city.slug}/${district.slug}/${service.slug}`
     : `/${city.slug}/${service.slug}`
   const title = `${enServiceTitle(service)} in ${place} | Pars Medya`
-  const description = enClipMeta(`${enServiceTitle(service)} for businesses in ${place} and ${city.name}. Build scalable systems with Pars Medya.`)
+  const area = district ? `${district.name} and across ${city.name}` : city.name
+  const description = enClipMeta(`${enServiceTitle(service)} for businesses in ${area}: ${enServiceDesc(service).replace(/\.$/, '')}. Build scalable systems with Pars Medya.`)
   const h1 = `${enServiceTitle(service)} in ${place}`
 
   const extras = getServicePageExtras(service.slug)
@@ -231,7 +225,8 @@ export function buildEnLocalServicePage(
     kind,
     canonicalPath,
     trCanonicalPath,
-    indexable: true,
+    // Same decision as the Turkish counterpart, including its admin override.
+    indexable: isLocalPageIndexable({ kind: district ? 'district-service' : 'city-service', citySlug: city.slug, serviceSlug: service.slug, override: trOverride }),
     title,
     description,
     h1,
@@ -280,6 +275,7 @@ export function buildEnLocalServicePage(
 export type EnLocalHubModel = {
   kind: 'en-national-hub' | 'en-region-hub' | 'en-city-hub' | 'en-district-hub'
   canonicalPath: string
+  indexable: boolean
   trCanonicalPath: string
   title: string
   description: string
@@ -292,9 +288,10 @@ export type EnLocalHubModel = {
 export function buildEnNationalHub(): EnLocalHubModel {
   return {
     kind: 'en-national-hub',
+    indexable: true,
     canonicalPath: enNationalHubPath(),
     trCanonicalPath: '/hizmet-bolgeleri',
-    title: 'Software Development & Digital Services Across Turkey | Pars Medya',
+    title: 'Software & Digital Services Across Turkey | Pars Medya',
     description: enClipMeta('Custom software, web, CRM, ERP, e-commerce and digital solutions for businesses across all 81 provinces of Turkey. Plan your project with Pars Medya.'),
     h1: 'Software & Digital Solutions Across Turkey',
     intro: 'Pars Medya delivers custom software, enterprise platforms, web applications and digital growth projects for businesses across Turkey. Our remote project management model ensures consistent quality regardless of location.',
@@ -318,9 +315,10 @@ export function buildEnRegionHub(region: TurkeyRegion): EnLocalHubModel {
   const name = enRegionName(region)
   return {
     kind: 'en-region-hub',
+    indexable: true,
     canonicalPath: enRegionPath(region),
     trCanonicalPath: `/hizmet-bolgeleri/${region === 'Marmara' ? 'marmara' : region === 'Ege' ? 'ege' : region === 'Akdeniz' ? 'akdeniz' : region === 'İç Anadolu' ? 'ic-anadolu' : region === 'Karadeniz' ? 'karadeniz' : region === 'Doğu Anadolu' ? 'dogu-anadolu' : 'guneydogu-anadolu'}`,
-    title: `${name} Software Development & Digital Services | Pars Medya`,
+    title: `${name} Software & Digital Services | Pars Medya`,
     description: enClipMeta(`Software development and digital services for ${cities.length} provinces in the ${name} region. Web, CRM, ERP and enterprise solutions.`),
     h1: `${name} Software Development & Digital Services`,
     intro: `We deliver software and digital solutions for businesses across the ${name} region of Turkey. ${cities.length} provinces are covered through our remote project coordination model.`,
@@ -343,9 +341,10 @@ export function buildEnCityHub(city: TurkeyCity): EnLocalHubModel {
   const districtCount = city.districts.length
   return {
     kind: 'en-city-hub',
+    indexable: true,
     canonicalPath: enCityPath(city),
     trCanonicalPath: `/${city.slug}`,
-    title: `Software Development & Digital Solutions in ${city.name} | Pars Medya`,
+    title: `Software & Digital Solutions in ${city.name} | Pars Medya`,
     description: enClipMeta(`Software, web, CRM, ERP and digital solutions for businesses in ${city.name}. ${districtCount} districts covered.`),
     h1: `Software Development & Digital Solutions in ${city.name}`,
     intro: `We deliver software and digital solutions for businesses operating across ${city.name} and its ${districtCount} districts. Projects are coordinated remotely with in-person support available when needed.`,
@@ -369,9 +368,10 @@ export function buildEnCityHub(city: TurkeyCity): EnLocalHubModel {
 export function buildEnDistrictHub(city: TurkeyCity, district: TurkeyDistrict): EnLocalHubModel {
   return {
     kind: 'en-district-hub',
+    indexable: isLocalPageIndexable({ kind: 'district-hub', citySlug: city.slug }),
     canonicalPath: enDistrictPath(city, district),
     trCanonicalPath: `/${city.slug}/${district.slug}`,
-    title: `Software Development & Digital Solutions in ${district.name} | Pars Medya`,
+    title: `Software & Digital Solutions in ${district.name} | Pars Medya`,
     description: enClipMeta(`Software and digital solutions for businesses in ${district.name}, ${city.name}. Web, custom software, CRM, ERP and integrations.`),
     h1: `Software Development & Digital Solutions in ${district.name}`,
     intro: `We provide software development and digital services for businesses in ${district.name} and across ${city.name}. Solutions are not limited to a single district; scope can cover branches, teams and operations across the province.`,

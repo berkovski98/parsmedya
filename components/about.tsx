@@ -1,5 +1,7 @@
 import { Target, Eye, Gauge } from 'lucide-react'
 import Image from 'next/image'
+import { CountUp } from '@/components/motion/count-up'
+import { stagger } from '@/lib/motion'
 
 const values = [
   {
@@ -21,18 +23,18 @@ const values = [
 
 export function About() {
   return (
-    <section id="hakkimizda" className="border-t border-border bg-background py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <span className="text-sm font-semibold uppercase tracking-widest text-accent">
-              Kısaca ParsMedya
+    <section id="hakkimizda" className="bg-background py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
+          <div data-reveal>
+            <span className="eyebrow">
+              Kısaca Pars Medya
             </span>
-            <h2 className="mt-3 text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h2 className="text-display mt-5 text-balance text-[2rem] text-foreground sm:text-[2.75rem]">
               Teknolojiyi işinizin hizmetine sunuyoruz
             </h2>
             <p className="mt-5 text-pretty leading-relaxed text-muted-foreground">
-              ParsMedya; web, mobil ve kurumsal yazılım alanında uzmanlaşmış bir dijital
+              Pars Medya; web, mobil ve kurumsal yazılım alanında uzmanlaşmış bir dijital
               çözüm ortağıdır. Bir panter kadar hızlı, bir o kadar da kararlı bir yaklaşımla,
               fikirlerinizi ölçeklenebilir ve güvenli teknolojilere dönüştürüyoruz.
             </p>
@@ -51,38 +53,40 @@ export function About() {
 
             <dl className="mt-8 grid grid-cols-3 gap-6 border-t border-border pt-8">
               <div>
-                <dt className="font-display text-3xl font-bold text-foreground">120+</dt>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="120+" /></dt>
                 <dd className="mt-1 text-sm text-muted-foreground">Tamamlanan proje</dd>
               </div>
               <div>
-                <dt className="font-display text-3xl font-bold text-foreground">8+</dt>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="8+" /></dt>
                 <dd className="mt-1 text-sm text-muted-foreground">Yıllık deneyim</dd>
               </div>
               <div>
-                <dt className="font-display text-3xl font-bold text-foreground">%98</dt>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="%98" /></dt>
                 <dd className="mt-1 text-sm text-muted-foreground">Müşteri memnuniyeti</dd>
               </div>
             </dl>
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-center rounded-2xl bg-primary px-8 py-12">
+            <div data-reveal="scale" className="relative flex items-center justify-center overflow-hidden rounded-3xl bg-ink px-8 py-14"><div aria-hidden="true" className="bg-grid absolute inset-0 text-white [mask-image:radial-gradient(ellipse_at_center,#000,transparent_75%)]" />
               <Image
                 src="/parsmedya-logo.png"
-                alt="ParsMedya logosu"
+                alt="Pars Medya logosu"
                 width={384}
                 height={77}
                 sizes="(min-width: 640px) 384px, 280px"
-                className="h-14 w-auto sm:h-16"
+                className="relative h-14 w-auto sm:h-16"
               />
             </div>
 
-            {values.map((v) => (
+            {values.map((v, index) => (
               <div
                 key={v.title}
-                className="flex gap-4 rounded-xl border border-border bg-card p-5"
+                data-reveal
+                style={stagger(index + 1)}
+                className="group flex gap-4 rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_16px_40px_-24px_rgb(10_20_50/0.35)] sm:p-6"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent-strong transition-colors duration-300 group-hover:bg-ink group-hover:text-accent">
                   <v.icon className="h-5 w-5" />
                 </div>
                 <div>

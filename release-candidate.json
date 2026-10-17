@@ -1,10 +1,18 @@
 {
-  "version": "1.1.13",
-  "title": "Production build düzeltmesi",
-  "releaseTitle": "Production build düzeltmesi",
-  "summary": "Blog önbelleği production build sırasında hata vermez; yayınlanan yazılar güvenle derlenir.",
+  "version": "1.1.14",
+  "title": "Yeni tasarım, EDI sayfası ve arama motoru iyileştirmeleri",
+  "releaseTitle": "Yeni tasarım, EDI sayfası ve arama motoru iyileştirmeleri",
+  "summary": "Site yenilendi, EDI entegrasyonu öne çıkarıldı, telefon ve WhatsApp ile tek dokunuşla iletişim eklendi; arama motoru uyumu iyileştirildi. Sayfa adresleri değişmedi.",
   "releaseNotes": [
-    "Production build adımı blog sayfalarında cookies hatası vermeden tamamlanır.",
-    "Blog listesi ve detay önbelleği önceki sürümdeki gibi çalışmaya devam eder."
+    "Üst menü, ana sayfa, hizmet kartları, blog ve alt bilgi alanı yenilendi; sayfa kaydırıldıkça bölümler yumuşak geçişlerle görünür.",
+    "Ana sayfa sadeleştirildi; çalışma süreci, sektörler ve sık sorulan sorular bölümleri eklendi.",
+    "EDI entegrasyonu için Türkçe ve İngilizce yeni bir tanıtım sayfası eklendi; ana sayfada, menüde ve alt bilgide öne çıkarılır.",
+    "0539 840 18 98 numarası ve WhatsApp butonları menüde, alt bilgide ve iletişim sayfasında yer alır; mevcut 0212 963 77 77 ofis hattı korunur.",
+    "Google'a şirket adı, logo, telefon ve e-posta bilgisi tek ve tutarlı biçimde iletiliyor.",
+    "Şehir ve ilçe sayfalarındaki ek hataları düzeltildi (örneğin “Ankara'da”, “Kadıköy'de”).",
+    "Birbirine çok benzeyen ilçe ve hizmet sayfaları açık kalıyor ancak Google'a öncelikli olarak gösterilmiyor; öne çıkan altı şehrin sayfaları öne alındı.",
+    "İngilizce sayfalarda kalan Türkçe başlıklar kaldırıldı; her İngilizce hizmet sayfasına kendine özel açıklama ve sık sorulan sorular eklendi.",
+    "Bulunamayan sayfalar için yardımcı bir sayfa ve sosyal medya için yeni bir paylaşım görseli eklendi.",
+    "KVKK, gizlilik, çerez ve kullanım koşulları sayfalarının taslakları hazırlandı; şirket bilgileri tamamlanana kadar yayında görünmüyor."
   ]
 }

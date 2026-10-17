@@ -45,6 +45,11 @@ const staticPairs: Record<string, string> = {
   '/hizmetler': '/en/services',
   '/blog': '/en/blog',
   '/iletisim': '/en/contact',
+  '/gizlilik-politikasi': '/en/privacy-policy',
+  '/kvkk-aydinlatma-metni': '/en/privacy-policy',
+  '/cerez-politikasi': '/en/cookie-policy',
+  '/kullanim-kosullari': '/en/terms-of-use',
+  '/referanslar': '/en/references',
 }
 
 function normalizePath(pathname: string) {

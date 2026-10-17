@@ -1,5 +1,6 @@
 import { getServicePageExtras } from '@/lib/service-page-copy'
 import { getServiceCategory, services, type Service, type ServiceCategory } from '@/lib/services'
+import { lowerKeepAcronyms } from '@/lib/turkish'
 
 export type LocalServiceRecord = {
   id: string
@@ -32,7 +33,7 @@ export function getLocalServiceRegistry(): LocalServiceRecord[] {
     keywords: keywordsFor(service),
     icon: service.icon,
     seoTitleTemplate: `{location} ${service.title} | Pars Medya`,
-    seoDescriptionTemplate: `{location} ${service.title.toLocaleLowerCase('tr-TR')} hizmetleriyle işletmenize özel yazılım ve dijital çözümler geliştirin. Pars Medya ile projenizi planlayın.`,
+    seoDescriptionTemplate: `{location} ${lowerKeepAcronyms(service.title)} hizmetleriyle işletmenize özel yazılım ve dijital çözümler geliştirin. Pars Medya ile projenizi planlayın.`,
     source: service,
   }))
 }

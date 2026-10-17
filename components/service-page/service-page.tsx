@@ -3,6 +3,7 @@ import { ServiceBenefits } from '@/components/service-page/service-benefits'
 import { ServiceCapabilities } from '@/components/service-page/service-capabilities'
 import { ServiceCTA } from '@/components/service-page/service-cta'
 import { ServiceHero } from '@/components/service-page/service-hero'
+import { ServiceLocalLinks } from '@/components/service-page/service-local-links'
 import { ServiceOutcomes } from '@/components/service-page/service-outcomes'
 import { ServiceOverview, serviceOverviewParagraphs } from '@/components/service-page/service-overview'
 import { ServiceProcess } from '@/components/service-page/service-process'
@@ -10,6 +11,7 @@ import { ServiceFaq, ServicePackages, ServiceRelated, ServiceUseCases } from '@/
 import { ServiceTechStack } from '@/components/service-page/service-tech-stack'
 import { ServiceTrustBar } from '@/components/service-page/service-trust-bar'
 import { ServiceVisual } from '@/components/service-page/service-visual'
+import { EdiCallout } from '@/components/edi/edi-callout'
 import type { Locale } from '@/lib/i18n'
 import { buildServicePageModel, mergeTechStack, serviceHighlights, serviceJsonLd } from '@/lib/service-page'
 import { safeJsonLd } from '@/lib/seo'
@@ -29,6 +31,8 @@ export {
   ServiceTrustBar,
   ServiceVisual,
 }
+
+const EDI_RELATED_SLUGS = new Set(['api-sistem-entegrasyonlari', 'api-system-integrations', 'erp-yazilim-cozumleri', 'erp-software-solutions', 'stok-siparis-yonetim-sistemleri', 'inventory-order-management'])
 
 export function ServicePage({
   service,
@@ -52,6 +56,7 @@ export function ServicePage({
         highlights={serviceHighlights(service, locale)}
       />
       <ServiceCapabilities model={model} features={service.features} />
+      {EDI_RELATED_SLUGS.has(service.slug) ? <div className="py-6"><EdiCallout locale={locale} /></div> : null}
       <ServiceProcess model={model} />
       <ServiceArchitecture model={model} />
       <ServiceTechStack model={model} technologies={mergeTechStack(service, model.visual)} />
@@ -61,6 +66,7 @@ export function ServicePage({
       <ServicePackages model={model} packages={service.packages} />
       <ServiceFaq model={model} faqs={service.faqs} />
       <ServiceRelated model={model} current={service} />
+      <ServiceLocalLinks model={model} service={service} />
       <ServiceCTA model={model} />
     </>
   )

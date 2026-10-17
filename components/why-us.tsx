@@ -1,62 +1,63 @@
-import { CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, Handshake, MessagesSquare, ShieldCheck, UsersRound } from 'lucide-react'
+import type { Locale } from '@/lib/i18n'
+import { stagger } from '@/lib/motion'
 
-const reasons = [
-  {
-    title: 'Şeffaf Süreç',
-    description:
-      'Projenizin her aşamasında düzenli raporlama ve net iletişim sunuyoruz.',
+const content = {
+  tr: {
+    eyebrow: 'Neden Pars Medya?',
+    title: 'Güvenle çalışabileceğiniz bir ekip',
+    text: 'Sadece kod yazmıyor, işinizi anlıyoruz. Hedeflerinize ulaşmanız için teknolojiyi doğru şekilde kullanmanıza yardımcı oluyoruz. Uzun soluklu iş ortaklıkları kuruyoruz.',
+    cta: { label: 'Bizi daha yakından tanıyın', href: '/hakkimizda' },
+    reasons: [
+      { icon: MessagesSquare, title: 'Şeffaf Süreç', description: 'Projenizin her aşamasında net kararlar, kontrol noktaları ve düzenli iletişim sunuyoruz.' },
+      { icon: UsersRound, title: 'Tek Sorumlu Ekip', description: 'Analiz, tasarım, yazılım ve dijital büyüme kararlarını aynı ekip içinde, tek bir plan üzerinden yönetiyoruz.' },
+      { icon: ShieldCheck, title: 'Güvenlik Öncelikli', description: 'Yetkilendirme, veri koruma ve KVKK gerekliliklerini ilk mimari kararlardan itibaren ele alıyoruz.' },
+      { icon: Handshake, title: 'Uzun Vadeli Destek', description: 'Yayın sonrası bakım, ölçümleme ve geliştirmeyle yanınızda olmaya devam ediyoruz.' },
+    ],
   },
-  {
-    title: 'Zamanında Teslim',
-    description:
-      'Planlanan takvime sadık kalarak projelerinizi vaktinde teslim ediyoruz.',
+  en: {
+    eyebrow: 'Why Pars Medya?',
+    title: 'A technology partner that understands the business behind the brief',
+    text: 'We combine commercial understanding, product thinking and engineering discipline to create solutions that remain useful, maintainable and measurable.',
+    cta: { label: 'Get to know us', href: '/en/about' },
+    reasons: [
+      { icon: MessagesSquare, title: 'Transparent Delivery', description: 'Clear decisions, review points and regular communication throughout the project.' },
+      { icon: UsersRound, title: 'One Accountable Team', description: 'Analysis, design, engineering and digital growth decisions are managed by one team, against one plan.' },
+      { icon: ShieldCheck, title: 'Security by Design', description: 'Access, validation and data protection are considered from the first architecture decisions.' },
+      { icon: Handshake, title: 'Long-Term Partnership', description: 'Maintenance, measurement and further development continue after launch.' },
+    ],
   },
-  {
-    title: 'Güvenlik Öncelikli',
-    description:
-      'Güncel güvenlik standartları ve KVKK uyumlu altyapılar geliştiriyoruz.',
-  },
-  {
-    title: 'Uzun Vadeli Destek',
-    description:
-      'Yayın sonrası bakım, güncelleme ve teknik destekle yanınızdayız.',
-  },
-]
+} as const
 
-export function WhyUs() {
+export function WhyUs({ locale = 'tr' }: { locale?: Locale }) {
+  const t = content[locale]
   return (
-    <section id="neden-biz" className="border-b border-border bg-secondary/40">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-2">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-accent">
-            Neden ParsMedya?
-          </p>
-          <h2 className="mt-3 text-balance font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Güvenle çalışabileceğiniz bir ekip
-          </h2>
-          <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Sadece kod yazmıyor, işinizi anlıyoruz. Hedeflerinize ulaşmanız için
-            teknolojiyi doğru şekilde kullanmanıza yardımcı oluyoruz. Uzun soluklu
-            iş ortaklıkları kuruyoruz.
-          </p>
+    <section id={locale === 'tr' ? 'neden-biz' : undefined} className="border-y border-border bg-secondary/40">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+        <div className="lg:sticky lg:top-32 lg:self-start" data-reveal>
+          <p className="eyebrow">{t.eyebrow}</p>
+          <h2 className="text-display mt-5 text-balance text-[2.1rem] text-foreground sm:text-5xl">{t.title}</h2>
+          <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-muted-foreground">{t.text}</p>
+          <Link href={t.cta.href} className="group mt-8 inline-flex items-center gap-2 border-b-2 border-accent pb-1 text-sm font-semibold text-foreground transition-colors hover:text-accent-strong">
+            {t.cta.label}<ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
+          </Link>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          {reasons.map((reason) => (
-            <div
-              key={reason.title}
-              className="rounded-xl border border-border bg-card p-5"
-            >
-              <CheckCircle2 className="h-6 w-6 text-accent" />
-              <h3 className="mt-4 font-display text-base font-semibold text-foreground">
-                {reason.title}
-              </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {reason.description}
-              </p>
-            </div>
+        <ol className="divide-y divide-border border-y border-border">
+          {t.reasons.map((reason, index) => (
+            <li key={reason.title} data-reveal style={stagger(index)} className="group grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 py-8 sm:grid-cols-[4.5rem_auto_1fr] sm:items-start sm:gap-x-6 sm:py-10">
+              <span className="hidden font-display text-sm font-bold tabular-nums text-muted-foreground/70 sm:block sm:pt-3" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <span className="flex size-12 items-center justify-center rounded-xl bg-card text-primary shadow-sm ring-1 ring-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105 group-hover:bg-ink group-hover:text-accent group-hover:ring-ink">
+                <reason.icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">{reason.title}</h3>
+                <p className="mt-2 max-w-md leading-relaxed text-muted-foreground">{reason.description}</p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   )

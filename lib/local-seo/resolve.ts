@@ -26,6 +26,12 @@ export const RESERVED_TR_CITY_SEGMENTS = [
   'sitemap-en.xml',
   'robots.txt',
   'geo',
+  'kvkk-aydinlatma-metni',
+  'gizlilik-politikasi',
+  'cerez-politikasi',
+  'kullanim-kosullari',
+  'referanslar',
+  'manifest.webmanifest',
 ] as const
 
 const reserved = new Set<string>(RESERVED_TR_CITY_SEGMENTS)

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { LocalServiceHero } from '@/components/local-seo/service-hero'
 import type { LocalServicePageModel } from '@/lib/local-seo/content'
+import { inPlace, ofPlace } from '@/lib/local-seo/text-utils'
 import { cn } from '@/lib/utils'
 
 function Section({
@@ -40,6 +41,9 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
               {paragraph}
             </p>
           ))}
+          <Link href={`/hizmetler/${model.service.slug}`} className="inline-flex text-sm font-semibold text-primary hover:underline">
+            {model.service.title} hakkında detaylı bilgi →
+          </Link>
         </div>
       </Section>
 
@@ -154,7 +158,7 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
       </Section>
 
       {model.districts.length > 0 ? (
-        <Section title={`${model.city.name}'da hizmet verdiğimiz bölgeler`}>
+        <Section title={`${inPlace(model.city.name)} hizmet verdiğimiz bölgeler`}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {model.districts.map((item) => (
               <Link
@@ -170,7 +174,7 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
       ) : null}
 
       {model.otherDistricts.length > 0 ? (
-        <Section title={`${model.city.name}'daki diğer bölgeler`}>
+        <Section title={`${ofPlace(model.city.name)} diğer bölgeler`}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
             {model.otherDistricts.map((item) => (
               <Link

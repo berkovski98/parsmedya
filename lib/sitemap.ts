@@ -8,17 +8,22 @@ import {
   blogPostsCacheTag,
 } from '@/lib/blog-cache'
 import { hasSupabaseConfig, getSupabaseConfig } from '@/lib/supabase/config'
-import { getNonIndexableLocalPaths } from '@/lib/local-seo/overrides'
+import { emptyOverrideSets } from '@/lib/local-seo/index-policy'
+import { getLocalIndexOverrideSets } from '@/lib/local-seo/overrides'
 import {
   buildLocalCitySitemapEntries,
   buildLocalServiceSitemapChunk,
   localServiceSitemapNames,
+  maxServedLocalServiceChunk,
 } from '@/lib/local-seo/sitemap'
 import {
   buildEnLocalCitySitemapEntries,
   buildEnLocalServiceSitemapChunk,
+  enLocalServiceSitemapNames,
+  maxServedEnLocalServiceChunk,
 } from '@/lib/local-seo/en-sitemap'
-import { CHILD_SITEMAP_FILES, FALLBACK_CHILD_SITEMAP_FILES } from '@/lib/sitemap-index'
+import { childSitemapFiles, FALLBACK_CHILD_SITEMAP_FILES } from '@/lib/sitemap-index'
+import { STATIC_CONTENT_UPDATED_AT } from '@/lib/sitemap-lastmod'
 import {
   buildEnglishBlogSitemapEntries,
   buildEnglishPageSitemapEntries,
@@ -27,6 +32,7 @@ import {
   buildTurkishPageSitemapEntries,
   buildTurkishSitemapEntries,
   childSitemapPath,
+  latestBlogLastModified,
   type SitemapEntry,
   type SitemapPost,
 } from '@/lib/sitemap-xml'
@@ -177,27 +183,64 @@ export async function localCitySitemapEntries() {
   }
 }
 
+async function localOverrideSets() {
+  try {
+    return await unstable_cache(
+      async () => {
+        const sets = await getLocalIndexOverrideSets()
+        return { excluded: [...sets.excluded], promoted: [...sets.promoted] }
+      },
+      ['local-index-overrides'],
+      { revalidate: 3600 },
+    )().then((value) => ({ excluded: new Set(value.excluded), promoted: new Set(value.promoted) }))
+  } catch (error) {
+    console.error('[sitemap] local override sets failed', error)
+    return emptyOverrideSets()
+  }
+}
+
 export async function localServiceSitemapChunk(index: number) {
   try {
-    const excluded = await getNonIndexableLocalPaths()
-    return buildLocalServiceSitemapChunk(index, { excluded })
+    return buildLocalServiceSitemapChunk(index, { sets: await localOverrideSets() })
   } catch (error) {
     console.error('[sitemap] local service chunk failed', error)
     return []
   }
 }
 
-export function sitemapIndexEntries(now = new Date()): SitemapEntry[] {
+async function enLocalServiceSitemapChunk(index: number) {
   try {
-    return CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+    return buildEnLocalServiceSitemapChunk(index, { sets: await localOverrideSets() })
   } catch (error) {
-    console.error('[sitemap] index entries failed', error)
-    return FALLBACK_CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+    console.error('[sitemap] english local service chunk failed', error)
+    return []
   }
 }
 
-export function fallbackSitemapIndexEntries(now = new Date()): SitemapEntry[] {
-  return FALLBACK_CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: now }))
+/** Child sitemap names for the index; local service files follow the current URL count. */
+export async function activeChildSitemapFiles() {
+  const sets = await localOverrideSets()
+  return childSitemapFiles(localServiceSitemapNames(sets), enLocalServiceSitemapNames(sets))
+}
+
+async function childLastModified(file: string): Promise<Date | string> {
+  if (file === 'tr-blog.xml') return latestBlogLastModified(await publishedPosts('tr'))
+  if (file === 'en-blog.xml') return latestBlogLastModified(await publishedPosts('en'))
+  return STATIC_CONTENT_UPDATED_AT
+}
+
+export async function sitemapIndexEntries(): Promise<SitemapEntry[]> {
+  try {
+    const files = await activeChildSitemapFiles()
+    return Promise.all(files.map(async (file) => ({ url: childSitemapPath(file), lastModified: await childLastModified(file) })))
+  } catch (error) {
+    console.error('[sitemap] index entries failed', error)
+    return fallbackSitemapIndexEntries()
+  }
+}
+
+export function fallbackSitemapIndexEntries(): SitemapEntry[] {
+  return FALLBACK_CHILD_SITEMAP_FILES.map((file) => ({ url: childSitemapPath(file), lastModified: STATIC_CONTENT_UPDATED_AT }))
 }
 
 export async function childSitemapEntries(file: string): Promise<SitemapEntry[] | null> {
@@ -212,12 +255,14 @@ export async function childSitemapEntries(file: string): Promise<SitemapEntry[] 
     if (enMatch) {
       const enIdx = Number(enMatch[1]) - 1
       if (!Number.isInteger(enIdx) || enIdx < 0) return []
-      return buildEnLocalServiceSitemapChunk(enIdx)
+      if (enIdx >= maxServedEnLocalServiceChunk(await localOverrideSets())) return null
+      return enLocalServiceSitemapChunk(enIdx)
     }
     const match = file.match(/^local-services-(\d+)\.xml$/)
     if (!match) return null
     const index = Number(match[1]) - 1
-    if (!Number.isInteger(index) || index < 0 || index >= localServiceSitemapNames().length) return []
+    if (!Number.isInteger(index) || index < 0) return []
+    if (index >= maxServedLocalServiceChunk(await localOverrideSets())) return null
     return localServiceSitemapChunk(index)
   } catch (error) {
     console.error('[sitemap] child entries failed', file, error)

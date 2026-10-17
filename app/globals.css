@@ -36,6 +36,11 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-accent-strong: var(--accent-strong);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --font-sans: var(--font-inter);
   --font-display: var(--font-manrope);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -81,6 +86,12 @@
   --sidebar-accent-foreground: oklch(0.36 0.09 258);
   --sidebar-border: oklch(0.9 0.012 250);
   --sidebar-ring: oklch(0.58 0.15 250);
+  /* Brand frame: deep navy used by header, hero and footer. */
+  --ink: oklch(0.2 0.05 262);
+  --ink-2: oklch(0.255 0.065 261);
+  --ink-foreground: oklch(0.975 0.006 250);
+  /* Darker orange for small text on light backgrounds (WCAG AA). */
+  --accent-strong: oklch(0.56 0.18 40);
 }
 
 .dark {
@@ -161,5 +172,263 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer base {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+  :focus-visible {
+    outline-offset: 3px;
+  }
+}
+
+/* ───────────────── Design primitives ───────────────── */
+
+@utility eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  &::before {
+    content: '';
+    width: 1.5rem;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+}
+
+@utility eyebrow-on-ink {
+  color: var(--accent);
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, currentColor 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, currentColor 7%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+@utility text-display {
+  font-family: var(--font-manrope);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+/* Hairline that grows across the top of interactive cards. */
+@utility card-hairline {
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px -1px auto;
+    height: 2px;
+    border-radius: inherit;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.6s var(--ease-out-expo);
+  }
+  &:hover::before,
+  &:focus-within::before {
+    transform: scaleX(1);
+  }
+}
+
+/* ───────────────── Motion ───────────────── */
+
+@keyframes pm-line-up {
+  from { transform: translate3d(0, 108%, 0); }
+}
+@keyframes pm-fade-up {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+}
+@keyframes pm-fade {
+  from { opacity: 0; }
+}
+@keyframes pm-pixel {
+  0%, 100% { opacity: var(--pixel-min, 0.15); }
+  50% { opacity: var(--pixel-max, 0.9); }
+}
+@keyframes pm-marquee {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes pm-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+@keyframes pm-page-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+}
+@keyframes pm-parallax {
+  from { transform: translate3d(0, var(--parallax-from, 36px), 0); }
+  to { transform: translate3d(0, var(--parallax-to, -36px), 0); }
+}
+@keyframes pm-pop {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.9); }
+}
+
+.hero-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+.hero-line > span {
+  display: block;
+}
+
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-line > span {
+    animation: pm-line-up 0.6s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .intro {
+    animation: pm-fade-up 0.9s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 240ms);
+  }
+  .intro-fade {
+    animation: pm-fade 1.2s ease-out both;
+    animation-delay: calc(var(--i, 0) * 90ms + 200ms);
+  }
+  .pixel-blink {
+    animation: pm-pixel 4.8s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * -0.7s);
+  }
+  .marquee-track {
+    animation: pm-marquee 48s linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+  .float-soft {
+    animation: pm-float 7s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * -1.6s);
+  }
+  .pop-in {
+    animation: pm-pop 0.5s var(--ease-out-expo) both;
+  }
+  .page-enter {
+    animation: pm-page-in 0.45s var(--ease-out-expo) both;
+  }
+
+  /* Scroll reveal: only hidden once the observer has booted (data-motion="on"). */
+  [data-reveal] {
+    transition:
+      opacity 0.8s var(--ease-out-expo),
+      transform 0.9s var(--ease-out-expo),
+      clip-path 1s var(--ease-out-expo);
+    transition-delay: calc(var(--i, 0) * 75ms);
+  }
+  :root[data-motion='on'] [data-reveal]:not([data-inview]) {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+  }
+  :root[data-motion='on'] [data-reveal='fade']:not([data-inview]) {
+    transform: none;
+  }
+  :root[data-motion='on'] [data-reveal='scale']:not([data-inview]) {
+    transform: scale(0.965);
+  }
+  :root[data-motion='on'] [data-reveal='wipe']:not([data-inview]) {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 100% 0 0);
+  }
+  [data-reveal='wipe'] {
+    clip-path: inset(0 0 0 0);
+  }
+
+  @supports (animation-timeline: view()) {
+    .parallax {
+      animation: pm-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+
+/* Small screens: shorter travel, no parallax layers. */
+@media (max-width: 767px) {
+  :root[data-motion='on'] [data-reveal]:not([data-inview]) {
+    transform: translate3d(0, 16px, 0);
+  }
+  .parallax {
+    animation: none !important;
+  }
+}
+
+/* Reading progress (scroll-driven, zero JS; hidden where unsupported). */
+@keyframes pm-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.reading-progress {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  .reading-progress {
+    display: block;
+    transform-origin: left;
+    animation: pm-progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* EDI flow diagram: packets travel along the wires between columns. */
+@keyframes pm-wire-y {
+  0% { top: 0; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { top: calc(100% - 0.5rem); opacity: 0; }
+}
+@keyframes pm-wire-x {
+  0% { left: 0; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { left: calc(100% - 0.5rem); opacity: 0; }
+}
+.edi-wire > i {
+  position: absolute;
+  left: calc(50% - 0.25rem);
+  top: calc(50% - 0.25rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .edi-wire > i {
+    animation: pm-wire-y 2.6s linear infinite;
+    animation-delay: calc(var(--i, 0) * -0.87s);
+  }
+}
+@media (min-width: 768px) {
+  .edi-wire > i {
+    top: calc(50% - 0.25rem);
+    left: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .edi-wire > i {
+      animation-name: pm-wire-x;
+    }
   }
 }

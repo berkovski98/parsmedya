@@ -5,6 +5,7 @@ import { EnServiceLanding } from '@/components/local-seo/en-service-landing'
 import { buildEnDistrictHub, buildEnLocalServicePage } from '@/lib/local-seo/en-content'
 import { resolveEnCityChild } from '@/lib/local-seo/en-resolve'
 import { createEnLocalPageMetadata } from '@/lib/local-seo/en-metadata'
+import { getLocalSeoOverride } from '@/lib/local-seo/overrides'
 import { enLocalHubJsonLd, enLocalServiceJsonLd } from '@/lib/local-seo/en-schema'
 
 export const revalidate = 86400
@@ -16,10 +17,11 @@ export async function generateMetadata({ params }: { params: Promise<{ region: s
   if (!route) return { title: 'Page not found | Pars Medya' }
   if (route.type === 'en-district-hub') {
     const model = buildEnDistrictHub(route.city, route.district)
-    return createEnLocalPageMetadata({ title: model.title, description: model.description, canonical: model.canonicalPath, trCanonical: model.trCanonicalPath })
+    return createEnLocalPageMetadata({ title: model.title, description: model.description, canonical: model.canonicalPath, trCanonical: model.trCanonicalPath, indexable: model.indexable })
   }
-  const model = buildEnLocalServicePage(route.city, route.service)
-  return createEnLocalPageMetadata({ title: model.title, description: model.description, canonical: model.canonicalPath, trCanonical: model.trCanonicalPath })
+  const override = await getLocalSeoOverride(route.city.slug, null, route.service.slug)
+  const model = buildEnLocalServicePage(route.city, route.service, null, override)
+  return createEnLocalPageMetadata({ title: model.title, description: model.description, canonical: model.canonicalPath, trCanonical: model.trCanonicalPath, indexable: model.indexable })
 }
 
 export default async function EnCitySlugPage({ params }: { params: Promise<{ region: string; city: string; slug: string }> }) {
@@ -35,7 +37,8 @@ export default async function EnCitySlugPage({ params }: { params: Promise<{ reg
       </>
     )
   }
-  const model = buildEnLocalServicePage(route.city, route.service)
+  const override = await getLocalSeoOverride(route.city.slug, null, route.service.slug)
+  const model = buildEnLocalServicePage(route.city, route.service, null, override)
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: enLocalServiceJsonLd(model) }} />

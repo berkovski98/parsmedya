@@ -1,52 +1,47 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { BlogCard } from '@/components/blog-card'
-import { buttonVariants } from '@/components/ui/button'
 import { getPublishedPosts } from '@/lib/blog'
 
 export async function LatestBlogPosts({ locale = 'tr' }: { locale?: 'tr' | 'en' }) {
   const isEnglish = locale === 'en'
   const latestPosts = await getPublishedPosts(3, locale)
+  const href = isEnglish ? '/en/blog' : '/blog'
+  const allLabel = isEnglish ? 'View All Articles' : 'Tüm Yazıları Gör'
+  // A placeholder section adds no value on the home page (and reads as thin content), so skip it until posts exist.
+  if (latestPosts.length === 0) return null
 
   return (
     <section
       aria-labelledby="latest-blog-heading"
-      className="border-b border-border bg-secondary/40"
+      className="bg-background"
     >
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">
-          Blog
-        </p>
-        <h2
-          id="latest-blog-heading"
-          className="mt-3 max-w-3xl text-balance font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
-        >
-          {isEnglish ? 'Latest from the Blog' : 'Blogdan Son Yazılar'}
-        </h2>
-        <p className="mt-5 max-w-4xl text-pretty leading-relaxed text-muted-foreground">
-          {isEnglish ? 'Explore current thinking on digital marketing, web technologies, brand management and sustainable digital growth.' : 'Dijital pazarlama, web teknolojileri, marka yönetimi ve işletmelerin dijital dünyada büyümesine yardımcı olacak güncel içeriklerimizi keşfedin.'}
-        </p>
-
-        {latestPosts.length > 0 ? (
-          <div className="mt-10 grid gap-5 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
-            {latestPosts.map((post) => <BlogCard key={post.slug} post={post} locale={locale} />)}
+      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28">
+        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end" data-reveal>
+          <div>
+            <p className="eyebrow">Blog</p>
+            <h2
+              id="latest-blog-heading"
+              className="text-display mt-5 max-w-3xl text-balance text-[2.1rem] text-foreground sm:text-5xl"
+            >
+              {isEnglish ? 'Latest from the Blog' : 'Blogdan Son Yazılar'}
+            </h2>
+            <p className="mt-6 max-w-3xl text-pretty text-lg leading-relaxed text-muted-foreground">
+              {isEnglish ? 'Explore current thinking on digital marketing, web technologies, brand management and sustainable digital growth.' : 'Dijital pazarlama, web teknolojileri, marka yönetimi ve işletmelerin dijital dünyada büyümesine yardımcı olacak güncel içeriklerimizi keşfedin.'}
+            </p>
           </div>
-        ) : (
-          <p className="mt-10 rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-            {isEnglish ? 'New English articles will be published here soon.' : 'Yeni blog yazılarımız çok yakında burada olacak.'}
-          </p>
-        )}
+          <Link href={href} className="group hidden h-12 items-center gap-2 rounded-lg border border-border px-5 text-sm font-semibold text-foreground transition-all duration-300 hover:border-foreground hover:bg-foreground hover:text-background lg:inline-flex">
+            {allLabel}<ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
+          </Link>
+        </div>
 
-        <div className="mt-10 flex justify-center sm:mt-12">
-          <Link
-            href={isEnglish ? '/en/blog' : '/blog'}
-            className={buttonVariants({
-              size: 'lg',
-              className: 'min-h-11 px-5',
-            })}
-          >
-            {isEnglish ? 'View All Articles' : 'Tüm Yazıları Gör'}
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          {latestPosts.map((post, index) => <BlogCard key={post.slug} post={post} locale={locale} index={index} />)}
+        </div>
+
+        <div className="mt-12 flex justify-center lg:hidden">
+          <Link href={href} className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">
+            {allLabel}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
           </Link>
         </div>
       </div>

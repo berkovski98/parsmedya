@@ -1,3 +1,4 @@
+import { lowerKeepAcronyms } from '@/lib/turkish'
 import {
   Blocks,
   Bot,
@@ -79,7 +80,7 @@ function createService(seed: Seed): Service {
       { question: 'Mevcut sistemlerimizle entegre olabilir mi?', answer: 'Evet. Uygun API, web servisleri veya güvenli veri aktarım yöntemleri üzerinden mevcut uygulamalarınızla kontrollü entegrasyon kurabiliriz.' },
     ],
     technologies: ['Next.js', 'React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Cloud'],
-    whyParsMedya: `Pars Medya, ${seed.title.toLocaleLowerCase('tr-TR')} projelerini yalnız teknik teslimat olarak değil, iş hedeflerini destekleyen uzun vadeli bir ürün yatırımı olarak ele alır. Analiz, kullanıcı deneyimi, güvenlik ve entegrasyon kararlarını aynı ekip içinde yönetir; şeffaf iletişim ve sürdürülebilir kod yapısıyla kurumunuzun gelişen ihtiyaçlarına uyum sağlayan çözümler üretir.`,
+    whyParsMedya: `Pars Medya, ${lowerKeepAcronyms(seed.title)} projelerini yalnız teknik teslimat olarak değil, iş hedeflerini destekleyen uzun vadeli bir ürün yatırımı olarak ele alır. Analiz, kullanıcı deneyimi, güvenlik ve entegrasyon kararlarını aynı ekip içinde yönetir; şeffaf iletişim ve sürdürülebilir kod yapısıyla kurumunuzun gelişen ihtiyaçlarına uyum sağlayan çözümler üretir.`,
     relatedSlugs: seed.related,
     seoTitle: seed.seoTitle,
     seoDescription: seed.seoDescription,
@@ -99,8 +100,8 @@ const seeds: Seed[] = [
     features: ['Yönetim panelleri|Operasyon, kullanıcı ve içerik süreçlerini tek merkezden yöneten arayüzler.', 'Müşteri ve bayi portalları|Farklı kullanıcı gruplarına özel veri, belge ve işlem ekranları.', 'Rezervasyon sistemleri|Takvim, kapasite, ödeme ve bildirimlerle çalışan rezervasyon akışları.', 'Sipariş yönetimi|Siparişten teslimata durum, onay ve operasyon takibi.', 'İş takip platformları|Görev, sorumlu, termin ve ilerleme bilgilerinin merkezi yönetimi.', 'Üyelik sistemleri|Kayıt, giriş, profil, abonelik ve rol bazlı erişim.', 'API entegrasyonları|Ödeme, ERP, CRM ve üçüncü taraf servislerle güvenli veri alışverişi.', 'Responsive uygulamalar|Masaüstü, tablet ve mobilde tutarlı çalışan kullanıcı deneyimi.'],
     benefits: ['Manuel ve dağınık süreçleri tek platformda toplar', 'Kullanıcı rollerine göre güvenli erişim sağlar', 'Operasyonların anlık izlenmesini kolaylaştırır', 'Tekrarlayan veri girişini ve hata riskini azaltır', 'Yeni modül ve kullanıcılarla ölçeklenebilir', 'Kurumsal verinin kontrollü yönetilmesini sağlar'],
     useCases: ['Servis operasyonu|Saha taleplerinin, ekiplerin ve iş emirlerinin web üzerinden yönetilmesi.', 'Bayi ağı|Bayilerin sipariş, stok, kampanya ve belge süreçlerine erişmesi.', 'Rezervasyon|Şube, personel veya kaynak kapasitesine göre online randevu alınması.', 'Üyelik platformu|Farklı paket ve yetkilere sahip kullanıcıların içerik ve hizmetlere erişmesi.'],
-    related: ['ozel-yazilim-gelistirme', 'api-sistem-entegrasyonlari', 'musteri-bayi-portali', 'dashboard-raporlama-sistemleri'],
-    seoTitle: 'Web Yazılım Geliştirme | Kurumsal Web Uygulamaları | Pars Medya', seoDescription: 'Yönetim paneli, müşteri portalı, rezervasyon, sipariş ve iş takip süreçleri için güvenli ve ölçeklenebilir web yazılımları geliştiriyoruz.',
+    related: ['web-sitesi-gelistirme', 'ozel-yazilim-gelistirme', 'api-sistem-entegrasyonlari', 'musteri-bayi-portali', 'dashboard-raporlama-sistemleri'],
+    seoTitle: 'Web Yazılım Geliştirme | Panel ve Portal | Pars Medya', seoDescription: 'Yönetim paneli, müşteri portalı, rezervasyon, sipariş ve iş takip süreçleri için güvenli ve ölçeklenebilir web yazılımları geliştiriyoruz.',
     faq: [['Web sitesi ile web yazılımı arasındaki fark nedir?', 'Web sitesi çoğunlukla içerik sunar; web yazılımı kullanıcı, veri, rol, iş kuralı ve entegrasyonlarla işlem gerçekleştiren dinamik bir sistemdir.'], ['Çok kullanıcılı ve yetkili yapı kurulabilir mi?', 'Evet. Her rolün görebileceği veri ve yapabileceği işlemler ayrıntılı biçimde tanımlanabilir, kritik hareketler kayıt altına alınabilir.']],
   },
   {
@@ -140,7 +141,7 @@ const seeds: Seed[] = [
     features: ['Ürün ve varyant|Katalog, kategori, özellik ve varyant yönetimi.', 'Fiyat ve kampanya|Segment, kupon, iskonto ve dönemsel fiyat kuralları.', 'Ödeme|Kart, havale ve uygun ödeme sağlayıcılarıyla güvenli checkout.', 'Stok ve sipariş|Rezervasyon, durum, iptal, iade ve operasyon takibi.', 'Kargo|Firma seçimi, etiket, takip kodu ve teslimat akışı.', 'Pazaryeri|Ürün, stok ve sipariş bilgilerinin senkronizasyonu.'],
     benefits: ['Satış modeline özel müşteri deneyimi sunar', 'Sipariş operasyonunu otomatikleştirir', 'Stok tutarsızlığını azaltır', 'Kampanya ve fiyat yönetimini merkezileştirir', 'Yeni kanal ve entegrasyonlara hazırdır'],
     useCases: ['D2C marka|Markanın doğrudan tüketiciye kontrollü deneyimle satış yapması.', 'B2B sipariş|Müşteriye özel fiyat, limit ve onaylarla toplu sipariş.', 'Çok kanallı satış|Web ve pazaryeri stoklarının ortak yönetimi.', 'Abonelik|Belirli dönemlerde tekrarlanan ürün veya hizmet tahsilatı.'],
-    related: ['b2b-b2c-platform-gelistirme', 'stok-siparis-yonetim-sistemleri', 'api-sistem-entegrasyonlari', 'crm-yazilim-cozumleri'], seoTitle: 'E-Ticaret Yazılımı | Özel E-Ticaret Altyapısı | Pars Medya', seoDescription: 'Ürün, stok, sipariş, ödeme, kargo ve pazaryeri süreçlerinize uygun performanslı e-ticaret yazılımı geliştirin.',
+    related: ['e-ticaret-cozumleri', 'b2b-b2c-platform-gelistirme', 'stok-siparis-yonetim-sistemleri', 'api-sistem-entegrasyonlari', 'crm-yazilim-cozumleri'], seoTitle: 'E-Ticaret Yazılımı | Özel E-Ticaret Altyapısı | Pars Medya', seoDescription: 'Ürün, stok, sipariş, ödeme, kargo ve pazaryeri süreçlerinize uygun performanslı e-ticaret yazılımı geliştirin.',
     faq: [['Hazır e-ticaret paketi yerine özel altyapı ne zaman gerekir?', 'Özel fiyat, yoğun entegrasyon, farklı sipariş akışı veya standart paketlerin kısıtladığı müşteri deneyimi varsa özel altyapı değerlendirilebilir.'], ['Pazaryeri ve kargo entegrasyonları yapılabilir mi?', 'Evet. İlgili sağlayıcıların API olanaklarına göre ürün, stok, sipariş, etiket ve takip süreçleri entegre edilebilir.']],
   },
   {
@@ -150,7 +151,7 @@ const seeds: Seed[] = [
     features: ['İntranet|Duyuru, belge ve kurum içi kaynakların merkezi erişimi.', 'Talep yönetimi|İzin, satın alma, destek ve operasyon talepleri.', 'Belge akışı|Versiyon, onay ve erişim kuralları.', 'Self-servis ekranlar|Kullanıcının kendi bilgi ve taleplerini yönetmesi.', 'Rol bazlı erişim|Departman ve görev bazında güvenli yetkilendirme.', 'İşlem kayıtları|Kritik hareketlerin izlenebilirliği.'],
     benefits: ['Kurum içi bilgiye erişimi kolaylaştırır', 'E-posta ile yürüyen süreçleri azaltır', 'Onay sürelerini kısaltır', 'Yetki ve sorumlulukları netleştirir', 'Uzaktan ve mobil çalışmayı destekler'],
     useCases: ['Çalışan portalı|Belge, duyuru, izin ve bordro erişimi.', 'İç destek|BT ve operasyon taleplerinin SLA ile takibi.', 'Kalite yönetimi|Prosedür, revizyon ve onay süreçleri.', 'Proje ofisi|Portföy, görev, risk ve karar kayıtlarının yönetimi.'],
-    related: ['web-yazilim-gelistirme', 'ozel-yazilim-gelistirme', 'is-surecleri-otomasyonu'], seoTitle: 'Kurumsal Web Uygulamaları | İntranet ve Portallar | Pars Medya', seoDescription: 'İntranet, talep, belge, görev ve self-servis süreçleri için güvenli ve responsive kurumsal web uygulamaları geliştiriyoruz.',
+    related: ['web-yazilim-gelistirme', 'ozel-yazilim-gelistirme', 'is-surecleri-otomasyonu'], seoTitle: 'Kurumsal Web Uygulamaları | İntranet | Pars Medya', seoDescription: 'İntranet, talep, belge, görev ve self-servis süreçleri için güvenli ve responsive kurumsal web uygulamaları geliştiriyoruz.',
     faq: [['Uygulama şirket ağıyla sınırlandırılabilir mi?', 'Evet. Kimlik sağlayıcı, VPN, IP politikası veya çok faktörlü doğrulama gibi seçenekler kurumun güvenlik yaklaşımına göre değerlendirilebilir.'], ['Mobil cihazlarda kullanılabilir mi?', 'Responsive arayüz sayesinde uygun iş akışları telefon ve tabletlerden güvenli biçimde kullanılabilir.']],
   },
   {
@@ -160,7 +161,7 @@ const seeds: Seed[] = [
     features: ['iOS ve Android|Platformlara uygun tutarlı deneyim.', 'Push bildirimleri|İşlem ve iletişim odaklı bildirim akışları.', 'Çevrimdışı kullanım|Uygun verilerin bağlantısız senaryolarda yönetimi.', 'Konum ve kamera|Saha süreçlerinde cihaz yeteneklerinin kullanımı.', 'Güvenli oturum|Kimlik, token ve cihaz bazlı koruma.', 'Yönetim paneli|İçerik, kullanıcı ve operasyon kontrolü.'],
     benefits: ['Hizmete erişimi hızlandırır', 'Saha verisini kaynağında toplar', 'Müşteri bağlılığını destekler', 'Bildirimlerle zamanında iletişim kurar', 'Web ve kurumsal sistemlerle bütünleşir'],
     useCases: ['Saha servis|Görev, konum, fotoğraf ve sonuç kaydı.', 'Müşteri uygulaması|Sipariş, talep, sadakat ve bildirim işlemleri.', 'Ekip uygulaması|Vardiya, görev ve kurum içi iletişim.', 'Rezervasyon|Mobil randevu, ödeme ve hatırlatma.'],
-    related: ['web-yazilim-gelistirme', 'api-sistem-entegrasyonlari', 'crm-yazilim-cozumleri'], seoTitle: 'Mobil Uygulama Geliştirme | iOS ve Android | Pars Medya', seoDescription: 'Müşteri, çalışan ve saha süreçleri için güvenli, entegre ve kullanıcı odaklı iOS ve Android uygulamaları geliştiriyoruz.',
+    related: ['mobil-uygulama', 'web-yazilim-gelistirme', 'api-sistem-entegrasyonlari', 'crm-yazilim-cozumleri'], seoTitle: 'Kurumsal Mobil Uygulama Geliştirme | Pars Medya', seoDescription: 'Müşteri, çalışan ve saha süreçleri için güvenli, entegre ve kullanıcı odaklı iOS ve Android uygulamaları geliştiriyoruz.',
     faq: [['Native mi çapraz platform mu tercih edilmeli?', 'Karar; cihaz yetenekleri, performans beklentisi, ekip ve ürün yol haritasına göre verilir. Analiz sonucunda uygun yaklaşımı öneririz.'], ['Mağaza yayın sürecini yönetiyor musunuz?', 'Evet. Hesap hazırlığı, paketleme, test ve mağaza inceleme adımlarında destek sağlarız.']],
   },
   {

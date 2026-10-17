@@ -5,5 +5,20 @@ import { getPublishedPosts } from '@/lib/blog'
 import { createPageMetadata } from '@/lib/seo'
 
 export const revalidate = 60
-export const metadata: Metadata = createPageMetadata({ title: 'Insights | Pars Medya Blog', description: 'Read practical insights on software development, digital products, technology strategy, marketing and sustainable business growth.', canonical: '/en/blog', tr: '/blog', en: '/en/blog', locale: 'en' })
-export default async function EnglishBlogPage() { const posts = await getPublishedPosts(undefined, 'en'); return <><PageHeader locale="en" eyebrow="Insights" title="Pars Medya Blog" description="Practical thinking on software, digital products, marketing and sustainable growth." /><section className="bg-background"><div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">{posts.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{posts.map((post) => <BlogCard key={post.id} post={post} locale="en" />)}</div> : <p className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">English articles will be published here soon.</p>}</div></section></> }
+export async function generateMetadata(): Promise<Metadata> {
+  // Ö16: while the English blog has no posts the listing stays reachable but is noindex, follow
+  // and is left out of en-blog.xml. It becomes indexable automatically with the first post.
+  const hasPosts = (await getPublishedPosts(1, 'en')).length > 0
+  const metadata = createPageMetadata({
+    title: 'Software & Digital Growth Insights | Pars Medya Blog',
+    description: 'Read practical insights on software development, digital products, technology strategy, marketing and sustainable business growth from the Pars Medya team.',
+    canonical: '/en/blog',
+    tr: '/blog',
+    en: '/en/blog',
+    locale: 'en',
+    index: hasPosts,
+  })
+  // While empty, /blog does not point here, so this page does not claim a Turkish counterpart either.
+  return hasPosts ? metadata : { ...metadata, alternates: { canonical: metadata.alternates?.canonical } }
+}
+export default async function EnglishBlogPage() { const posts = await getPublishedPosts(undefined, 'en'); return <><PageHeader locale="en" path="/en/blog" eyebrow="Insights" title="Pars Medya Blog" description="Practical thinking on software, digital products, marketing and sustainable growth." /><section className="bg-background"><div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">{posts.length ? <div className="grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">{posts.map((post, index) => <BlogCard key={post.id} post={post} locale="en" index={index} />)}</div> : <p className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">English articles will be published here soon.</p>}</div></section></> }

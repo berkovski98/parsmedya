@@ -2,7 +2,7 @@ import { getCitiesForRegion, TURKEY_REGION_ORDER, type TurkeyCity, type TurkeyDi
 import { localRegionPath } from '@/lib/local-seo/resolve'
 import type { LocalSeoFaq } from '@/lib/local-seo/types'
 import { getLocalService, getLocalServices } from '@/lib/services/service-registry'
-import { clipMeta, locative, pick, pickMany, possessive } from '@/lib/local-seo/text-utils'
+import { clipMeta, inPlace, ofPlace, pick, pickMany } from '@/lib/local-seo/text-utils'
 
 export type HubContentCard = {
   title: string
@@ -247,12 +247,12 @@ function cityOverview(city: TurkeyCity): string[] {
   const coast = city.coastal ? ' kıyı ve iç hat işletmeleri' : ''
   const frames = [
     [
-      `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan ${metro} operasyonlar için yazılım ve dijital çözümler geliştirdiğimiz bir hizmet bölgesidir.${coast} Bu sayfa, ${possessive(city.name)} işletmelerinin ihtiyaç duyduğu hizmetlere hızlı erişim sağlar.`,
+      `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan ${metro} operasyonlar için yazılım ve dijital çözümler geliştirdiğimiz bir hizmet bölgesidir.${coast} Bu sayfa, ${inPlace(city.name)} işletmelerinin ihtiyaç duyduğu hizmetlere hızlı erişim sağlar.`,
       `${profile.focus} için ${city.name} genelinde web, özel yazılım, CRM, ERP, e-ticaret ve entegrasyon projelerini analiz, mimari ve canlıya alma adımlarıyla yürütürüz. Hazır paket yerine mevcut süreçlerinize uygun modüler kapsam çıkarırız.`,
       `Aşağıdaki ilçe kartlarından ${city.name} içindeki bölgenize özel hizmet sayfalarına geçebilir; popüler hizmetler bölümünden doğrudan teklif almak istediğiniz çözüme ulaşabilirsiniz.`,
     ],
     [
-      `${possessive(city.name)} ekipleri için dijital dönüşüm projelerinde merkez–şube–saha kullanıcılarını aynı mimaride buluşturuyoruz. ${city.region} bölgesindeki ${profile.economy} ${city.name} ölçeğinde de geçerlidir.`,
+      `${inPlace(city.name)} ekipleri için dijital dönüşüm projelerinde merkez–şube–saha kullanıcılarını aynı mimaride buluşturuyoruz. ${city.region} bölgesindeki ${profile.economy} ${city.name} ölçeğinde de geçerlidir.`,
       `${districtCount} ilçenin tamamı için ayrı hizmet sayfaları yayınlıyoruz. Proje kapsamı tek bir ilçeyle sınırlı kalmaz; ${city.name} genelindeki operasyonlar tek sistemde yönetilebilir.`,
       `Keşif ve teslimatı uzaktan veya ihtiyaca göre yüz yüze koordinasyonla ilerletiriz; ${city.name} için ayrı bir şube adresi yayınlamıyoruz.`,
     ],
@@ -266,7 +266,7 @@ function districtOverview(city: TurkeyCity, district: TurkeyDistrict): string[] 
   const frames = [
     [
       `${district.name}, ${city.name} ili içinde yazılım ve dijital hizmet ihtiyacı olan işletmeler için yerel bir başlangıç noktasıdır. Web, özel yazılım, CRM, ERP ve e-ticaret projelerini ${city.name} genelindeki ekiplerle aynı proje disipliniyle yönetiriz.`,
-      `${locative(district.name)} ${profile.focus} yoğunluğu farklı sektörlerden talep doğurabilir. Çözümleri yalnızca ilçe sınırına hapsetmeyiz; merkez, şube ve saha kullanıcıları ortak veri modelinde buluşur.`,
+      `${ofPlace(district.name)} ${profile.focus} yoğunluğu farklı sektörlerden talep doğurabilir. Çözümleri yalnızca ilçe sınırına hapsetmeyiz; merkez, şube ve saha kullanıcıları ortak veri modelinde buluşur.`,
       `Aşağıdaki hizmet kartları ${district.name} için özelleştirilmiş sayfalara gider. Proje sonrası bakım ve geliştirme desteği Türkiye genelinde aynı modelle sürdürülür.`,
     ],
     [
@@ -305,7 +305,7 @@ export function regionHubSections(region: TurkeyRegion): HubSections {
     serviceCards: serviceCards(NATIONAL_SERVICE_SLUGS.slice(0, 6), '/hizmetler'),
     processTitle: 'Çalışma Modelimiz',
     processSteps: pickMany(PROCESS_NATIONAL, seed, 5, 0),
-    solutionTitle: `${region}'daki İşletmeler İçin Çözümler`,
+    solutionTitle: `${ofPlace(region)} İşletmeler İçin Çözümler`,
     solutionCards: pickMany(SOLUTION_CARDS, seed, 8, 10),
     useCaseTitle: `${region} Bölgesinde Hangi Projeleri Geliştiriyoruz?`,
     useCases: pickMany(USE_CASES, seed, 7, 20),
@@ -327,7 +327,7 @@ export function cityHubSections(city: TurkeyCity): HubSections {
   const featured = getLocalServices().filter((s) => s.source.featuredOnHome).slice(0, 6)
   const popularSlugs = featured.length ? featured.map((s) => s.slug) : NATIONAL_SERVICE_SLUGS.slice(0, 6)
   return {
-    overviewTitle: `${city.name}'de Yazılım Hizmetleri`,
+    overviewTitle: `${inPlace(city.name)} Yazılım Hizmetleri`,
     overviewParagraphs: cityOverview(city),
     serviceCards: serviceCards(NATIONAL_SERVICE_SLUGS.slice(0, 8), prefix),
     processTitle: 'Nasıl Çalışıyoruz?',
@@ -356,12 +356,12 @@ export function districtHubSections(city: TurkeyCity, district: TurkeyDistrict):
   const prefix = `/${city.slug}/${district.slug}`
   const seed = `${city.slug}:${district.slug}`
   return {
-    overviewTitle: `${district.name}'te Yazılım ve Dijital Hizmetler`,
+    overviewTitle: `${inPlace(district.name)} Yazılım ve Dijital Hizmetler`,
     overviewParagraphs: districtOverview(city, district),
     serviceCards: serviceCards(DISTRICT_POPULAR_SLUGS, prefix),
     processTitle: 'Proje Süreci',
     processSteps: PROCESS_NATIONAL,
-    solutionTitle: `${district.name}'teki İşletmeler İçin Çözümler`,
+    solutionTitle: `${ofPlace(district.name)} İşletmeler İçin Çözümler`,
     solutionCards: pickMany(SOLUTION_CARDS, seed, 8, 8),
     digitalizationTitle: 'İş Süreçlerini Nasıl Dijitalleştiriyoruz?',
     digitalizationAreas: pickMany(DIGITALIZATION, seed, 8, 18),
@@ -448,7 +448,7 @@ export function cityHubFaqs(city: TurkeyCity): LocalSeoFaq[] {
       answer: `${city.name} için ayrı bir şube adresi yayınlamıyoruz. Keşif ve teslimatı uzaktan, gerektiğinde yüz yüze koordinasyonla yürütürüz.`,
     },
     {
-      question: `${city.name}'de hangi yazılım hizmetleri sunuluyor?`,
+      question: `${inPlace(city.name)} hangi yazılım hizmetleri sunuluyor?`,
       answer: 'Özel yazılım, CRM, ERP, web platformları, e-ticaret, mobil uygulama, API entegrasyonları ve dijital pazarlama hizmetleri il bazlı sayfalarda listelenir.',
     },
     {
@@ -469,7 +469,7 @@ export function cityHubFaqs(city: TurkeyCity): LocalSeoFaq[] {
 export function districtHubFaqs(city: TurkeyCity, district: TurkeyDistrict): LocalSeoFaq[] {
   return [
     {
-      question: `${district.name}'teki işletmelere uzaktan hizmet veriyor musunuz?`,
+      question: `${ofPlace(district.name)} işletmelere uzaktan hizmet veriyor musunuz?`,
       answer: `Evet. ${district.name} için yayınlanan hizmet sayfaları uzaktan proje yönetimi modeliyle yürütülür; keşif toplantıları çevrimiçi planlanabilir.`,
     },
     {
