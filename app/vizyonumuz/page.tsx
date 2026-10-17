@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { CorporateDetail } from '@/components/corporate-detail'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Vizyonumuz | Pars Medya', description: "Pars Medya'nın yazılım, dijital dönüşüm ve global teknoloji çözümlerine yönelik uzun vadeli vizyonunu keşfedin.", canonical: '/vizyonumuz', tr: '/vizyonumuz', en: '/en/vision', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Vizyonumuz: Teknoloji ve Dijital Dönüşüm | Pars Medya', description: "Pars Medya'nın yazılım, dijital dönüşüm ve global teknoloji çözümlerine yönelik uzun vadeli vizyonunu, ilkelerini ve kalıcı değer üretme yaklaşımını keşfedin.", canonical: '/vizyonumuz', tr: '/vizyonumuz', en: '/en/vision', locale: 'tr' })
 
 const paragraphs = [
   'Pars Medya olarak vizyonumuz, Türkiye’den global pazarlara değer üreten; teknoloji, tasarım ve iş stratejisini aynı zeminde buluşturan güvenilir bir teknoloji markası olmaktır. Kurumların yalnızca bugünkü ihtiyaçlarını karşılayan değil, değişen pazar koşullarına uyum sağlayabilen dijital altyapılar geliştirmeyi hedefliyoruz.',
@@ -20,4 +20,4 @@ const principles = [
   { title: 'Kullanıcı Odaklılık', description: 'Karmaşık süreçleri kullanıcıların kolayca anlayıp uygulayabileceği deneyimlere dönüştürürüz.' },
   { title: 'Sürdürülebilir Başarı', description: 'Kısa vadeli kazanımları uzun vadeli bakım, gelişim ve iş değeriyle dengeleriz.' },
 ]
-export default function VisionPage() { return <CorporateDetail locale="tr" title="Vizyonumuz" description="Teknoloji, yazılım ve dijital dönüşüm alanlarında Türkiye’den global pazarlara sürdürülebilir değer üreten güvenilir bir çözüm ortağı olmayı hedefliyoruz." paragraphs={paragraphs} principles={principles} globalText="İstanbul merkezli çalışma anlayışımızı Dubai, Moskova ve İsviçre’deki iş bağlantıları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel sınırlar yerine güçlü iletişim, yerel pazar farkındalığı ve ortak kalite standartlarıyla markalara farklı ülkelerde dijital çözümler sunuyoruz." ctaTitle="Dijital geleceğinizi birlikte şekillendirelim." /> }
+export default function VisionPage() { return <CorporateDetail locale="tr" path="/vizyonumuz" title="Vizyonumuz" description="Teknoloji, yazılım ve dijital dönüşüm alanlarında Türkiye’den global pazarlara sürdürülebilir değer üreten güvenilir bir çözüm ortağı olmayı hedefliyoruz." paragraphs={paragraphs} principles={principles} globalText="İstanbul merkezli çalışma anlayışımızı Dubai, Moskova ve İsviçre’deki iş bağlantıları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel sınırlar yerine güçlü iletişim, yerel pazar farkındalığı ve ortak kalite standartlarıyla markalara farklı ülkelerde dijital çözümler sunuyoruz." ctaTitle="Dijital geleceğinizi birlikte şekillendirelim." /> }

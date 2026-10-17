@@ -7,6 +7,8 @@ import { localHubJsonLd, localServiceJsonLd } from '../lib/local-seo/schema'
 import { isValidLocalPath, resolveCityChild, resolveDistrictService, resolveRegionHub } from '../lib/local-seo/resolve'
 import { getLocalSeoInventory } from '../lib/local-seo/stats'
 import { buildLocalCitySitemapEntries, buildLocalServiceSitemapChunk, buildLocalServiceSitemapEntries, localServiceSitemapNames } from '../lib/local-seo/sitemap'
+import { isLocalPageIndexable } from '../lib/local-seo/index-policy'
+import { ORG_ID } from '../lib/schema/organization'
 import { getLocalService, getLocalServices } from '../lib/services/service-registry'
 import { canonicalAbsoluteUrl, PRODUCTION_SITE_URL } from '../lib/site-url'
 import { buildEnglishSitemapEntries, childSitemapPath, locUrls, sitemapIndex, urlset } from '../lib/sitemap-xml'
@@ -125,7 +127,10 @@ test('service pages produce unique title, description, H1 and self-canonical', (
       assert.ok(!model.description.toLowerCase().includes('localhost'))
       assert.ok(model.description.length >= 120)
       assert.ok(model.breadcrumbs.some((item) => item.name === city.name))
-      assert.equal(model.indexable, true)
+      assert.ok(model.description.length <= 160, model.description)
+      assert.equal((model.description.match(/Pars Medya ile planlayın\./g) || []).length <= 1, true)
+      // Index policy (Ö4): city × service pages are indexable only in priority cities.
+      assert.equal(model.indexable, isLocalPageIndexable({ kind: 'city-service', citySlug: city.slug, serviceSlug: service.slug }))
     }
   }
 
@@ -155,10 +160,12 @@ test('JSON-LD includes BreadcrumbList, Service, FAQPage and no fake LocalBusines
   assert.ok(types.includes('Service'))
   assert.ok(types.includes('FAQPage'))
   assert.ok(types.includes('WebPage'))
-  assert.ok(types.includes('Organization'))
+  // The full Organization node is printed once by the root layout; local graphs link to it by @id.
+  assert.equal(types.includes('Organization'), false)
   assert.equal(types.includes('LocalBusiness'), false)
   const serviceNode = parsed['@graph'].find((node) => node['@type'] === 'Service')!
   assert.equal(serviceNode.url, `${PRODUCTION_SITE_URL}/istanbul/kadikoy/ozel-yazilim-gelistirme`)
+  assert.deepEqual(serviceNode.provider, { '@id': ORG_ID })
   const areas = serviceNode.areaServed as Array<{ name: string }>
   assert.deepEqual(areas.map((item) => item.name), ['Kadıköy', 'İstanbul'])
   const crumbs = parsed['@graph'].find((node) => node['@type'] === 'BreadcrumbList')!
@@ -214,17 +221,25 @@ test('local service pages include detail paragraphs, integrations and expanded F
 test('local sitemaps contain only valid canonical Turkish URLs and skip English', () => {
   const cityXml = urlset(buildLocalCitySitemapEntries(new Date('2026-08-19T00:00:00.000Z')))
   const serviceXml = urlset(buildLocalServiceSitemapEntries({
-    now: new Date('2026-08-19T00:00:00.000Z'),
-    excluded: new Set(['/istanbul/kadikoy/ozel-yazilim-gelistirme']),
+    lastModified: new Date('2026-08-19T00:00:00.000Z'),
+    sets: {
+      excluded: new Set(['/istanbul/ozel-yazilim-gelistirme']),
+      promoted: new Set(['/ankara/cankaya/crm-yazilim-cozumleri']),
+    },
   }))
   const cityLocs = locUrls(cityXml)
   const serviceLocs = locUrls(serviceXml)
   assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/istanbul`))
   assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/kadikoy`))
   assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/hizmet-bolgeleri`))
-  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/ozel-yazilim-gelistirme`))
+  assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/crm-yazilim-cozumleri`))
+  // An override with own copy promotes a district page; an override switched to noindex removes one.
   assert.ok(serviceLocs.includes(`${PRODUCTION_SITE_URL}/ankara/cankaya/crm-yazilim-cozumleri`))
+  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/ozel-yazilim-gelistirme`), false)
   assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/kadikoy/ozel-yazilim-gelistirme`), false)
+  assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/tokat/crm-yazilim-cozumleri`), false)
+  assert.equal(cityLocs.includes(`${PRODUCTION_SITE_URL}/tokat/erbaa`), false)
+  assert.ok(cityLocs.includes(`${PRODUCTION_SITE_URL}/tokat`))
   assert.equal(serviceLocs.includes(`${PRODUCTION_SITE_URL}/istanbul/cankaya/crm-yazilim-cozumleri`), false)
   assert.ok(cityLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/`) && !url.includes('/tr/')))
   assert.ok(serviceLocs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/`) && !url.includes('/tr/')))

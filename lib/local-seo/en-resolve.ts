@@ -191,3 +191,16 @@ export function enLocalPathToTr(enPath: string): string | null {
   }
   return null
 }
+
+/** True when an /en/service-areas/... path resolves to a real English local page. */
+export function isValidEnLocalPath(pathname: string) {
+  const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+  if (path === EN_SERVICE_AREAS_ROOT) return true
+  if (!path.startsWith(`${EN_SERVICE_AREAS_ROOT}/`)) return false
+  const parts = path.slice(EN_SERVICE_AREAS_ROOT.length + 1).split('/').filter(Boolean)
+  if (parts.length === 1) return Boolean(resolveEnRegionHub(parts[0]!))
+  if (parts.length === 2) return Boolean(resolveEnCityHub(parts[0]!, parts[1]!))
+  if (parts.length === 3) return Boolean(resolveEnCityChild(parts[0]!, parts[1]!, parts[2]!))
+  if (parts.length === 4) return Boolean(resolveEnDistrictService(parts[0]!, parts[1]!, parts[2]!, parts[3]!))
+  return false
+}

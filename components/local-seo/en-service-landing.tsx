@@ -23,7 +23,7 @@ export function EnServiceLanding({ model }: { model: EnLocalServicePageModel }) 
       <section className="relative overflow-x-clip border-b border-border">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(ellipse 60% 45% at 10% 0%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 55%), radial-gradient(ellipse 50% 40% at 90% 20%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%)' }} />
         <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <LocalBreadcrumbs items={model.breadcrumbs} />
+          <LocalBreadcrumbs items={model.breadcrumbs} locale="en" />
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-accent">{model.eyebrow}</p>
           <h1 className="mt-3 max-w-3xl text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">{model.h1}</h1>
           <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{model.heroDescription}</p>
@@ -40,6 +40,9 @@ export function EnServiceLanding({ model }: { model: EnLocalServicePageModel }) 
           {model.detailParagraphs.map((p) => (
             <p key={p.slice(0, 48)} className="text-pretty leading-relaxed text-muted-foreground">{p}</p>
           ))}
+          <Link href={`/en/services/${model.enService.slug}`} className="inline-flex text-sm font-semibold text-primary hover:underline">
+            More about {model.enService.title} →
+          </Link>
         </div>
       </Section>
 

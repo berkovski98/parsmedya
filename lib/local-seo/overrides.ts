@@ -1,5 +1,7 @@
+import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { hasSupabaseConfig, getSupabaseConfig } from '@/lib/supabase/config'
+import { emptyOverrideSets, hasCustomLocalContent, type LocalIndexOverrideSets } from '@/lib/local-seo/index-policy'
 import { overrideKey, type LocalSeoOverride } from '@/lib/local-seo/types'
 
 function publicClient() {
@@ -23,7 +25,8 @@ function mapRow(row: Record<string, unknown>): LocalSeoOverride {
   }
 }
 
-export async function getLocalSeoOverride(city: string, district: string | null, service: string) {
+/** Cached per request so metadata and page share one query. */
+export const getLocalSeoOverride = cache(async (city: string, district: string | null, service: string) => {
   if (!hasSupabaseConfig()) return null
   try {
     const supabase = publicClient()
@@ -40,29 +43,46 @@ export async function getLocalSeoOverride(city: string, district: string | null,
   } catch {
     return null
   }
+})
+
+function overridePath(row: Record<string, unknown>) {
+  const city = String(row.city_slug || '')
+  const service = String(row.service_slug || '')
+  if (!city || !service) return null
+  const district = row.district_slug ? String(row.district_slug) : ''
+  return district ? `/${city}/${district}/${service}` : `/${city}/${service}`
 }
 
-export async function getNonIndexableLocalPaths() {
-  const excluded = new Set<string>()
-  if (!hasSupabaseConfig()) return excluded
+/**
+ * Turkish override rows that change the default index decision of the local index policy:
+ * `excluded` = switched to noindex, `promoted` = indexable rows that add their own copy.
+ * English pages read the same sets through their Turkish counterpart.
+ */
+export async function getLocalIndexOverrideSets(): Promise<LocalIndexOverrideSets> {
+  const sets = emptyOverrideSets()
+  if (!hasSupabaseConfig()) return sets
   try {
     const { data, error } = await publicClient()
       .from('local_seo_overrides')
-      .select('city_slug,district_slug,service_slug,is_indexable')
+      .select('city_slug,district_slug,service_slug,is_indexable,content_json,faq_json')
       .eq('locale', 'tr')
-      .eq('is_indexable', false)
-    if (error || !data) return excluded
+    if (error || !data) return sets
     for (const row of data) {
-      const city = String(row.city_slug || '')
-      const service = String(row.service_slug || '')
-      if (!city || !service) continue
-      const district = row.district_slug ? String(row.district_slug) : ''
-      excluded.add(district ? `/${city}/${district}/${service}` : `/${city}/${service}`)
+      const path = overridePath(row)
+      if (!path) continue
+      const override = mapRow(row)
+      if (override.is_indexable === false) sets.excluded.add(path)
+      else if (hasCustomLocalContent(override)) sets.promoted.add(path)
     }
-    return excluded
+    return sets
   } catch {
-    return excluded
+    return sets
   }
+}
+
+/** @deprecated use getLocalIndexOverrideSets */
+export async function getNonIndexableLocalPaths() {
+  return (await getLocalIndexOverrideSets()).excluded
 }
 
 export { overrideKey }

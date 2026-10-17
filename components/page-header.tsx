@@ -3,6 +3,8 @@ import { ChevronRight } from 'lucide-react'
 import { PixelField } from '@/components/pixel-field'
 import { localeHomePath, type Locale } from '@/lib/i18n'
 import { stagger } from '@/lib/motion'
+import { safeJsonLd } from '@/lib/seo'
+import { canonicalAbsoluteUrl } from '@/lib/site-url'
 
 interface PageHeaderProps {
   eyebrow: string
@@ -10,11 +12,28 @@ interface PageHeaderProps {
   description?: string
   locale?: Locale
   parent?: { label: string; href?: string }
+  /** Canonical path of the page; when given, a BreadcrumbList matching the visible trail is emitted. */
+  path?: string
 }
 
-export function PageHeader({ eyebrow, title, description, locale = 'tr', parent }: PageHeaderProps) {
+function breadcrumbJsonLd(locale: Locale, eyebrow: string, path: string, parent?: { label: string; href?: string }) {
+  const items = [
+    { name: locale === 'en' ? 'Home' : 'Ana Sayfa', href: localeHomePath(locale) },
+    ...(parent?.href ? [{ name: parent.label, href: parent.href }] : []),
+    { name: eyebrow, href: path },
+  ]
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    '@id': `${canonicalAbsoluteUrl(path)}#breadcrumb`,
+    itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: canonicalAbsoluteUrl(item.href) })),
+  }
+}
+
+export function PageHeader({ eyebrow, title, description, locale = 'tr', parent, path }: PageHeaderProps) {
   return (
     <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">
+      {path && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd(locale, eyebrow, path, parent)) }} />}
       <div aria-hidden="true" className="bg-grid absolute inset-0 -z-10 bg-right-top text-white [mask-image:radial-gradient(ellipse_70%_100%_at_85%_0%,#000_10%,transparent_70%)]" />
       <PixelField className="-z-10 hidden md:block [mask-image:radial-gradient(ellipse_60%_100%_at_100%_0%,#000_10%,transparent_70%)]" />
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-12 sm:px-6 md:pb-24 md:pt-16">

@@ -16,7 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const service = getService(slug)
-  if (!service) return { title: 'Hizmet Bulunamadı | ParsMedya' }
+  if (!service) return { title: 'Hizmet Bulunamadı | Pars Medya' }
   const title = service.seoTitle ?? `${service.title} | Pars Medya`
   const description = service.seoDescription ?? service.description
   const canonical = `/hizmetler/${service.slug}`

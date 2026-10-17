@@ -3,19 +3,22 @@ import { PageHeader } from '@/components/page-header'
 import { About } from '@/components/about'
 import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
+import { TeamSection } from '@/components/team-section'
 import { createPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = createPageMetadata({ title: 'Hakkımızda | Pars Medya', description: 'Pars Medya’nın yazılım mühendisliği, ürün tasarımı ve dijital stratejiyi birleştiren ekibini, çalışma yaklaşımını ve uluslararası bakışını tanıyın.', canonical: '/hakkimizda', tr: '/hakkimizda', en: '/en/about', locale: 'tr' })
+export const metadata: Metadata = createPageMetadata({ title: 'Hakkımızda | Pars Medya Yazılım ve Dijital Ajans', description: 'Pars Medya’nın yazılım mühendisliği, ürün tasarımı ve dijital stratejiyi birleştiren ekibini, çalışma yaklaşımını ve uluslararası bakışını tanıyın.', canonical: '/hakkimizda', tr: '/hakkimizda', en: '/en/about', locale: 'tr' })
 
 export default function HakkimizdaPage() {
   return (
     <>
       <PageHeader
         eyebrow="Hakkımızda"
+        path="/hakkimizda"
         title="Markaların dijital gücünü ortaya çıkaran ekip"
         description="Bir panter kadar hızlı, bir o kadar da kararlı bir yaklaşımla fikirlerinizi ölçeklenebilir ve güvenli teknolojilere dönüştürüyoruz."
       />
       <About />
+      <TeamSection locale="tr" />
       <WhyUs />
       <ContactCta />
     </>

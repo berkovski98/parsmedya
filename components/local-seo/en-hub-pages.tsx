@@ -22,7 +22,7 @@ function EnHubHero({ model, kicker }: { model: EnLocalHubModel; kicker: string }
         }}
       />
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <LocalBreadcrumbs items={model.breadcrumbs} />
+        <LocalBreadcrumbs items={model.breadcrumbs} locale="en" />
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-accent">{kicker}</p>
         <h1 className="mt-3 max-w-3xl text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">{model.h1}</h1>
         <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{model.intro}</p>
@@ -71,8 +71,8 @@ export function EnNationalHub({ model }: { model: EnLocalHubModel }) {
   return (
     <article>
       <EnHubHero model={model} kicker="Turkey • Service Areas" />
-      <HubContentSections sections={sections} />
-      <HubFaqAndCta faqs={model.faqs} />
+      <HubContentSections sections={sections} locale="en" />
+      <HubFaqAndCta faqs={model.faqs} locale="en" />
     </article>
   )
 }
@@ -82,8 +82,8 @@ export function EnRegionHub({ model, region }: { model: EnLocalHubModel; region:
   return (
     <article>
       <EnHubHero model={model} kicker={`Turkey • ${enRegionName(region)}`} />
-      <HubContentSections sections={sections} />
-      <HubFaqAndCta faqs={model.faqs} />
+      <HubContentSections sections={sections} locale="en" />
+      <HubFaqAndCta faqs={model.faqs} locale="en" />
     </article>
   )
 }
@@ -93,9 +93,9 @@ export function EnCityHub({ model, city }: { model: EnLocalHubModel; city: Turke
   return (
     <article>
       <EnHubHero model={model} kicker={`${enRegionName(city.region)} • ${city.name}`} />
-      <HubContentSections sections={sections} />
+      <HubContentSections sections={sections} locale="en" />
       <EnServiceGroups hrefFor={(slug) => `${enCityPath(city)}/${slug}`} locationLabel={city.name} />
-      <HubFaqAndCta faqs={model.faqs} />
+      <HubFaqAndCta faqs={model.faqs} locale="en" />
     </article>
   )
 }
@@ -106,7 +106,7 @@ export function EnDistrictHub({ model, city, district }: { model: EnLocalHubMode
   return (
     <article>
       <EnHubHero model={model} kicker={`${city.name} • ${district.name}`} />
-      <HubContentSections sections={sections} />
+      <HubContentSections sections={sections} locale="en" />
       <EnServiceGroups hrefFor={(slug) => `${enDistrictPath(city, district)}/${slug}`} locationLabel={district.name} />
       <section className="border-b border-border bg-secondary/40 py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -123,7 +123,7 @@ export function EnDistrictHub({ model, city, district }: { model: EnLocalHubMode
           </Link>
         </div>
       </section>
-      <HubFaqAndCta faqs={model.faqs} />
+      <HubFaqAndCta faqs={model.faqs} locale="en" />
     </article>
   )
 }

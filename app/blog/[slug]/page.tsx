@@ -8,8 +8,10 @@ import { BlogContent } from '@/components/blog-content'
 import { BlogCoverImage } from '@/components/blog-cover-image'
 import { BlogArticleCta, ReadingProgress } from '@/components/blog-article-cta'
 import { resolveBlogImageSrc } from '@/lib/blog-image'
-import { absoluteAlternates, createPageMetadata, safeJsonLd } from '@/lib/seo'
-import { absoluteUrl, getSiteUrl } from '@/lib/site-url'
+import { blogAuthorNode, blogShareImage } from '@/lib/blog-seo'
+import { orgRef, websiteRef } from '@/lib/schema/organization'
+import { createPageMetadata, safeJsonLd, socialImage } from '@/lib/seo'
+import { absoluteUrl, canonicalAbsoluteUrl } from '@/lib/site-url'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -18,27 +20,25 @@ export const revalidate = 60
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = await getPublishedPost(slug)
-  if (!post) return { title: 'Blog Yazısı Bulunamadı | ParsMedya' }
-  const title = post.seo_title || `${post.title} | ParsMedya`
+  if (!post) return { title: 'Blog Yazısı Bulunamadı | Pars Medya' }
+  const title = post.seo_title || `${post.title} | Pars Medya`
   const description = post.seo_description || post.excerpt
-  const image = resolveBlogImageSrc(post.image_url)
+  const image = blogShareImage(post.image_url)
   const translation = await getPublishedTranslation(post.translation_group_id, 'en')
   const canonical = `/blog/${post.slug}`
-  const enPath = translation ? `/en/blog/${translation.slug}` : '/en/blog'
+  // hreflang only points to a real translation (Ö3); no translation → no "en" alternate.
+  const enPath = translation ? `/en/blog/${translation.slug}` : null
   const metadata = createPageMetadata({ title, description, canonical, tr: canonical, en: enPath, locale: 'tr', image, type: 'article' })
   return {
     ...metadata,
-    alternates: absoluteAlternates(canonical, { tr: canonical, en: enPath, 'x-default': canonical }),
     openGraph: {
+      ...metadata.openGraph,
       type: 'article',
-      locale: 'tr_TR',
-      title,
-      description,
-      url: absoluteUrl(canonical),
-      images: [{ url: image, alt: post.title }],
+      images: [socialImage(image, post.title)],
       publishedTime: post.published_at || undefined,
       modifiedTime: post.updated_at,
       authors: [post.author],
+      ...(enPath ? {} : { alternateLocale: [] }),
     },
   }
 }
@@ -66,11 +66,12 @@ export default async function BlogDetailPage({ params }: Props) {
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.seo_description || post.excerpt,
-    image: [new URL(image, getSiteUrl()).toString()],
+    image: [canonicalAbsoluteUrl(blogShareImage(post.image_url))],
     datePublished: post.published_at || post.created_at,
     dateModified: post.updated_at,
-    author: { '@type': 'Person', name: post.author },
-    publisher: { '@type': 'Organization', name: 'Pars Medya', url: getSiteUrl() },
+    author: blogAuthorNode(post.author),
+    publisher: orgRef(),
+    isPartOf: websiteRef(),
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
     inLanguage: 'tr-TR',
   }

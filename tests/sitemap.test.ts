@@ -125,11 +125,10 @@ test('sitemap index lists child sitemaps without mixing urlset', () => {
   assert.ok(locs.every((url) => url.startsWith(`${PRODUCTION_SITE_URL}/sitemaps/`)))
 })
 
-test('robots.txt lists both language sitemaps on the canonical host', () => {
+test('robots.txt lists only the sitemap index on the canonical host', () => {
   const document = robots()
   assert.deepEqual(document.sitemap, [...SITEMAP_INDEX_URLS])
-  assert.ok(document.sitemap.includes(`${PRODUCTION_SITE_URL}/sitemap.xml`))
-  assert.ok(document.sitemap.includes(`${PRODUCTION_SITE_URL}/sitemap-en.xml`))
+  assert.deepEqual(document.sitemap, [`${PRODUCTION_SITE_URL}/sitemap.xml`])
   assert.equal(containsForbiddenHost(document.sitemap.join('\n')), false)
 })
 

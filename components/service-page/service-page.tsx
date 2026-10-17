@@ -3,6 +3,7 @@ import { ServiceBenefits } from '@/components/service-page/service-benefits'
 import { ServiceCapabilities } from '@/components/service-page/service-capabilities'
 import { ServiceCTA } from '@/components/service-page/service-cta'
 import { ServiceHero } from '@/components/service-page/service-hero'
+import { ServiceLocalLinks } from '@/components/service-page/service-local-links'
 import { ServiceOutcomes } from '@/components/service-page/service-outcomes'
 import { ServiceOverview, serviceOverviewParagraphs } from '@/components/service-page/service-overview'
 import { ServiceProcess } from '@/components/service-page/service-process'
@@ -65,6 +66,7 @@ export function ServicePage({
       <ServicePackages model={model} packages={service.packages} />
       <ServiceFaq model={model} faqs={service.faqs} />
       <ServiceRelated model={model} current={service} />
+      <ServiceLocalLinks model={model} service={service} />
       <ServiceCTA model={model} />
     </>
   )

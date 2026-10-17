@@ -4,6 +4,8 @@ import { ArrowUpRight, Clock, Mail, MapPin, Phone } from 'lucide-react'
 import { ContactActionsOnInk } from '@/components/contact-actions'
 import { localeHomePath, paths, type Locale } from '@/lib/i18n'
 import { CONTACT_EMAIL, CONTACT_LABELS, MOBILE_PHONE, OFFICE_PHONE, officePhoneDisplay, phoneDisplay } from '@/lib/contact-info'
+import { LEGAL_PAGES_PUBLISHED, REFERENCES_PUBLISHED } from '@/lib/company-profile'
+import { LEGAL_LINKS, REFERENCES_PATHS } from '@/lib/legal-pages'
 import { getCorporateLinks } from '@/lib/navigation'
 import { EDI_COPY, EDI_PATHS } from '@/lib/edi'
 import { services } from '@/lib/services'
@@ -16,10 +18,17 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
   const english = locale === 'en'
   const text = CONTACT_LABELS[locale]
   const featured = (english ? englishServices : services).filter((service) => service.featuredOnHome).slice(0, 6)
+  // Legal pages are linked only once their texts are complete (LEGAL_PAGES_PUBLISHED).
+  const legalLinks = LEGAL_PAGES_PUBLISHED
+    ? (english
+        ? [{ label: 'Privacy Policy', href: LEGAL_LINKS.en.privacy }, { label: 'Cookie Policy', href: LEGAL_LINKS.en.cookies }, { label: 'Terms of Use', href: LEGAL_LINKS.en.terms }]
+        : [{ label: 'KVKK Aydınlatma Metni', href: LEGAL_LINKS.tr.kvkk }, { label: 'Gizlilik Politikası', href: LEGAL_LINKS.tr.privacy }, { label: 'Çerez Politikası', href: LEGAL_LINKS.tr.cookies }, { label: 'Kullanım Koşulları', href: LEGAL_LINKS.tr.terms }])
+    : []
   const explore = [
     { label: english ? 'Services' : 'Hizmetler', href: paths.services(locale) },
     { label: english ? 'Service Areas' : 'Bölgelerimiz', href: english ? '/en/service-areas' : '/hizmet-bolgeleri' },
     { label: 'Blog', href: paths.blog(locale) },
+    ...(REFERENCES_PUBLISHED ? [{ label: english ? 'References' : 'Referanslar', href: REFERENCES_PATHS[locale] }] : []),
     { label: english ? 'Contact' : 'İletişim', href: paths.contact(locale) },
   ]
 
@@ -29,8 +38,8 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr_1fr_1.3fr] lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href={localeHomePath(locale)} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label={english ? 'ParsMedya home' : 'ParsMedya ana sayfa'}>
-              <Image src="/parsmedya-logo.png" alt="ParsMedya" width={196} height={40} sizes="196px" className="h-8 w-auto" />
+            <Link href={localeHomePath(locale)} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label={english ? 'Pars Medya home' : 'Pars Medya ana sayfa'}>
+              <Image src="/parsmedya-logo.png" alt="Pars Medya" width={196} height={40} sizes="196px" className="h-8 w-auto" />
             </Link>
             <p className="mt-5 max-w-xs text-[0.9375rem] leading-relaxed text-white/60">
               {english
@@ -84,7 +93,14 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
         </div>
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 py-7 text-sm text-white/45 sm:flex-row">
-          <p>© {new Date().getFullYear()} ParsMedya. {english ? 'All rights reserved.' : 'Tüm hakları saklıdır.'}</p>
+          <p>© {new Date().getFullYear()} Pars Medya. {english ? 'All rights reserved.' : 'Tüm hakları saklıdır.'}</p>
+          {legalLinks.length > 0 && (
+            <nav aria-label={english ? 'Legal' : 'Yasal'}>
+              <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+                {legalLinks.map((item) => <li key={item.href}><Link href={item.href} className="transition-colors hover:text-white">{item.label}</Link></li>)}
+              </ul>
+            </nav>
+          )}
           <p className="flex items-center gap-2">
             <span className="inline-block size-1.5 rounded-full bg-accent" aria-hidden="true" />
             {english ? 'Istanbul · Dubai · Moscow · Switzerland' : 'İstanbul · Dubai · Moskova · İsviçre'}

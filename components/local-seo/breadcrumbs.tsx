@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import type { Locale } from '@/lib/i18n'
 import type { LocalBreadcrumb } from '@/lib/local-seo/content'
 
-export function LocalBreadcrumbs({ items }: { items: LocalBreadcrumb[] }) {
+export function LocalBreadcrumbs({ items, locale = 'tr' }: { items: LocalBreadcrumb[]; locale?: Locale }) {
   return (
-    <nav aria-label="Sayfa yolu" className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+    <nav aria-label={locale === 'en' ? 'Breadcrumb' : 'Sayfa yolu'} className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
       {items.map((item, index) => {
         const last = index === items.length - 1
         return (

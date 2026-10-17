@@ -8,6 +8,7 @@ import {
 } from '@/lib/service-page-copy'
 import type { Service } from '@/lib/services'
 import type { EnglishService } from '@/lib/services-en'
+import { orgRef, websiteRef } from '@/lib/schema/organization'
 import { canonicalAbsoluteUrl } from '@/lib/site-url'
 
 export type ServicePageModel = {
@@ -158,8 +159,12 @@ export function mergeTechStack(service: Service | EnglishService, visual: Servic
   return [...new Set([...TECH_BY_VISUAL[visual], ...service.technologies])]
 }
 
+/** "What are CRM Software Solutions?" for plural titles, "What is Website Development?" otherwise. */
 export function overviewHeading(title: string, locale: Locale) {
-  return locale === 'en' ? `What is ${title}?` : `${title} nedir?`
+  if (locale !== 'en') return `${title} nedir?`
+  const lastWord = title.trim().split(/\s+/).pop() || ''
+  const plural = /[^s]s$/i.test(lastWord)
+  return `${plural ? 'What are' : 'What is'} ${title}?`
 }
 
 export function serviceHighlights(service: Service | EnglishService, locale: Locale) {
@@ -172,32 +177,57 @@ export function serviceJsonLd(service: Service | EnglishService, model: ServiceP
   const home = canonicalAbsoluteUrl(model.homeHref)
   const services = canonicalAbsoluteUrl(model.servicesHref)
   const ui = SERVICE_UI[model.locale]
+  const inLanguage = model.locale === 'en' ? 'en-US' : 'tr-TR'
+  const description = service.seoDescription ?? service.description
 
-  return {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: ui.home, item: home },
-          { '@type': 'ListItem', position: 2, name: ui.services, item: services },
-          { '@type': 'ListItem', position: 3, name: service.title, item: url },
-        ],
-      },
-      {
-        '@type': 'Service',
-        name: service.title,
-        description: service.seoDescription ?? service.description,
-        url,
-        inLanguage: model.locale === 'en' ? 'en-US' : 'tr-TR',
-        provider: {
-          '@type': 'Organization',
-          name: 'Pars Medya',
-          url: canonicalAbsoluteUrl('/'),
-        },
-        areaServed: 'TR',
-        serviceType: service.title,
-      },
-    ],
+  const graph: Record<string, unknown>[] = [
+    {
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      url,
+      name: service.seoTitle ?? service.title,
+      description,
+      inLanguage,
+      isPartOf: websiteRef(),
+      breadcrumb: { '@id': `${url}#breadcrumb` },
+      mainEntity: { '@id': `${url}#service` },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${url}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: ui.home, item: home },
+        { '@type': 'ListItem', position: 2, name: ui.services, item: services },
+        { '@type': 'ListItem', position: 3, name: service.title, item: url },
+      ],
+    },
+    {
+      '@type': 'Service',
+      '@id': `${url}#service`,
+      name: service.title,
+      description,
+      url,
+      inLanguage,
+      provider: orgRef(),
+      areaServed: { '@type': 'Country', name: model.locale === 'en' ? 'Turkey' : 'Türkiye' },
+      serviceType: service.title,
+      category: model.category,
+    },
+  ]
+
+  // The same questions are visible in ServiceFaq on the page.
+  if (service.faqs.length > 0) {
+    graph.push({
+      '@type': 'FAQPage',
+      '@id': `${url}#faq`,
+      inLanguage,
+      mainEntity: service.faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+      })),
+    })
   }
+
+  return { '@context': 'https://schema.org', '@graph': graph }
 }

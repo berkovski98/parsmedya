@@ -7,11 +7,11 @@ import { stagger } from '@/lib/motion'
 
 type Card = { title: string; description: string }
 
-export function CorporateDetail({ locale, title, description, paragraphs, principles, steps, globalText, ctaTitle }: { locale: Locale; title: string; description: string; paragraphs: string[]; principles: Card[]; steps?: string[]; globalText?: string; ctaTitle: string }) {
+export function CorporateDetail({ locale, path, title, description, paragraphs, principles, steps, globalText, ctaTitle }: { locale: Locale; path?: string; title: string; description: string; paragraphs: string[]; principles: Card[]; steps?: string[]; globalText?: string; ctaTitle: string }) {
   const english = locale === 'en'
   const contactHref = english ? '/en/contact' : '/iletisim'
   return <>
-    <PageHeader locale={locale} parent={{ label: english ? 'Corporate' : 'Kurumsal' }} eyebrow={title} title={title} description={description} />
+    <PageHeader locale={locale} path={path} parent={{ label: english ? 'Corporate' : 'Kurumsal' }} eyebrow={title} title={title} description={description} />
     <section className="bg-background"><div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:py-24 lg:grid-cols-[1.4fr_.6fr]">
       <article className="space-y-6" data-reveal>{paragraphs.map((paragraph) => <p key={paragraph.slice(0, 42)} className="text-pretty text-lg leading-8 text-muted-foreground">{paragraph}</p>)}</article>
       <aside data-reveal="scale" className="h-fit rounded-3xl bg-ink p-7 text-ink-foreground lg:sticky lg:top-28"><Globe2 className="h-8 w-8 text-accent" /><h2 className="mt-4 font-display text-xl font-bold text-white">{english ? 'Technology with lasting value' : 'Kalıcı değer üreten teknoloji'}</h2><p className="mt-3 leading-relaxed text-white/70">{english ? 'We connect business insight, thoughtful design and reliable engineering to create digital systems that can evolve with organizations.' : 'İş bilgisini, kullanıcı odaklı tasarımı ve güvenilir mühendisliği bir araya getirerek kurumlarla birlikte gelişebilen dijital sistemler kuruyoruz.'}</p></aside>

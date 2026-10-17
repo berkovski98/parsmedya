@@ -129,9 +129,9 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
       <Link
         href={homeHref}
         className="group/logo flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-ink"
-        aria-label={english ? 'ParsMedya home' : 'ParsMedya ana sayfa'}
+        aria-label={english ? 'Pars Medya home' : 'Pars Medya ana sayfa'}
       >
-        <Image src="/parsmedya-logo.png" alt="ParsMedya" width={196} height={40} sizes="196px" className="h-7 w-auto transition-opacity duration-300 group-hover/logo:opacity-90 lg:h-8" />
+        <Image src="/parsmedya-logo.png" alt="Pars Medya" width={196} height={40} sizes="196px" className="h-7 w-auto transition-opacity duration-300 group-hover/logo:opacity-90 lg:h-8" />
       </Link>
 
       <nav className="relative hidden items-center gap-5 lg:flex xl:gap-7" aria-label={english ? 'Main menu' : 'Ana menü'}>
@@ -170,20 +170,18 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
           </div>
         </div>
 
-        {!english && (
-          <div className="group relative py-4">
-            {dropdownTrigger('regions', 'Bölgelerimiz', regionsActive)}
-            <div className={cn(panel, '-left-3 w-72', dismissed('regions'))}>
-              {regionLinks.map((item) => (
-                <Link key={item.href} href={item.href} onClick={(event) => closeDesktop('regions', event.currentTarget)} className={cn(panelItem, 'flex items-center justify-between')}>
-                  <span>{item.label}</span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">{item.cityCount} il</span>
-                </Link>
-              ))}
-              <Link href={regionsHref} onClick={(event) => closeDesktop('regions', event.currentTarget)} className="mt-1 block rounded-lg border-t border-border px-3 py-2.5 text-sm font-semibold text-accent-strong hover:text-foreground">Tüm bölgeler →</Link>
-            </div>
+        <div className="group relative py-4">
+          {dropdownTrigger('regions', english ? 'Service Areas' : 'Bölgelerimiz', regionsActive)}
+          <div className={cn(panel, '-left-3 w-72', dismissed('regions'))}>
+            {regionLinks.map((item) => (
+              <Link key={item.href} href={item.href} onClick={(event) => closeDesktop('regions', event.currentTarget)} className={cn(panelItem, 'flex items-center justify-between')}>
+                <span>{item.label}</span>
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">{item.cityCount} {english ? 'provinces' : 'il'}</span>
+              </Link>
+            ))}
+            <Link href={regionsHref} onClick={(event) => closeDesktop('regions', event.currentTarget)} className="mt-1 block rounded-lg border-t border-border px-3 py-2.5 text-sm font-semibold text-accent-strong hover:text-foreground">{english ? 'All regions →' : 'Tüm bölgeler →'}</Link>
           </div>
-        )}
+        </div>
 
         {simpleLinks.slice(1).map((item) => <Link key={item.href} href={item.href} className={cn(topLink, topLinkState(isActive(item.href)))}>{item.label}</Link>)}
       </nav>

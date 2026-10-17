@@ -21,8 +21,9 @@ import {
   regionHubSections,
   type HubSections,
 } from '@/lib/local-seo/hub-content'
+import { isLocalPageIndexable } from '@/lib/local-seo/index-policy'
 import { localRegionPath } from '@/lib/local-seo/resolve'
-import { clipMeta, hash, locative, pick, pickMany, possessive } from '@/lib/local-seo/text-utils'
+import { clipMeta, hash, inPlace, lowerKeepAcronyms, ofPlace, pick, pickMany } from '@/lib/local-seo/text-utils'
 import type { LocalSeoFaq, LocalSeoOverride } from '@/lib/local-seo/types'
 import { getRelatedLocalServices, type LocalServiceRecord } from '@/lib/services/service-registry'
 
@@ -78,7 +79,7 @@ const REGION_BUSINESS: Record<TurkeyRegion, string> = {
 }
 
 function featureNouns(service: LocalServiceRecord) {
-  return service.source.features.slice(0, 3).map((feature) => feature.title.toLocaleLowerCase('tr-TR'))
+  return service.source.features.slice(0, 3).map((feature) => lowerKeepAcronyms(feature.title))
 }
 
 function locationLabel(city: TurkeyCity, district: TurkeyDistrict | null) {
@@ -90,23 +91,23 @@ function businessScope(city: TurkeyCity, district: TurkeyDistrict | null) {
   const metro = city.metropolitan ? 'büyükşehir ölçeğindeki operasyonlar ve' : 'yerel operasyonlar ve'
   const coast = city.coastal ? ' kıyı ve iç hat işletmeleri dahil' : ''
   if (district) {
-    return `${locative(district.name)} ${metro} ${city.name} genelindeki ${region}${coast}`
+    return `${ofPlace(district.name)} ${metro} ${city.name} genelindeki ${region}${coast}`
   }
-  return `${possessive(city.name)} ${metro} ${region}${coast}`
+  return `${inPlace(city.name)} ${metro} ${region}${coast}`
 }
 
 function uniqueHero(service: LocalServiceRecord, city: TurkeyCity, district: TurkeyDistrict | null, seed: string) {
   const nouns = featureNouns(service)
   const frames = district
     ? [
-        `${district.name} ve ${city.name} genelindeki işletmeler için ${service.title.toLocaleLowerCase('tr-TR')} kapsamında ${nouns[0] || 'iş süreçleri'}, ${nouns[1] || 'entegrasyon'} ve ${nouns[2] || 'raporlama'} ihtiyaçlarını aynı mimaride ele alıyoruz.`,
-        `${locative(district.name)} ekiplerin günlük işlerini sadeleştiren, ${city.name} ölçeğinde büyüyebilen ${service.title.toLocaleLowerCase('tr-TR')} çözümleri geliştiriyoruz.`,
+        `${district.name} ve ${city.name} genelindeki işletmeler için ${lowerKeepAcronyms(service.title)} kapsamında ${nouns[0] || 'iş süreçleri'}, ${nouns[1] || 'entegrasyon'} ve ${nouns[2] || 'raporlama'} ihtiyaçlarını aynı mimaride ele alıyoruz.`,
+        `${ofPlace(district.name)} ekiplerin günlük işlerini sadeleştiren, ${city.name} ölçeğinde büyüyebilen ${lowerKeepAcronyms(service.title)} çözümleri geliştiriyoruz.`,
         `${district.name} merkezli işletmeler için ${service.shortDescription.replace(/\.$/, '')}; kapsam ${city.name} genelindeki şube ve ekipleri de kapsayacak şekilde planlanır.`,
       ]
     : [
-        `${possessive(city.name)} işletmeler için ölçeklenebilir, güvenli ve iş süreçlerine uyarlanmış ${service.title.toLocaleLowerCase('tr-TR')} çözümleri geliştiriyoruz.`,
-        `${city.name} özelinde ${nouns[0] || 'süreç yönetimi'}, ${nouns[1] || 'entegrasyon'} ve ${nouns[2] || 'raporlama'} ihtiyaçlarını ${service.title.toLocaleLowerCase('tr-TR')} kapsamında uçtan uca kurguluyoruz.`,
-        `${city.region} bölgesindeki ${REGION_BUSINESS[city.region]} için ${service.title.toLocaleLowerCase('tr-TR')} projelerini analiz, mimari ve canlıya alma adımlarıyla yürütüyoruz.`,
+        `${inPlace(city.name)} işletmeler için ölçeklenebilir, güvenli ve iş süreçlerine uyarlanmış ${lowerKeepAcronyms(service.title)} çözümleri geliştiriyoruz.`,
+        `${city.name} özelinde ${nouns[0] || 'süreç yönetimi'}, ${nouns[1] || 'entegrasyon'} ve ${nouns[2] || 'raporlama'} ihtiyaçlarını ${lowerKeepAcronyms(service.title)} kapsamında uçtan uca kurguluyoruz.`,
+        `${city.region} bölgesindeki ${REGION_BUSINESS[city.region]} için ${lowerKeepAcronyms(service.title)} projelerini analiz, mimari ve canlıya alma adımlarıyla yürütüyoruz.`,
       ]
   return pick(frames, seed, 1)
 }
@@ -116,9 +117,9 @@ function uniqueSummary(service: LocalServiceRecord, city: TurkeyCity, district: 
   const outcome = extras.outcomes[hash(seed) % extras.outcomes.length]
   const place = locationLabel(city, district)
   const frames = [
-    `${service.description} ${possessive(place)} teslimatta ${outcome.title.tr.toLocaleLowerCase('tr-TR')} hedefini merkeze alırız.`,
+    `${service.description} ${inPlace(place)} teslimatta ${lowerKeepAcronyms(outcome.title.tr)} hedefini merkeze alırız.`,
     `${service.title}, ${businessScope(city, district)} için mevcut araçlarla konuşabilen ve bakım maliyeti öngörülebilir bir ürün olarak kurgulanır.`,
-    `${locative(place)} ekiplerin gerçek görev akışlarından yola çıkarak ${service.title.toLocaleLowerCase('tr-TR')} kapsamını modül, yetki ve veri modeli düzeyinde netleştiririz.`,
+    `${ofPlace(place)} ekiplerin gerçek görev akışlarından yola çıkarak ${lowerKeepAcronyms(service.title)} kapsamını modül, yetki ve veri modeli düzeyinde netleştiririz.`,
   ]
   return pick(frames, seed, 2)
 }
@@ -127,22 +128,22 @@ function uniqueLocationIntro(service: LocalServiceRecord, city: TurkeyCity, dist
   const districtCount = city.districts.length
   if (district) {
     const frames = [
-      `${district.name}, ${city.name} ili içinde ${service.title.toLocaleLowerCase('tr-TR')} ihtiyacı olan işletmeler için yerel bir operasyon noktasıdır. Çözümleri ilçe sınırına hapsetmeyiz; ${city.name} genelindeki ekipler, müşteriler ve tedarik süreçleri aynı sistemde yönetilebilir.`,
-      `${locative(district.name)} şirketler genelde ${city.name} içindeki diğer ilçelerle de çalışır. Bu nedenle ${service.title.toLocaleLowerCase('tr-TR')} projelerinde yetki, şube ve lokasyon kırılımını baştan planlarız.`,
-      `${district.name} için kurulan ${service.title.toLocaleLowerCase('tr-TR')} altyapısı, ${city.name} ilindeki ${districtCount} ilçeden gelen talep, stok veya müşteri verisini tek yerde toplamaya uygun tasarlanır.`,
+      `${district.name}, ${city.name} ili içinde ${lowerKeepAcronyms(service.title)} ihtiyacı olan işletmeler için yerel bir operasyon noktasıdır. Çözümleri ilçe sınırına hapsetmeyiz; ${city.name} genelindeki ekipler, müşteriler ve tedarik süreçleri aynı sistemde yönetilebilir.`,
+      `${ofPlace(district.name)} şirketler genelde ${city.name} içindeki diğer ilçelerle de çalışır. Bu nedenle ${lowerKeepAcronyms(service.title)} projelerinde yetki, şube ve lokasyon kırılımını baştan planlarız.`,
+      `${district.name} için kurulan ${lowerKeepAcronyms(service.title)} altyapısı, ${city.name} ilindeki ${districtCount} ilçeden gelen talep, stok veya müşteri verisini tek yerde toplamaya uygun tasarlanır.`,
     ]
     return pick(frames, seed, 3)
   }
   const frames = [
-    `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan işletme operasyonları için ${service.title.toLocaleLowerCase('tr-TR')} projelerinde çok lokasyonlu kullanım senaryolarını baştan hesaba katarız.`,
-    `${possessive(city.name)} teslim ettiğimiz ${service.title.toLocaleLowerCase('tr-TR')} sistemleri, ilçe ekiplerinin ayrı çalışması yerine ortak veri, ortak yetki modeli ve ortak raporlama ile yönetilmesini hedefler.`,
-    `${city.name} ölçeğinde ${service.title.toLocaleLowerCase('tr-TR')} ihtiyacı çoğu zaman tek bir ofisle sınırlı kalmaz. Analizde şube, saha ve merkez kullanıcılarını ayırır; gereksiz yere şişirilmemiş bir kapsam çıkarırız.`,
+    `${city.name}, ${city.region} bölgesinde ${districtCount} ilçeye yayılan işletme operasyonları için ${lowerKeepAcronyms(service.title)} projelerinde çok lokasyonlu kullanım senaryolarını baştan hesaba katarız.`,
+    `${inPlace(city.name)} teslim ettiğimiz ${lowerKeepAcronyms(service.title)} sistemleri, ilçe ekiplerinin ayrı çalışması yerine ortak veri, ortak yetki modeli ve ortak raporlama ile yönetilmesini hedefler.`,
+    `${city.name} ölçeğinde ${lowerKeepAcronyms(service.title)} ihtiyacı çoğu zaman tek bir ofisle sınırlı kalmaz. Analizde şube, saha ve merkez kullanıcılarını ayırır; gereksiz yere şişirilmemiş bir kapsam çıkarırız.`,
   ]
   return pick(frames, seed, 3)
 }
 
 function sectorNotes(service: LocalServiceRecord, city: TurkeyCity, district: TurkeyDistrict | null) {
-  const place = locative(locationLabel(city, district))
+  const place = ofPlace(locationLabel(city, district))
   const extras = getServicePageExtras(service.slug)
   return extras.outcomes.slice(0, 4).map((outcome) => ({
     title: outcome.title.tr,
@@ -158,7 +159,7 @@ function locationFaqs(service: LocalServiceRecord, city: TurkeyCity, district: T
   }))
   const local: LocalSeoFaq[] = [
     {
-      question: `${place} için ${service.title.toLocaleLowerCase('tr-TR')} sürecini nasıl yürütüyorsunuz?`,
+      question: `${place} için ${lowerKeepAcronyms(service.title)} sürecini nasıl yürütüyorsunuz?`,
       answer: `${place} konumundaki ekiplerle keşif, kapsam ve teslimat adımlarını çevrimiçi veya ihtiyaca göre yüz yüze koordinasyonla ilerletiriz. İlçe bazında şube adresi yayınlamayız; proje ${city.name} ve Türkiye genelindeki işletmelerle aynı yöntemle yönetilir.`,
     },
     {
@@ -204,7 +205,7 @@ function serviceDetailParagraphs(service: LocalServiceRecord, city: TurkeyCity, 
   const long = service.source.longDescription || []
   const frames = [
     `${service.title}, ${businessScope(city, district)} için tasarlanır. ${service.description}`,
-    `${locative(place)} ekiplerin günlük operasyonlarında ${featureNouns(service).join(', ') || 'süreç yönetimi'} ihtiyaçlarını karşılamak üzere modüler bir mimari kurulur.`,
+    `${ofPlace(place)} ekiplerin günlük operasyonlarında ${featureNouns(service).join(', ') || 'süreç yönetimi'} ihtiyaçlarını karşılamak üzere modüler bir mimari kurulur.`,
     extras.why[0]?.text.tr || `${service.shortDescription} Pars Medya ekibiyle kapsam analizi sonrası netleştirilir.`,
     ...long.slice(0, 2),
   ]
@@ -234,9 +235,9 @@ function fitMeta(service: LocalServiceRecord, city: TurkeyCity, district: Turkey
   const place = locationLabel(city, district)
   const cityHint = district ? ` ${city.name} genelindeki` : ''
   const frames = [
-    `${place} ${service.title.toLocaleLowerCase('tr-TR')} hizmetleriyle${cityHint} işletmeler için ${nouns[0] || 'yazılım'}, ${nouns[1] || 'otomasyon'} ve ${nouns[2] || 'entegrasyon'} çözümleri geliştirin.`,
-    `${place} ${service.title.toLocaleLowerCase('tr-TR')} ile ${nouns[0] || 'iş süreçleri'} ve ${nouns[1] || 'raporlama'} ihtiyaçlarınızı Pars Medya ekibiyle planlayın.`,
-    `${locative(place)} ekipler için ${service.title.toLocaleLowerCase('tr-TR')}: ${nouns.slice(0, 2).join(', ') || service.shortDescription}. Pars Medya ile projenizi konuşun.`,
+    `${place} ${lowerKeepAcronyms(service.title)} hizmetleriyle${cityHint} işletmeler için ${nouns[0] || 'yazılım'}, ${nouns[1] || 'otomasyon'} ve ${nouns[2] || 'entegrasyon'} çözümleri geliştirin.`,
+    `${place} ${lowerKeepAcronyms(service.title)} ile ${nouns[0] || 'iş süreçleri'} ve ${nouns[1] || 'raporlama'} ihtiyaçlarınızı Pars Medya ekibiyle planlayın.`,
+    `${ofPlace(place)} ekipler için ${lowerKeepAcronyms(service.title)}: ${nouns.slice(0, 2).join(', ') || service.shortDescription}. Pars Medya ile projenizi konuşun.`,
   ]
   return clipMeta(pick(frames, seed, 4))
 }
@@ -272,7 +273,7 @@ export function buildLocalServicePage(
   return {
     kind,
     canonicalPath,
-    indexable: override?.is_indexable !== false,
+    indexable: isLocalPageIndexable({ kind, citySlug: city.slug, serviceSlug: service.slug, override }),
     title: override?.seo_title?.trim() || `${defaultH1} | Pars Medya`,
     description: override?.meta_description?.trim() || fitMeta(service, city, district, seed),
     h1: override?.hero_title?.trim() || defaultH1,
@@ -286,7 +287,7 @@ export function buildLocalServicePage(
     })),
     capabilities: extras.architecture.layers.map((layer) => ({
       title: layer.title.tr,
-      description: `${place} teslimatında ${layer.title.tr.toLocaleLowerCase('tr-TR')} katmanı, ${service.title.toLocaleLowerCase('tr-TR')} kapsamının parçası olarak ele alınır.`,
+      description: `${place} teslimatında ${lowerKeepAcronyms(layer.title.tr)} katmanı, ${lowerKeepAcronyms(service.title)} kapsamının parçası olarak ele alınır.`,
     })),
     features: service.source.features,
     technologies: service.source.technologies,
@@ -327,6 +328,7 @@ export function buildLocalServicePage(
 export type LocalHubModel = {
   kind: 'city-hub' | 'district-hub' | 'national-hub' | 'region-hub'
   canonicalPath: string
+  indexable: boolean
   title: string
   description: string
   h1: string
@@ -341,6 +343,7 @@ export function buildCityHub(city: TurkeyCity): LocalHubModel {
   return {
     kind: 'city-hub',
     canonicalPath: `/${city.slug}`,
+    indexable: isLocalPageIndexable({ kind: 'city-hub', citySlug: city.slug }),
     title: meta.title,
     description: meta.description,
     h1: meta.h1,
@@ -361,6 +364,7 @@ export function buildDistrictHub(city: TurkeyCity, district: TurkeyDistrict): Lo
   return {
     kind: 'district-hub',
     canonicalPath: `/${city.slug}/${district.slug}`,
+    indexable: isLocalPageIndexable({ kind: 'district-hub', citySlug: city.slug }),
     title: meta.title,
     description: meta.description,
     h1: meta.h1,
@@ -382,6 +386,7 @@ export function buildNationalHub(): LocalHubModel {
   return {
     kind: 'national-hub',
     canonicalPath: '/hizmet-bolgeleri',
+    indexable: true,
     title: meta.title,
     description: meta.description,
     h1: meta.h1,
@@ -402,6 +407,7 @@ export function buildRegionHub(region: TurkeyRegion): LocalHubModel {
   return {
     kind: 'region-hub',
     canonicalPath,
+    indexable: true,
     title: meta.title,
     description: meta.description,
     h1: meta.h1,

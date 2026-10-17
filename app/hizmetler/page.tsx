@@ -12,6 +12,7 @@ export default function HizmetlerPage() {
     <>
       <PageHeader
         eyebrow="Hizmetler"
+        path="/hizmetler"
         title="İşletmenizi büyüten yazılım ve dijital çözümler"
         description="Web uygulamalarından CRM ve ERP sistemlerine, entegrasyondan dijital büyümeye kadar ihtiyaçlarınıza özel, güvenli ve ölçeklenebilir çözümler geliştiriyoruz."
       />

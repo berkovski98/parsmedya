@@ -29,10 +29,21 @@ function supabaseStorageHosts() {
   return [...hosts]
 }
 
+// Applied to every response. HSTS only matters over HTTPS (production); browsers ignore it on http://localhost.
+const SECURITY_HEADERS = [
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+]
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compress: true,
   output: 'standalone',
+  // proxy.ts strips trailing slashes (and the legacy /tr prefix) in one redirect.
+  skipTrailingSlashRedirect: true,
   experimental: {
     serverActions: {
       bodySizeLimit: '6mb',
@@ -49,6 +60,9 @@ const nextConfig = {
   },
   async redirects() {
     return TR_PREFIX_REDIRECTS
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: SECURITY_HEADERS }]
   },
 }
 
