@@ -1,14 +1,16 @@
 {
-  "version": "1.1.14",
-  "title": "Yeni tasarım ve WhatsApp iletişimi",
-  "releaseTitle": "Yeni tasarım ve WhatsApp iletişimi",
-  "summary": "Site daha modern bir görünüme kavuştu; telefon ve WhatsApp ile tek dokunuşla iletişim eklendi.",
+  "version": "1.1.15",
+  "title": "Arama motoru uyumu iyileştirmeleri",
+  "releaseTitle": "Arama motoru uyumu iyileştirmeleri",
+  "summary": "Site, arama motorlarında daha doğru ve güvenilir görünmesi için düzenlendi; sayfa adresleri değişmedi.",
   "releaseNotes": [
-    "Üst menü, ana sayfa girişi, hizmet kartları, blog ve alt bilgi alanı yenilendi.",
-    "Sayfa kaydırıldıkça bölümler yumuşak geçişlerle görünür; hareket azaltma tercihi olan ziyaretçilerde animasyonlar kapanır.",
-    "0539 840 18 98 numarası menüde, alt bilgide ve iletişim sayfasında tıklanabilir olarak gösterilir.",
-    "WhatsApp butonları Türkçe ve İngilizce hazır mesajla yeni sekmede açılır; sağ altta sabit WhatsApp butonu bulunur.",
-    "Mevcut 0212 963 77 77 ofis hattı korunur ve ikinci iletişim seçeneği olarak gösterilir.",
-    "Mobil menü tam ekran açılır; arama ve WhatsApp butonları menünün altında yer alır."
+    "Google'a şirket adı, logo, telefon ve e-posta bilgisi tek ve tutarlı biçimde iletiliyor.",
+    "Şehir ve ilçe sayfalarındaki ek hataları düzeltildi (örneğin “Ankara'da”, “Kadıköy'de”).",
+    "Birbirine çok benzeyen ilçe ve hizmet sayfaları açık kalıyor ancak Google'a öncelikli olarak gösterilmiyor; öne çıkan altı şehrin sayfaları öne alındı.",
+    "İngilizce sayfalarda kalan Türkçe başlıklar ve paket kartları kaldırıldı; her İngilizce hizmet sayfasına kendine özel açıklama ve sık sorulan sorular eklendi.",
+    "Sosyal medyada paylaşılan bağlantılar için yeni bir paylaşım görseli hazırlandı.",
+    "Bulunamayan sayfalar için Türkçe ve İngilizce yardımcı bir sayfa eklendi.",
+    "www ile başlayan adresler otomatik olarak ana adrese yönlendiriliyor.",
+    "KVKK, gizlilik, çerez ve kullanım koşulları sayfalarının taslakları hazırlandı; şirket bilgileri tamamlanana kadar yayında görünmüyor."
   ]
 }
