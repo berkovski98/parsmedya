@@ -9,6 +9,7 @@ import { getLocalServicesByCategory } from '@/lib/services/service-registry'
 import { getEnglishService } from '@/lib/services-en'
 import { toEnglishServiceSlug } from '@/lib/i18n'
 import type { EnLocalHubModel } from '@/lib/local-seo/en-content'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 function EnHubHero({ model, kicker }: { model: EnLocalHubModel; kicker: string }) {
   return (
@@ -30,9 +31,7 @@ function EnHubHero({ model, kicker }: { model: EnLocalHubModel; kicker: string }
           <Link href="/en/contact" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
             Discuss Your Project
           </Link>
-          <Link href="/en/services" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>
-            All Services
-          </Link>
+          <LocalContactActions locale="en" />
         </div>
       </div>
     </section>

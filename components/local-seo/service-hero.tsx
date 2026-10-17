@@ -4,6 +4,7 @@ import { LocalBreadcrumbs } from '@/components/local-seo/breadcrumbs'
 import { ServiceVisual } from '@/components/service-page/service-visual'
 import type { LocalServicePageModel } from '@/lib/local-seo/content'
 import { getLocalServiceVisual } from '@/lib/services/service-registry'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 export function LocalServiceHero({ model }: { model: LocalServicePageModel }) {
   return (
@@ -33,9 +34,7 @@ export function LocalServiceHero({ model }: { model: LocalServicePageModel }) {
             <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
               Projenizi Konuşalım
             </Link>
-            <Link href="#hizmet-ozeti" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>
-              Hizmeti İncele
-            </Link>
+            <LocalContactActions locale="tr" />
           </div>
         </div>
         <div className="min-w-0">

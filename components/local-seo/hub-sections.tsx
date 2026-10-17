@@ -15,6 +15,7 @@ import type { Locale } from '@/lib/i18n'
 import type { HubContentCard, HubLocationCard, HubProcessStep, HubRegionCard, HubSections, HubServiceCard } from '@/lib/local-seo/hub-content'
 import { getLocalService } from '@/lib/services/service-registry'
 import { cn } from '@/lib/utils'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 const WHY_ICONS = [Layers, Shield, Zap, Globe, RefreshCw, Headphones] as const
 
@@ -288,9 +289,7 @@ export function HubFaqAndCta({ faqs, locale = 'tr' }: { faqs: { question: string
             <Link href={copy.contactHref} className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
               {copy.ctaPrimary}
             </Link>
-            <Link href="mailto:info@parsmedya.net" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 border-primary-foreground/20 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10' })}>
-              {copy.ctaSecondary}
-            </Link>
+            <LocalContactActions locale={locale} tone="dark" />
           </div>
         </div>
       </section>
