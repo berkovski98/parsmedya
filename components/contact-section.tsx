@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MapPin, Send, CheckCircle2 } from 'lucide-react'
 import { ContactChannels } from '@/components/contact-channels'
+import { LegalConsentNote } from '@/components/legal-consent-note'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -154,6 +155,7 @@ export function ContactSection() {
                 {submitting ? 'Gönderiliyor…' : 'Mesaj Gönder'}
                 <Send className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </button>
+              <LegalConsentNote locale="tr" />
             </form>
           )}
         </div>
