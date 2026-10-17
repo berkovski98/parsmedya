@@ -10,6 +10,8 @@ export const serviceSlugMap: Record<string, string> = {
   'saas-yazilim-gelistirme': 'saas-development', 'dashboard-raporlama-sistemleri': 'dashboard-reporting-systems',
   'musteri-bayi-portali': 'customer-dealer-portals', 'stok-siparis-yonetim-sistemleri': 'inventory-order-management',
   'yapay-zeka-destekli-yazilim': 'ai-powered-software-solutions', 'yazilim-modernizasyonu': 'software-modernization',
+  // Standalone landing page, intentionally outside the service registry (no local SEO pages).
+  'edi-entegrasyonu': 'edi-integration',
 }
 
 const enToTrMap = new Map(Object.entries(serviceSlugMap).map(([tr, en]) => [en, tr]))

@@ -6,6 +6,7 @@ import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
 import { createPageMetadata } from '@/lib/seo'
 import { ServicesSeoContent } from '@/components/home/services-seo-content'
+import { EdiSpotlight } from '@/components/edi/edi-spotlight'
 import { HomeMarkets } from '@/components/home/markets'
 import { HomeFaq } from '@/components/home/home-faq'
 import { Process } from '@/components/process'
@@ -17,6 +18,7 @@ export default function Home() {
     <>
       <Hero />
       <Services home />
+      <EdiSpotlight />
       <WhyUs />
       <Process />
       <ServicesSeoContent />

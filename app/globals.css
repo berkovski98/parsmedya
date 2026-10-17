@@ -393,3 +393,42 @@
     animation-timeline: scroll(root);
   }
 }
+
+/* EDI flow diagram: packets travel along the wires between columns. */
+@keyframes pm-wire-y {
+  0% { top: 0; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { top: calc(100% - 0.5rem); opacity: 0; }
+}
+@keyframes pm-wire-x {
+  0% { left: 0; opacity: 0; }
+  12%, 88% { opacity: 1; }
+  100% { left: calc(100% - 0.5rem); opacity: 0; }
+}
+.edi-wire > i {
+  position: absolute;
+  left: calc(50% - 0.25rem);
+  top: calc(50% - 0.25rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .edi-wire > i {
+    animation: pm-wire-y 2.6s linear infinite;
+    animation-delay: calc(var(--i, 0) * -0.87s);
+  }
+}
+@media (min-width: 768px) {
+  .edi-wire > i {
+    top: calc(50% - 0.25rem);
+    left: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .edi-wire > i {
+      animation-name: pm-wire-x;
+    }
+  }
+}

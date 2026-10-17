@@ -5,6 +5,7 @@ import { ContactActionsOnInk } from '@/components/contact-actions'
 import { localeHomePath, paths, type Locale } from '@/lib/i18n'
 import { CONTACT_EMAIL, CONTACT_LABELS, MOBILE_PHONE, OFFICE_PHONE, officePhoneDisplay, phoneDisplay } from '@/lib/contact-info'
 import { getCorporateLinks } from '@/lib/navigation'
+import { EDI_COPY, EDI_PATHS } from '@/lib/edi'
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 
@@ -49,6 +50,7 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
           <nav aria-label={english ? 'Featured services' : 'Öne çıkan hizmetler'}>
             <p className={columnTitle}>{english ? 'Services' : 'Hizmetler'}</p>
             <ul className="mt-5 space-y-3">
+              <li><Link href={EDI_PATHS[locale]} className={footerLink}>{EDI_COPY[locale].label}<span className="ml-1.5 rounded bg-accent/15 px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-accent">EDI</span></Link></li>
               {featured.map((service) => <li key={service.slug}><Link href={paths.service(locale, service.slug)} className={footerLink}>{service.title}</Link></li>)}
             </ul>
           </nav>

@@ -3,6 +3,7 @@ import { EnglishContactCta, EnglishHero, EnglishServices, EnglishWhyUs } from '@
 import { LatestBlogPosts } from '@/components/latest-blog-posts'
 import { createPageMetadata } from '@/lib/seo'
 import { ServicesSeoContent } from '@/components/home/services-seo-content'
+import { EdiSpotlight } from '@/components/edi/edi-spotlight'
 import { HomeMarkets } from '@/components/home/markets'
 import { HomeFaq } from '@/components/home/home-faq'
 import { Process } from '@/components/process'
@@ -14,6 +15,7 @@ export default function EnglishHomePage() {
     <>
       <EnglishHero />
       <EnglishServices />
+      <EdiSpotlight locale="en" />
       <EnglishWhyUs />
       <Process locale="en" />
       <ServicesSeoContent locale="en" />

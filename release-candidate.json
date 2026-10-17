@@ -1,10 +1,11 @@
 {
   "version": "1.1.14",
-  "title": "Yeni tasarım ve WhatsApp iletişimi",
-  "releaseTitle": "Yeni tasarım ve WhatsApp iletişimi",
-  "summary": "Site daha modern bir görünüme kavuştu; telefon ve WhatsApp ile tek dokunuşla iletişim eklendi.",
+  "title": "Yeni tasarım, EDI sayfası ve WhatsApp iletişimi",
+  "releaseTitle": "Yeni tasarım, EDI sayfası ve WhatsApp iletişimi",
+  "summary": "Site daha modern bir görünüme kavuştu; EDI entegrasyonu öne çıkarıldı, telefon ve WhatsApp ile tek dokunuşla iletişim eklendi.",
   "releaseNotes": [
     "Üst menü, ana sayfa girişi, hizmet kartları, blog ve alt bilgi alanı yenilendi.",
+    "EDI entegrasyonu için Türkçe ve İngilizce yeni bir tanıtım sayfası eklendi; ana sayfada, menüde ve alt bilgide öne çıkarılır.",
     "Sayfa kaydırıldıkça bölümler yumuşak geçişlerle görünür; hareket azaltma tercihi olan ziyaretçilerde animasyonlar kapanır.",
     "0539 840 18 98 numarası menüde, alt bilgide ve iletişim sayfasında tıklanabilir olarak gösterilir.",
     "WhatsApp butonları Türkçe ve İngilizce hazır mesajla yeni sekmede açılır; sağ altta sabit WhatsApp butonu bulunur.",
