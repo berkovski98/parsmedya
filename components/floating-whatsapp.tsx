@@ -29,6 +29,7 @@ export function FloatingWhatsApp({ locale }: { locale: Locale }) {
   const visible = !footerVisible
   return (
     <div
+      data-track="floating"
       className={cn(
         'fixed right-4 z-40 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] sm:right-6',
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0',

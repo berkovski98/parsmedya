@@ -12,6 +12,7 @@ import { ServiceTechStack } from '@/components/service-page/service-tech-stack'
 import { ServiceTrustBar } from '@/components/service-page/service-trust-bar'
 import { ServiceVisual } from '@/components/service-page/service-visual'
 import { EdiCallout } from '@/components/edi/edi-callout'
+import { EngagementModel } from '@/components/engagement-model'
 import type { Locale } from '@/lib/i18n'
 import { buildServicePageModel, mergeTechStack, serviceHighlights, serviceJsonLd } from '@/lib/service-page'
 import { safeJsonLd } from '@/lib/seo'
@@ -63,6 +64,7 @@ export function ServicePage({
       <ServiceBenefits model={model} whyParagraph={service.whyParsMedya} />
       <ServiceOutcomes model={model} />
       {service.useCases && service.useCases.length > 0 ? <ServiceUseCases model={model} useCases={service.useCases} /> : null}
+      <EngagementModel locale={locale} />
       <ServicePackages model={model} packages={service.packages} />
       <ServiceFaq model={model} faqs={service.faqs} />
       <ServiceRelated model={model} current={service} />

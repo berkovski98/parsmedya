@@ -6,6 +6,7 @@ import { getCitiesByRegion, getSiblingDistricts, type TurkeyCity, type TurkeyDis
 import { localRegionPath } from '@/lib/local-seo/resolve'
 import type { LocalHubModel } from '@/lib/local-seo/content'
 import { getLocalServicesByCategory } from '@/lib/services/service-registry'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 function ServiceGroups({ hrefFor, locationLabel }: { hrefFor: (slug: string) => string; locationLabel: string }) {
   const groups = getLocalServicesByCategory()
@@ -53,9 +54,7 @@ function HubHero({ model, kicker }: { model: LocalHubModel; kicker: string }) {
           <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
             Projenizi Konuşalım
           </Link>
-          <Link href="/hizmetler" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>
-            Tüm hizmetler
-          </Link>
+          <LocalContactActions locale="tr" />
         </div>
       </div>
     </section>

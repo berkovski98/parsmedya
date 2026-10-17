@@ -50,7 +50,7 @@ export function Hero({ locale = 'tr' }: { locale?: Locale }) {
   const facts = [[String(expertiseCount), t.expertiseLabel], ...t.facts]
 
   return (
-    <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">
+    <section data-track="hero" className="relative isolate overflow-hidden bg-ink text-ink-foreground">
       <div aria-hidden="true" className="bg-grid absolute inset-0 -z-10 bg-right-top text-white [mask-image:radial-gradient(ellipse_75%_70%_at_70%_30%,#000_20%,transparent_75%)]" />
       <div aria-hidden="true" className="absolute -right-40 top-1/3 -z-10 size-[38rem] rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--accent)_22%,transparent),transparent_65%)] blur-2xl" />
       <PixelField className="-z-10 hidden lg:block [mask-image:radial-gradient(ellipse_75%_70%_at_70%_30%,#000_20%,transparent_75%)]" />

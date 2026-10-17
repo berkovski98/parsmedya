@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowRight, ChevronRight, ChevronDown, FileCheck2, Gauge, ListChecks, Repeat2, Send, Waypoints } from 'lucide-react'
 import { ContactActionsOnInk } from '@/components/contact-actions'
 import { ContactCta } from '@/components/contact-cta'
+import { EngagementModel } from '@/components/engagement-model'
 import { EdiFlow } from '@/components/edi/edi-flow'
 import { PixelField } from '@/components/pixel-field'
 import { EDI_COPY, EDI_PATHS } from '@/lib/edi'
@@ -60,7 +61,7 @@ export function EdiPage({ locale }: { locale: Locale }) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(ediJsonLd(locale)) }} />
 
-      <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">
+      <section data-track="edi" className="relative isolate overflow-hidden bg-ink text-ink-foreground">
         <div aria-hidden="true" className="bg-grid absolute inset-0 -z-10 bg-right-top text-white [mask-image:radial-gradient(ellipse_80%_90%_at_75%_10%,#000_15%,transparent_75%)]" />
         <PixelField className="-z-10 hidden lg:block [mask-image:radial-gradient(ellipse_60%_90%_at_100%_0%,#000_10%,transparent_70%)]" />
         <div className="mx-auto max-w-7xl px-4 pb-16 pt-12 sm:px-6 md:pb-24 md:pt-16">
@@ -203,6 +204,7 @@ export function EdiPage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
+      <EngagementModel locale={locale} />
       <ContactCta locale={locale} />
     </>
   )

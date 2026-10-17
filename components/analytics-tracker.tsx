@@ -6,24 +6,30 @@ import {
   LAST_PATH_STORAGE_KEY,
   SESSION_STORAGE_KEY,
   VISITOR_STORAGE_KEY,
-  createAnonymousId,
   isAnalyticsDomEnabled,
   shouldSkipDuplicatePath,
 } from '@/lib/analytics-client'
+import { getOrCreateId, placementOf, trackSiteEvent } from '@/lib/analytics-events-client'
+import { captureAttribution } from '@/lib/attribution-client'
+import { contactEventForHref } from '@/lib/site-events'
 import { isTrackablePath, localeFromPath, normalizeAnalyticsPath } from '@/lib/analytics-validation'
-
-function getOrCreateId(storage: Storage, key: string) {
-  try {
-    const created = createAnonymousId(storage.getItem(key))
-    storage.setItem(key, created)
-    return created
-  } catch {
-    return createAnonymousId()
-  }
-}
 
 export function AnalyticsTracker() {
   const pathname = usePathname()
+
+  // Source of the visit (UTM / referrer) once per session, plus contact-link clicks anywhere on the site.
+  useEffect(() => {
+    const { isNew } = captureAttribution()
+    if (isNew) trackSiteEvent('session_start')
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.('a[href]')
+      if (!link) return
+      const kind = contactEventForHref(link.getAttribute('href') || '')
+      if (kind) trackSiteEvent(kind, placementOf(link))
+    }
+    document.addEventListener('click', onClick, { capture: true })
+    return () => document.removeEventListener('click', onClick, { capture: true })
+  }, [])
 
   useEffect(() => {
     try {

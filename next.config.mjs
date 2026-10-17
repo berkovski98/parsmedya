@@ -1,4 +1,4 @@
-import { TR_PREFIX_REDIRECTS } from './lib/locale-redirects.mjs'
+import { PORTFOLIO_REDIRECTS, TR_PREFIX_REDIRECTS } from './lib/locale-redirects.mjs'
 
 const PRODUCTION_SITE_URL = 'https://parsmedya.net'
 
@@ -59,7 +59,7 @@ const nextConfig = {
     })),
   },
   async redirects() {
-    return TR_PREFIX_REDIRECTS
+    return [...TR_PREFIX_REDIRECTS, ...PORTFOLIO_REDIRECTS]
   },
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }]

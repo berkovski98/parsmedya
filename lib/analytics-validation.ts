@@ -1,3 +1,4 @@
+import { type Attribution, SITE_EVENT_TYPES, type SiteEventType, cleanAttribution, cleanTarget } from '@/lib/site-events'
 const excludedPrefixes = ['/admin', '/api', '/sitemaps', '/_next']
 const excludedPaths = ['/sitemap.xml', '/sitemap-en.xml', '/sitemap-tr.xml', '/robots.txt', '/favicon.ico', '/icon.svg']
 const assetPattern = /\.(?:css|js|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|xml|txt)$/i
@@ -46,6 +47,36 @@ export function sanitizeReferrer(referrer: string | undefined) {
     return `${url.protocol}//${url.host}${url.pathname}`
   } catch {
     return trimmed.split('?')[0].split('#')[0]
+  }
+}
+
+export interface SiteEventPayload extends Attribution {
+  event: SiteEventType
+  path: string
+  visitorId: string
+  sessionId: string
+  locale: 'tr' | 'en'
+  target?: string
+}
+
+/** Validates a conversion event (anything other than page_view). */
+export function validateSiteEventPayload(value: unknown): SiteEventPayload | null {
+  if (!value || typeof value !== 'object') return null
+  const payload = value as Record<string, unknown>
+  const event = payload.event
+  if (typeof event !== 'string' || !(SITE_EVENT_TYPES as readonly string[]).includes(event)) return null
+  const path = normalizeAnalyticsPath(typeof payload.pathname === 'string' ? payload.pathname : '')
+  if (!isTrackablePath(path)) return null
+  if (typeof payload.visitorId !== 'string' || !idPattern.test(payload.visitorId)) return null
+  if (typeof payload.sessionId !== 'string' || !idPattern.test(payload.sessionId)) return null
+  return {
+    event: event as SiteEventType,
+    path,
+    visitorId: payload.visitorId,
+    sessionId: payload.sessionId,
+    locale: payload.locale === 'en' || payload.locale === 'tr' ? payload.locale : localeFromPath(path),
+    target: cleanTarget(payload.target),
+    ...cleanAttribution(payload),
   }
 }
 

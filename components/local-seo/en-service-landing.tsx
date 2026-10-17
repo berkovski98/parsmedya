@@ -4,6 +4,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { LocalBreadcrumbs } from '@/components/local-seo/breadcrumbs'
 import type { EnLocalServicePageModel } from '@/lib/local-seo/en-content'
 import { cn } from '@/lib/utils'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 function Section({ id, title, children, className }: { id?: string; title: string; children: ReactNode; className?: string }) {
   return (
@@ -29,7 +30,7 @@ export function EnServiceLanding({ model }: { model: EnLocalServicePageModel }) 
           <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{model.heroDescription}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/en/contact" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>Discuss Your Project</Link>
-            <Link href="/en/services" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5' })}>All Services</Link>
+            <LocalContactActions locale="en" />
           </div>
         </div>
       </section>
@@ -177,7 +178,7 @@ export function EnServiceLanding({ model }: { model: EnLocalServicePageModel }) 
           <p className="mt-4 max-w-2xl text-pretty text-primary-foreground/80">{model.ctaText}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/en/contact" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>Tell Us About Your Project</Link>
-            <Link href="mailto:info@parsmedya.net" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 border-primary-foreground/20 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10' })}>Get in Touch</Link>
+            <LocalContactActions locale="en" tone="dark" />
           </div>
         </div>
       </section>

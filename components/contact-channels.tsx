@@ -12,7 +12,7 @@ export function ContactChannels({ locale }: { locale: Locale }) {
   const arrow = <ArrowUpRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" aria-hidden="true" />
 
   return (
-    <div className="mt-10 space-y-3">
+    <div className="mt-10 space-y-3" data-track="contact_page">
       <a href={whatsappHref(locale)} target="_blank" rel="noopener noreferrer" aria-label={text.whatsappAria} className={row}>
         <span className={`${icon} bg-[#25D366] text-ink`}><WhatsAppIcon className="size-6" /></span>
         <span className="min-w-0">

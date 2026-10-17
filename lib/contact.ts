@@ -14,6 +14,21 @@ export interface ContactMessage {
   created_at: string
   updated_at: string
   locale?: 'tr' | 'en'
+  source_path?: string | null
+  landing_path?: string | null
+  referrer?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+}
+
+/** Human-readable traffic source of a contact request, or null when nothing was recorded. */
+export function contactSourceLabel(message: Pick<ContactMessage, 'utm_source' | 'utm_medium' | 'utm_campaign' | 'referrer'>) {
+  if (message.utm_source) return [message.utm_source, message.utm_medium, message.utm_campaign].filter(Boolean).join(' / ')
+  if (message.referrer) {
+    try { return new URL(message.referrer).host.replace(/^www\./, '') } catch { return message.referrer }
+  }
+  return null
 }
 
 export const contactStatusLabels: Record<ContactStatus, string> = {

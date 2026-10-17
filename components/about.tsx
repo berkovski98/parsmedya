@@ -1,5 +1,8 @@
 import { Target, Eye, Gauge } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { CASE_STUDIES } from '@/lib/company-profile'
+import { INTERNATIONAL_STATEMENT } from '@/lib/company-claims'
 import { CountUp } from '@/components/motion/count-up'
 import { stagger } from '@/lib/motion'
 
@@ -39,30 +42,27 @@ export function About() {
               fikirlerinizi ölçeklenebilir ve güvenli teknolojilere dönüştürüyoruz.
             </p>
             <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-              Kurulduğumuz günden bu yana onlarca markayla çalıştık; her projede önceliğimiz
+              Farklı sektörlerden markalarla çalıştık; her projede önceliğimiz
               işinizi gerçekten ileri taşıyan, sürdürülebilir ve bakımı kolay ürünler ortaya
               koymak oldu. Uzun vadeli iş birliklerine inanır, teslimden sonra da yanınızda kalırız.
             </p>
             <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-              İstanbul&apos;dan başlayan hizmet ağımızı; Dubai, Moskova ve
-              İsviçre&apos;deki iş bağlantılarımız, farklı pazarlardaki proje
-              deneyimimiz ve global hizmet yaklaşımımızla uluslararası ölçekte
-              genişletiyoruz. Markaların farklı ülkelerdeki dijital ihtiyaçlarına,
-              yerel dinamikleri gözeten sürdürülebilir çözümler üretiyoruz.
+              {INTERNATIONAL_STATEMENT.tr} Markaların farklı ülkelerdeki dijital
+              ihtiyaçlarına, yerel dinamikleri gözeten sürdürülebilir çözümler üretiyoruz.
             </p>
 
             <dl className="mt-8 grid grid-cols-3 gap-6 border-t border-border pt-8">
               <div>
-                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="120+" /></dt>
-                <dd className="mt-1 text-sm text-muted-foreground">Tamamlanan proje</dd>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value={String(CASE_STUDIES.length)} /></dt>
+                <dd className="mt-1 text-sm text-muted-foreground"><Link href="/referanslar" className="underline-offset-4 hover:text-foreground hover:underline">Yayındaki referans projesi</Link></dd>
               </div>
               <div>
-                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="8+" /></dt>
-                <dd className="mt-1 text-sm text-muted-foreground">Yıllık deneyim</dd>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="4" /></dt>
+                <dd className="mt-1 text-sm text-muted-foreground">Adımlı şeffaf süreç</dd>
               </div>
               <div>
-                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground"><CountUp value="%98" /></dt>
-                <dd className="mt-1 text-sm text-muted-foreground">Müşteri memnuniyeti</dd>
+                <dt className="font-display text-3xl font-extrabold tracking-tight text-foreground">TR · EN</dt>
+                <dd className="mt-1 text-sm text-muted-foreground">Çok dilli projeler</dd>
               </div>
             </dl>
           </div>

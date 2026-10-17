@@ -5,6 +5,7 @@ import { LocalServiceHero } from '@/components/local-seo/service-hero'
 import type { LocalServicePageModel } from '@/lib/local-seo/content'
 import { inPlace, ofPlace } from '@/lib/local-seo/text-utils'
 import { cn } from '@/lib/utils'
+import { LocalContactActions } from '@/components/local-seo/local-contact-actions'
 
 function Section({
   id,
@@ -211,9 +212,7 @@ export function LocalServiceLanding({ model }: { model: LocalServicePageModel })
             <Link href="/iletisim" className={buttonVariants({ size: 'lg', className: 'h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90' })}>
               Projenizi Anlatın
             </Link>
-            <Link href="mailto:info@parsmedya.net" className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 border-primary-foreground/20 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10' })}>
-              İletişime Geçin
-            </Link>
+            <LocalContactActions locale="tr" tone="dark" />
           </div>
         </div>
       </section>

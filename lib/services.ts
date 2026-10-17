@@ -66,9 +66,9 @@ const legacyServices: Service[] = [
       'Google Core Web Vitals uyumlu altyapı',
     ],
     stats: [
-      { value: '90+', label: 'Yayınlanan web projesi' },
-      { value: '1.2sn', label: 'Ortalama yüklenme süresi' },
-      { value: '%99.9', label: 'Kesintisiz çalışma oranı' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
@@ -193,9 +193,9 @@ const legacyServices: Service[] = [
       'App Store ve Google Play yayın yönetimi dahil',
     ],
     stats: [
-      { value: '40+', label: 'Yayınlanan mobil uygulama' },
-      { value: '4.7', label: 'Ortalama mağaza puanı' },
-      { value: '2x', label: 'Daha hızlı geliştirme süreci' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
@@ -320,9 +320,9 @@ const legacyServices: Service[] = [
       'Dönüşüm odaklı, hızlı mağaza deneyimi',
     ],
     stats: [
-      { value: '%35', label: 'Ortalama dönüşüm artışı' },
-      { value: '50+', label: 'Kurulan online mağaza' },
-      { value: '7/24', label: 'Kesintisiz satış altyapısı' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
@@ -448,9 +448,9 @@ const legacyServices: Service[] = [
       'Şeffaf raporlama ve düzenli iyileştirme',
     ],
     stats: [
-      { value: '%180', label: 'Ortalama organik trafik artışı' },
-      { value: 'İlk 3', label: 'Hedef kelimelerde sıralama' },
-      { value: '3x', label: 'Reklam yatırım getirisi' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
@@ -578,9 +578,9 @@ const legacyServices: Service[] = [
       'Ölçeklenebilir tasarım sistemi teslimatı',
     ],
     stats: [
-      { value: '%45', label: 'Ortalama dönüşüm iyileşmesi' },
-      { value: '60+', label: 'Tamamlanan tasarım projesi' },
-      { value: '2 hafta', label: 'İlk prototip teslim süresi' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
@@ -703,9 +703,9 @@ const legacyServices: Service[] = [
       'CI/CD ile hızlı ve güvenli yayın süreçleri',
     ],
     stats: [
-      { value: '%40', label: 'Ortalama altyapı maliyet tasarrufu' },
-      { value: '99.9%', label: 'Hedeflenen sistem erişilebilirliği' },
-      { value: '10+', label: 'Yıl birikimli teknik tecrübe' },
+      { value: 'Uçtan uca', label: 'Analizden canlıya alma süreci' },
+      { value: 'Güvenli', label: 'Rol ve veri odaklı mimari' },
+      { value: 'Ölçeklenebilir', label: 'Büyümeye hazır altyapı' },
     ],
     features: [
       {
