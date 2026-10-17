@@ -1,4 +1,5 @@
 import 'server-only'
+import { isMissingFunctionError } from '@/lib/site-events'
 import { mapRpcResult } from '@/lib/analytics-query'
 import type { AnalyticsDetails, AnalyticsQueryResult, AnalyticsSummary } from '@/lib/analytics-types'
 import { createClient } from '@/lib/supabase/server'
@@ -99,5 +100,29 @@ export async function getAnalyticsDetails(): Promise<AnalyticsQueryResult<Analyt
         message: error instanceof Error ? error.message : 'İstatistik verileri alınamadı.',
       },
     }
+  }
+}
+
+export type ConversionSummary = {
+  events: Partial<Record<'session_start' | 'whatsapp_click' | 'phone_click' | 'email_click' | 'form_submit', number>>
+  contact_messages: number
+  sources: { source: string; sessions: number; conversions: number }[]
+  targets: { event: string; target: string; total: number }[]
+}
+
+/** Conversion summary for the last 30 days; `missing` is true until migration 010 is applied. */
+export async function getConversionSummary(): Promise<{ ok: true; data: ConversionSummary } | { ok: false; missing: boolean }> {
+  try {
+    const { data, error } = await (await createClient()).rpc('get_conversion_summary')
+    if (error) {
+      const missing = isMissingFunctionError(error)
+      if (!missing) logAnalyticsError('conversions', error)
+      return { ok: false, missing }
+    }
+    const value = (data || {}) as Partial<ConversionSummary>
+    return { ok: true, data: { events: value.events || {}, contact_messages: Number(value.contact_messages || 0), sources: value.sources || [], targets: value.targets || [] } }
+  } catch (error) {
+    logAnalyticsError('conversions', error)
+    return { ok: false, missing: false }
   }
 }

@@ -23,7 +23,7 @@ const content = {
 export function ContactCta({ locale = 'tr' }: { locale?: Locale }) {
   const t = content[locale]
   return (
-    <section id={locale === 'tr' ? 'iletisim' : undefined} className="bg-background px-4 pb-16 pt-6 sm:px-6 md:pb-24 md:pt-10">
+    <section id={locale === 'tr' ? 'iletisim' : undefined} data-track="cta" className="bg-background px-4 pb-16 pt-6 sm:px-6 md:pb-24 md:pt-10">
       <div data-reveal="scale" className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl bg-ink px-6 py-14 text-ink-foreground sm:px-12 md:py-20 lg:px-16">
         <div aria-hidden="true" className="bg-grid absolute inset-0 -z-10 bg-right-top text-white [mask-image:radial-gradient(ellipse_70%_90%_at_100%_0%,#000,transparent_70%)]" />
         <PixelField className="-z-10 hidden md:block [mask-image:radial-gradient(ellipse_70%_90%_at_100%_0%,#000,transparent_70%)]" />

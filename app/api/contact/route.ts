@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { validateContactPayload } from '@/lib/contact'
+import { cleanAttribution, cleanPath, isMissingFunctionError } from '@/lib/site-events'
 
 const recentSubmissions = new Map<string, number>()
 const RATE_LIMIT_MS = 30_000
@@ -21,7 +22,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Mesajınız kısa süre önce gönderildi. Lütfen bekleyip tekrar deneyin.' }, { status: 429 })
     }
 
-    const { error } = await (await createClient()).rpc('submit_contact_message', {
+    const supabase = await createClient()
+    const base = {
       contact_name: input.name,
       contact_email: input.email,
       contact_phone: input.phone,
@@ -29,7 +31,19 @@ export async function POST(request: Request) {
       contact_subject: input.subject,
       contact_message: input.message,
       contact_locale: body?.locale === 'en' ? 'en' : 'tr',
+    }
+    const source = cleanAttribution(body)
+    let { error } = await supabase.rpc('submit_contact_message_v2', {
+      ...base,
+      contact_source_path: cleanPath(body?.sourcePath) || null,
+      contact_landing_path: source.landingPath || null,
+      contact_referrer: source.referrer || null,
+      contact_utm_source: source.utmSource || null,
+      contact_utm_medium: source.utmMedium || null,
+      contact_utm_campaign: source.utmCampaign || null,
     })
+    // Before migration 010 is applied only the original function exists.
+    if (error && isMissingFunctionError(error)) ({ error } = await supabase.rpc('submit_contact_message', base))
     if (error) throw error
     recentSubmissions.set(fingerprint, Date.now())
     return NextResponse.json({ ok: true }, { status: 201 })
