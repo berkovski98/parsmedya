@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, Plus } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { safeJsonLd } from '@/lib/seo'
+import { canonicalAbsoluteUrl } from '@/lib/site-url'
 
 type Faq = { question: string; answer: string }
 
@@ -41,6 +42,8 @@ export function HomeFaq({ locale = 'tr' }: { locale?: Locale }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    '@id': `${canonicalAbsoluteUrl(locale === 'en' ? '/en' : '/')}#faq`,
+    inLanguage: locale === 'en' ? 'en' : 'tr-TR',
     mainEntity: t.faqs.map((faq) => ({ '@type': 'Question', name: faq.question, acceptedAnswer: { '@type': 'Answer', text: faq.answer } })),
   }
 

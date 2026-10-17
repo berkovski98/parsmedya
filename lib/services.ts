@@ -57,6 +57,7 @@ const legacyServices: Service[] = [
     description:
       'Kurumsal, hızlı ve SEO uyumlu web siteleri. Modern teknolojilerle ölçeklenebilir çözümler.',
     tagline: 'Markanızı en iyi yansıtan dijital vitrin',
+    benefits: ['Markanızı güven veren bir dijital vitrinle tanıtır', 'Hızlı açılan sayfalarla ziyaretçiyi kaybetmez', 'Arama motorlarında bulunabilirliği destekler', 'İçerikleri ekibinizin kolayca güncellemesini sağlar'],
     intro:
       'Kurumsal kimliğinizi güçlü şekilde yansıtan, hızlı yüklenen ve arama motorlarıyla uyumlu web siteleri geliştiriyoruz. Modern teknolojilerle kurulan altyapı sayesinde siteniz büyüdükçe sorunsuz ölçeklenir.',
     highlights: [
@@ -438,6 +439,7 @@ const legacyServices: Service[] = [
     description:
       'Arama motorlarında üst sıralara taşıyan strateji, içerik ve reklam yönetimi.',
     tagline: 'Doğru kitleye ulaşın',
+    benefits: ['Arama motorlarında görünürlüğü artırır', 'Reklam bütçesini ölçülebilir hedeflere bağlar', 'Doğru kitleden nitelikli ziyaret çeker', 'Kararları düzenli raporlarla destekler'],
     intro:
       'Arama motorlarında üst sıralara taşıyan strateji, içerik üretimi ve reklam yönetimi sunuyoruz. Veriye dayalı yaklaşımla bütçenizi en verimli şekilde değerlendiriyoruz.',
     highlights: [

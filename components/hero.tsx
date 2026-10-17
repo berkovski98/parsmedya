@@ -8,7 +8,7 @@ import { PointerParallax } from '@/components/motion/pointer-parallax'
 import { CONTACT_LABELS } from '@/lib/contact-info'
 import type { Locale } from '@/lib/i18n'
 import { depthStyle, stagger } from '@/lib/motion'
-import { EDI_COPY } from '@/lib/edi'
+import { EDI_COPY, EDI_PATHS } from '@/lib/edi'
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 
@@ -23,7 +23,7 @@ const copy = {
     expertiseLabel: 'Uzmanlık alanı',
     facts: [['4 adım', 'Şeffaf çalışma süreci'], ['TR · EN', 'Çok dilli projeler']],
     imageAlt: 'Pars Medya tarafından geliştirilen web ve mobil uygulama arayüzü',
-    chips: ['Güvenlik öncelikli, KVKK uyumlu', 'Performans odaklı geliştirme'],
+    chips: ['Güvenlik öncelikli, KVKK gerekliliklerini gözeten', 'Performans odaklı geliştirme'],
     marquee: 'Uzmanlık alanlarımız',
   },
   en: {
@@ -46,7 +46,8 @@ export function Hero({ locale = 'tr' }: { locale?: Locale }) {
   const source = locale === 'en' ? englishServices : services
   const capabilities = [EDI_COPY[locale].label, ...source.slice(0, 13).map((service) => service.title)]
   // Only verifiable facts here: catalogue services plus EDI integration, which has its own landing page.
-  const facts = [[String(source.length + 1), t.expertiseLabel], ...t.facts]
+  const expertiseCount = new Set([...source.map((service) => service.slug), EDI_PATHS[locale]]).size
+  const facts = [[String(expertiseCount), t.expertiseLabel], ...t.facts]
 
   return (
     <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">
@@ -65,6 +66,8 @@ export function Hero({ locale = 'tr' }: { locale?: Locale }) {
             {t.lines.map((line, index) => (
               <span key={line.text} className="hero-line">
                 <span style={stagger(index)} className={'accent' in line && line.accent ? 'text-accent' : undefined}>{line.text}</span>
+                {/* Lines are block-level; the space keeps the heading text readable for search engines and screen readers. */}
+                {index < t.lines.length - 1 ? ' ' : null}
               </span>
             ))}
           </h1>

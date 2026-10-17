@@ -131,7 +131,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
         className="group/logo flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-ink"
         aria-label={english ? 'Pars Medya home' : 'Pars Medya ana sayfa'}
       >
-        <Image src="/parsmedya-logo.png" alt="Pars Medya" width={196} height={40} sizes="196px" className="h-7 w-auto transition-opacity duration-300 group-hover/logo:opacity-90 lg:h-8" />
+        <Image src="/parsmedya-logo.png" alt="Pars Medya" width={196} height={40} sizes="196px" className="h-7 w-auto transition-opacity duration-300 group-hover/logo:opacity-90 lg:h-8" loading="eager" fetchPriority="high" />
       </Link>
 
       <nav className="relative hidden items-center gap-5 lg:flex xl:gap-7" aria-label={english ? 'Main menu' : 'Ana menü'}>

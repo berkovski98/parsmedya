@@ -1,6 +1,9 @@
 import { Globe2 } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { stagger } from '@/lib/motion'
+import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
+import { getRegionLinks } from '@/lib/navigation'
 import { services } from '@/lib/services'
 
 /** Display order for the stack; only names that the service catalogue itself lists are shown. */
@@ -73,6 +76,14 @@ export function HomeMarkets({ locale = 'tr' }: { locale?: Locale }) {
             {t.locations.map((location) => <li key={location} className="bg-ink px-4 py-4 text-center font-display text-base font-semibold text-white sm:text-lg">{location}</li>)}
           </ul>
           <p className="mt-6 text-sm font-medium text-white/60">{t.languages}</p>
+          <nav aria-label={locale === 'en' ? 'Service areas in Türkiye' : 'Türkiye hizmet bölgeleri'} className="mt-8 border-t border-white/10 pt-6">
+            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-white/45">{locale === 'en' ? 'Service areas in Türkiye' : 'Türkiye’deki hizmet bölgelerimiz'}</p>
+            <ul className="mt-4 flex flex-wrap gap-2">
+              {getRegionLinks(locale).map((region) => (
+                <li key={region.href}><Link href={region.href} className="group inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1.5 text-sm text-white/80 transition-colors hover:border-accent hover:text-white">{region.label}<ArrowUpRight className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" /></Link></li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
     </section>

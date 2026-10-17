@@ -298,8 +298,8 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .hero-line > span {
-    animation: pm-line-up 1s var(--ease-out-expo) both;
-    animation-delay: calc(var(--i, 0) * 90ms + 60ms);
+    animation: pm-line-up 0.6s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
   }
   .intro {
     animation: pm-fade-up 0.9s var(--ease-out-expo) both;
