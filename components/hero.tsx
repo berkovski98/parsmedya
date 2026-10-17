@@ -15,12 +15,13 @@ const copy = {
   tr: {
     badge: 'Güvenilir dijital çözüm ortağınız',
     lines: [{ text: 'İşinizi büyüten' }, { text: 'web ve yazılım', accent: true }, { text: 'çözümleri' }],
-    intro: 'ParsMedya olarak; kurumsal web siteleri, mobil uygulamalar ve e-ticaret sistemleri geliştiriyoruz. Markanızı dijitalde güçlü, hızlı ve güvenilir bir şekilde konumlandırıyoruz.',
+    intro: 'Pars Medya; özel yazılım, kurumsal platformlar, web siteleri, mobil uygulamalar ve ölçülebilir dijital büyüme çözümlerini tek ve sorumlu bir ekiple hayata geçirir.',
     primary: { label: 'Ücretsiz Teklif Al', href: '/iletisim' },
     secondary: { label: 'Hizmetleri İncele', href: '/hizmetler' },
     whatsappLead: 'ya da hemen',
-    stats: [['120+', 'Tamamlanan Proje'], ['8 Yıl', 'Sektör Deneyimi'], ['%98', 'Müşteri Memnuniyeti']],
-    imageAlt: 'ParsMedya tarafından geliştirilen web ve mobil uygulama arayüzü',
+    expertiseLabel: 'Uzmanlık alanı',
+    facts: [['4 adım', 'Şeffaf çalışma süreci'], ['TR · EN', 'Çok dilli projeler']],
+    imageAlt: 'Pars Medya tarafından geliştirilen web ve mobil uygulama arayüzü',
     chips: ['Güvenlik öncelikli, KVKK uyumlu', 'Performans odaklı geliştirme'],
     marquee: 'Uzmanlık alanlarımız',
   },
@@ -31,7 +32,8 @@ const copy = {
     primary: { label: 'Get a Free Proposal', href: '/en/contact' },
     secondary: { label: 'Explore Services', href: '/en/services' },
     whatsappLead: 'or',
-    stats: [['120+', 'Projects Delivered'], ['8 Years', 'Industry Experience'], ['98%', 'Client Satisfaction']],
+    expertiseLabel: 'Areas of expertise',
+    facts: [['4 steps', 'Transparent delivery process'], ['TR · EN', 'Multilingual projects']],
     imageAlt: 'Digital products and software solutions developed by Pars Medya',
     chips: ['Security by design', 'Performance-focused engineering'],
     marquee: 'Areas of expertise',
@@ -40,7 +42,10 @@ const copy = {
 
 export function Hero({ locale = 'tr' }: { locale?: Locale }) {
   const t = copy[locale]
-  const capabilities = (locale === 'en' ? englishServices : services).slice(0, 14).map((service) => service.title)
+  const source = locale === 'en' ? englishServices : services
+  const capabilities = source.slice(0, 14).map((service) => service.title)
+  // Only verifiable facts here: the service count comes from the catalogue itself.
+  const facts = [[String(source.length), t.expertiseLabel], ...t.facts]
 
   return (
     <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">
@@ -81,7 +86,7 @@ export function Hero({ locale = 'tr' }: { locale?: Locale }) {
           </p>
 
           <dl className="intro mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-8" style={stagger(5)}>
-            {t.stats.map(([value, label]) => (
+            {facts.map(([value, label]) => (
               <div key={label} className="flex flex-col">
                 <dt className="order-2 mt-1 text-xs text-white/55 sm:text-sm">{label}</dt>
                 <dd className="order-1 font-display text-2xl font-extrabold tracking-tight text-white sm:text-[2rem]"><CountUp value={value} /></dd>
