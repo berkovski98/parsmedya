@@ -45,6 +45,8 @@ export type CaseStudy = {
   /** What was delivered. Facts about the build only — no invented metrics. */
   delivered: Localized<string[]>
   technologies: string[]
+  /** Client name and public site; only for studies the owner cleared for naming. */
+  client?: { name: string; url?: string }
   /** The client is not named and nothing identifying is published. */
   anonymized: boolean
   /** Written permission from the client to publish their name and results. */
@@ -56,6 +58,28 @@ export type CaseStudy = {
  * Add a client name or measured results only with the client's written approval.
  */
 export const CASE_STUDIES: CaseStudy[] = [
+  {
+    slug: 'swiss-sales-partners',
+    sector: { tr: 'İsviçre · B2B satış ve eğitim', en: 'Switzerland · B2B sales & training' },
+    title: { tr: 'Swiss Sales Partners için beş dilli kurumsal site ve saha CRM’i', en: 'Five-language website and field CRM for Swiss Sales Partners' },
+    problem: {
+      tr: 'İsviçre pazarında hizmet veren şirketin tanıtımını, eğitim kataloğunu ve broşürlerini beş dilde tek yerden yönetmesi; saha satış ekibinin müşteri ve fırsatlarını takip edebilmesi gerekiyordu.',
+      en: 'The company needed to run its website, training catalogue and brochures in five languages from one place, and give its field sales team a way to track customers and opportunities.',
+    },
+    solution: {
+      tr: 'Fransızca, Almanca, İtalyanca, İngilizce ve Türkçe kurumsal site; yönetim panelinden güncellenen eğitim kataloğu ve PDF broşür yönetimi; rol bazlı yetkilendirme ve saha CRM’i; İsviçre’nin 26 kantonunu kapsayan yerel SEO yapısı kurduk.',
+      en: 'We built a French, German, Italian, English and Turkish website; a training catalogue and PDF brochure management run from the admin panel; role-based access and a field CRM; and a local SEO structure covering Switzerland’s 26 cantons.',
+    },
+    delivered: {
+      tr: ['FR, DE, IT, EN ve TR dillerinde kurumsal site', 'Eğitim kataloğu ve PDF broşür yönetimi', 'Rol bazlı yönetim paneli ve saha CRM’i', '26 kantonu kapsayan yerel SEO sayfaları'],
+      en: ['Corporate website in FR, DE, IT, EN and TR', 'Training catalogue and PDF brochure management', 'Role-based admin panel and field CRM', 'Local SEO pages covering all 26 cantons'],
+    },
+    technologies: ['React', 'TypeScript', 'TanStack Start', 'Supabase', 'Tailwind CSS'],
+    client: { name: 'Swiss Sales Partners', url: 'https://swisssales-partners.ch' },
+    anonymized: false,
+    // The owner listed this client as a named reference on 2026-10-17.
+    clientApproved: true,
+  },
   {
     slug: 'konteyner-edi-platformu',
     sector: { tr: 'Konteyner deposu ve lojistik', en: 'Container depot & logistics' },

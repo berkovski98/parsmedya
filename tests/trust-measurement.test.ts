@@ -66,17 +66,23 @@ test('contact source label prefers UTM, then referrer host', () => {
   assert.equal(contactSourceLabel({ utm_source: null, utm_medium: null, utm_campaign: null, referrer: null }), null)
 })
 
-test('references are published with anonymized real projects only', () => {
+test('references list real projects; only owner-cleared clients are named', () => {
   assert.equal(REFERENCES_PUBLISHED, true)
-  assert.equal(CASE_STUDIES.length, 4)
+  assert.equal(CASE_STUDIES.length, 5)
   for (const study of CASE_STUDIES) {
     assert.ok(isPublishableCaseStudy(study))
-    assert.equal(study.anonymized, true)
     assert.equal(study.delivered.tr.length, study.delivered.en.length)
-    // No client names or invented metrics in anonymized studies.
-    const text = JSON.stringify(study)
-    assert.doesNotMatch(text, /Hapag|Doğan|Servisium|Bidolu|%\d|\d+\s?%/)
+    if (study.client) {
+      assert.equal(study.clientApproved, true, `${study.slug} is named without approval`)
+      assert.equal(study.anonymized, false)
+    } else {
+      assert.equal(study.anonymized, true)
+      // No client names or invented metrics in anonymized studies.
+      assert.doesNotMatch(JSON.stringify(study), /Hapag|Doğan|Servisium|Bidolu|%\d|\d+\s?%/)
+    }
   }
+  const ssp = CASE_STUDIES.find((study) => study.slug === 'swiss-sales-partners')
+  assert.equal(ssp?.client?.url, 'https://swisssales-partners.ch')
   assert.deepEqual(publishedOptionalPaths('tr').filter((path) => path === '/referanslar'), ['/referanslar'])
   assert.ok(getCorporateLinks('tr').some((link) => link.href === '/referanslar'))
   assert.ok(getCorporateLinks('en').some((link) => link.href === '/en/references'))
