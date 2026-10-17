@@ -6,20 +6,20 @@ const content = {
     eyebrow: 'Çalışma Sürecimiz',
     title: 'Fikirden yayına dört adım',
     steps: [
-      { title: 'Keşif & Analiz', description: 'İhtiyaçlarınızı dinliyor, hedeflerinizi ve rakiplerinizi analiz ediyoruz.' },
-      { title: 'Tasarım & Planlama', description: 'Kullanıcı deneyimini önceleyen arayüz tasarımları ve yol haritası oluşturuyoruz.' },
-      { title: 'Geliştirme', description: 'Modern teknolojilerle ölçeklenebilir, güvenli ve hızlı çözümler kodluyoruz.' },
-      { title: 'Yayın & Destek', description: 'Projeyi yayına alıyor, ardından sürekli bakım ve destek sağlıyoruz.' },
+      { title: 'Keşif & Analiz', description: 'İhtiyaçlarınızı dinliyor; hedeflerinizi, kullanıcılarınızı, iş süreçlerinizi ve rakiplerinizi analiz ediyoruz.' },
+      { title: 'Tasarım & Planlama', description: 'Teknik mimariyi ve yol haritasını planlıyor, kullanıcı deneyimini önceleyen UI/UX tasarımları hazırlıyoruz.' },
+      { title: 'Geliştirme', description: 'Ölçeklenebilir, güvenli ve hızlı yazılımı entegrasyonlarıyla birlikte geliştiriyor; test ve güvenlik kontrollerinden geçiriyoruz.' },
+      { title: 'Yayın & Destek', description: 'Projeyi kontrollü biçimde canlıya alıyor, ardından bakım, ölçümleme ve sürekli geliştirmeyle destekliyoruz.' },
     ],
   },
   en: {
     eyebrow: 'How We Work',
     title: 'From idea to launch in four steps',
     steps: [
-      { title: 'Discovery & Analysis', description: 'We listen to your needs and analyse your goals, users and competitors.' },
-      { title: 'Design & Planning', description: 'We create a roadmap and interface designs that put user experience first.' },
-      { title: 'Development', description: 'We build scalable, secure and fast solutions with modern technology.' },
-      { title: 'Launch & Support', description: 'We take the product live and continue with maintenance and support.' },
+      { title: 'Discovery & Analysis', description: 'We listen to your needs and analyse your goals, users, business processes and competitors.' },
+      { title: 'Design & Planning', description: 'We plan the technical architecture and roadmap, then design UI/UX that puts users first.' },
+      { title: 'Development', description: 'We build scalable, secure and fast software with its integrations, then put it through testing and security review.' },
+      { title: 'Launch & Support', description: 'We launch in a controlled way and continue with maintenance, measurement and continuous improvement.' },
     ],
   },
 } as const

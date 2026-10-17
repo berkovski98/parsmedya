@@ -8,6 +8,8 @@ export async function LatestBlogPosts({ locale = 'tr' }: { locale?: 'tr' | 'en' 
   const latestPosts = await getPublishedPosts(3, locale)
   const href = isEnglish ? '/en/blog' : '/blog'
   const allLabel = isEnglish ? 'View All Articles' : 'Tüm Yazıları Gör'
+  // A placeholder section adds no value on the home page (and reads as thin content), so skip it until posts exist.
+  if (latestPosts.length === 0) return null
 
   return (
     <section
@@ -33,15 +35,9 @@ export async function LatestBlogPosts({ locale = 'tr' }: { locale?: 'tr' | 'en' 
           </Link>
         </div>
 
-        {latestPosts.length > 0 ? (
-          <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-            {latestPosts.map((post, index) => <BlogCard key={post.slug} post={post} locale={locale} index={index} />)}
-          </div>
-        ) : (
-          <p className="mt-12 rounded-2xl border border-dashed border-border bg-secondary/40 p-8 text-sm text-muted-foreground">
-            {isEnglish ? 'New English articles will be published here soon.' : 'Yeni blog yazılarımız çok yakında burada olacak.'}
-          </p>
-        )}
+        <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+          {latestPosts.map((post, index) => <BlogCard key={post.slug} post={post} locale={locale} index={index} />)}
+        </div>
 
         <div className="mt-12 flex justify-center lg:hidden">
           <Link href={href} className="group inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">

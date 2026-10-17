@@ -67,7 +67,7 @@ export function Services({ home = false, locale = 'tr', all = false }: ServicesP
     : home ? 'Markanızı Dijital Dünyada Büyüten Hizmetler' : 'Web’den kurumsal sistemlere uçtan uca çözümler'
   const intro = english
     ? 'From strategy and product design to software engineering, integrations and digital growth, we plan every engagement around your organization’s goals.'
-    : home ? 'Pars Medya olarak markaların dijital dünyada güçlü, ölçülebilir ve sürdürülebilir bir büyüme elde etmesi için ihtiyaç duyduğu çözümleri tek çatı altında sunuyoruz. Stratejiden tasarıma, yazılımdan dijital pazarlamaya kadar tüm süreçleri markanızın hedeflerine özel olarak planlıyoruz.' : null
+    : home ? 'Stratejiden tasarıma, yazılımdan dijital pazarlamaya kadar ölçülebilir ve sürdürülebilir büyüme için ihtiyaç duyduğunuz çözümleri tek çatı altında, hedeflerinize göre planlıyoruz.' : null
   const showFooterLink = home || (english && !all)
 
   return (

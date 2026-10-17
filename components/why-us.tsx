@@ -1,19 +1,19 @@
 import Link from 'next/link'
-import { ArrowRight, Clock3, Globe2, Handshake, LifeBuoy, MessagesSquare, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Handshake, MessagesSquare, ShieldCheck, UsersRound } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
 import { stagger } from '@/lib/motion'
 
 const content = {
   tr: {
-    eyebrow: 'Neden ParsMedya?',
+    eyebrow: 'Neden Pars Medya?',
     title: 'Güvenle çalışabileceğiniz bir ekip',
     text: 'Sadece kod yazmıyor, işinizi anlıyoruz. Hedeflerinize ulaşmanız için teknolojiyi doğru şekilde kullanmanıza yardımcı oluyoruz. Uzun soluklu iş ortaklıkları kuruyoruz.',
     cta: { label: 'Bizi daha yakından tanıyın', href: '/hakkimizda' },
     reasons: [
-      { icon: MessagesSquare, title: 'Şeffaf Süreç', description: 'Projenizin her aşamasında düzenli raporlama ve net iletişim sunuyoruz.' },
-      { icon: Clock3, title: 'Zamanında Teslim', description: 'Planlanan takvime sadık kalarak projelerinizi vaktinde teslim ediyoruz.' },
-      { icon: ShieldCheck, title: 'Güvenlik Öncelikli', description: 'Güncel güvenlik standartları ve KVKK uyumlu altyapılar geliştiriyoruz.' },
-      { icon: LifeBuoy, title: 'Uzun Vadeli Destek', description: 'Yayın sonrası bakım, güncelleme ve teknik destekle yanınızdayız.' },
+      { icon: MessagesSquare, title: 'Şeffaf Süreç', description: 'Projenizin her aşamasında net kararlar, kontrol noktaları ve düzenli iletişim sunuyoruz.' },
+      { icon: UsersRound, title: 'Tek Sorumlu Ekip', description: 'Analiz, tasarım, yazılım ve dijital büyüme kararlarını aynı ekip içinde, tek bir plan üzerinden yönetiyoruz.' },
+      { icon: ShieldCheck, title: 'Güvenlik Öncelikli', description: 'Yetkilendirme, veri koruma ve KVKK gerekliliklerini ilk mimari kararlardan itibaren ele alıyoruz.' },
+      { icon: Handshake, title: 'Uzun Vadeli Destek', description: 'Yayın sonrası bakım, ölçümleme ve geliştirmeyle yanınızda olmaya devam ediyoruz.' },
     ],
   },
   en: {
@@ -23,8 +23,8 @@ const content = {
     cta: { label: 'Get to know us', href: '/en/about' },
     reasons: [
       { icon: MessagesSquare, title: 'Transparent Delivery', description: 'Clear decisions, review points and regular communication throughout the project.' },
+      { icon: UsersRound, title: 'One Accountable Team', description: 'Analysis, design, engineering and digital growth decisions are managed by one team, against one plan.' },
       { icon: ShieldCheck, title: 'Security by Design', description: 'Access, validation and data protection are considered from the first architecture decisions.' },
-      { icon: Globe2, title: 'International Perspective', description: 'Project experience and business relationships across Istanbul, Dubai, Moscow and Switzerland.' },
       { icon: Handshake, title: 'Long-Term Partnership', description: 'Maintenance, measurement and further development continue after launch.' },
     ],
   },
