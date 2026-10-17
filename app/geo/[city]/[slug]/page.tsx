@@ -25,6 +25,7 @@ export async function generateMetadata({
       title: model.title,
       description: model.description,
       canonical: model.canonicalPath,
+      indexable: model.indexable,
     })
   }
   const override = await getLocalSeoOverride(route.city.slug, null, route.service.slug)

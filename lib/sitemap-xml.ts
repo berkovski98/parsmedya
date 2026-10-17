@@ -1,4 +1,7 @@
 import { canonicalAbsoluteUrl, isLocalhostHost, PRODUCTION_SITE_HOST, PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { LEGAL_PAGES_PUBLISHED, REFERENCES_PUBLISHED } from '@/lib/company-profile'
+import { legalPagesFor, REFERENCES_PATHS } from '@/lib/legal-pages'
+import { STATIC_CONTENT_UPDATED_AT } from '@/lib/sitemap-lastmod'
 
 export type SitemapPost = {
   slug: string
@@ -16,6 +19,14 @@ export type SitemapEntry = {
 
 export const TURKISH_STATIC_PATHS = ['/', '/hakkimizda', '/vizyonumuz', '/misyonumuz', '/hizmetler', '/hizmet-bolgeleri', '/blog', '/iletisim'] as const
 export const ENGLISH_STATIC_PATHS = ['/en', '/en/about', '/en/vision', '/en/mission', '/en/services', '/en/blog', '/en/contact'] as const
+
+/** Legal and reference pages join the sitemap only once they are published (noindex until then). */
+export function publishedOptionalPaths(locale: 'tr' | 'en') {
+  return [
+    ...(LEGAL_PAGES_PUBLISHED ? legalPagesFor(locale).map((page) => page.path) : []),
+    ...(REFERENCES_PUBLISHED ? [REFERENCES_PATHS[locale]] : []),
+  ]
+}
 
 const UNPREFIXED_TURKISH_MARKERS = ['/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/hizmet-bolgeleri']
 const FORBIDDEN_PATH_PREFIXES = ['/admin', '/api', '/sitemaps']
@@ -76,12 +87,18 @@ function escapeXml(value: string) {
 
 function lastmodIso(value: Date | string) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return new Date().toISOString()
+  if (Number.isNaN(date.getTime())) return new Date(STATIC_CONTENT_UPDATED_AT).toISOString()
   return date.toISOString()
 }
 
 export function blogLastModified(post: SitemapPost) {
-  return post.updated_at || post.published_at || post.created_at || new Date().toISOString()
+  return post.updated_at || post.published_at || post.created_at || STATIC_CONTENT_UPDATED_AT
+}
+
+/** Newest post date, used as lastmod for the blog listing and the blog child sitemap. */
+export function latestBlogLastModified(posts: SitemapPost[], fallback: Date | string = STATIC_CONTENT_UPDATED_AT) {
+  const times = posts.map((post) => new Date(blogLastModified(post)).getTime()).filter((time) => !Number.isNaN(time))
+  return times.length ? new Date(Math.max(...times)).toISOString() : fallback
 }
 
 function publishedPostsForLocale(posts: SitemapPost[], locale: 'tr' | 'en') {
@@ -116,7 +133,7 @@ export function isSafeSitemapPath(path: string) {
   }
 }
 
-export function toSitemapEntry(path: string, lastModified: Date | string = new Date()): SitemapEntry | null {
+export function toSitemapEntry(path: string, lastModified: Date | string = STATIC_CONTENT_UPDATED_AT): SitemapEntry | null {
   try {
     if (!isSafeSitemapPath(path)) return null
     return { url: canonicalAbsoluteUrl(path), lastModified: lastmodIso(lastModified) }
@@ -141,15 +158,16 @@ export function filterSitemapEntries(entries: SitemapEntry[], locale: 'tr' | 'en
 export function buildTurkishSitemapEntries({
   posts = [],
   serviceSlugs = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   posts?: SitemapPost[]
   serviceSlugs?: string[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'tr')
   return compactEntries([
     ...TURKISH_STATIC_PATHS.map((path) => toSitemapEntry(path, now)),
+    ...publishedOptionalPaths('tr').map((path) => toSitemapEntry(path, now)),
     ...serviceSlugs.map((slug) => toSitemapEntry(`/hizmetler/${slug}`, now)),
     ...published.map((post) => toSitemapEntry(`/blog/${post.slug}`, blogLastModified(post))),
   ], 'tr')
@@ -158,15 +176,16 @@ export function buildTurkishSitemapEntries({
 export function buildEnglishSitemapEntries({
   posts = [],
   serviceSlugs = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   posts?: SitemapPost[]
   serviceSlugs?: string[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'en')
   return compactEntries([
-    ...ENGLISH_STATIC_PATHS.map((path) => toSitemapEntry(path, now)),
+    ...ENGLISH_STATIC_PATHS.filter((path) => path !== '/en/blog' || published.length > 0).map((path) => toSitemapEntry(path, now)),
+    ...publishedOptionalPaths('en').map((path) => toSitemapEntry(path, now)),
     ...serviceSlugs.map((slug) => toSitemapEntry(`/en/services/${slug}`, now)),
     ...published.map((post) => toSitemapEntry(`/en/blog/${post.slug}`, blogLastModified(post))),
   ], 'en')
@@ -196,54 +215,57 @@ export function childSitemapPath(file: string) {
 
 export function buildTurkishPageSitemapEntries({
   serviceSlugs = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   serviceSlugs?: string[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   return compactEntries([
     ...TURKISH_STATIC_PATHS.filter((path) => path !== '/blog').map((path) => toSitemapEntry(path, now)),
+    ...publishedOptionalPaths('tr').map((path) => toSitemapEntry(path, now)),
     ...serviceSlugs.map((slug) => toSitemapEntry(`/hizmetler/${slug}`, now)),
   ], 'tr')
 }
 
 export function buildTurkishBlogSitemapEntries({
   posts = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   posts?: SitemapPost[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'tr')
   return compactEntries([
-    toSitemapEntry('/blog', now),
+    toSitemapEntry('/blog', latestBlogLastModified(published, now)),
     ...published.map((post) => toSitemapEntry(`/blog/${post.slug}`, blogLastModified(post))),
   ], 'tr')
 }
 
 export function buildEnglishPageSitemapEntries({
   serviceSlugs = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   serviceSlugs?: string[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   return compactEntries([
     ...ENGLISH_STATIC_PATHS.filter((path) => path !== '/en/blog').map((path) => toSitemapEntry(path, now)),
+    ...publishedOptionalPaths('en').map((path) => toSitemapEntry(path, now)),
     ...serviceSlugs.map((slug) => toSitemapEntry(`/en/services/${slug}`, now)),
   ], 'en')
 }
 
 export function buildEnglishBlogSitemapEntries({
   posts = [],
-  now = new Date(),
+  now = STATIC_CONTENT_UPDATED_AT,
 }: {
   posts?: SitemapPost[]
-  now?: Date
+  now?: Date | string
 } = {}): SitemapEntry[] {
   const published = publishedPostsForLocale(posts, 'en')
+  // An empty English blog listing is noindex (Ö16), so it is only listed once posts exist.
   return compactEntries([
-    toSitemapEntry('/en/blog', now),
+    published.length ? toSitemapEntry('/en/blog', latestBlogLastModified(published, now)) : null,
     ...published.map((post) => toSitemapEntry(`/en/blog/${post.slug}`, blogLastModified(post))),
   ], 'en')
 }
@@ -279,7 +301,10 @@ export const xmlResponse = (xml: string) => new Response(xml, {
   },
 })
 
+/**
+ * Advertised in robots.txt. /sitemap-en.xml still answers (same URL as before) but is no longer
+ * advertised: every English URL it lists is already in the index's en-* child sitemaps.
+ */
 export const SITEMAP_INDEX_URLS = [
   `${PRODUCTION_SITE_URL}/sitemap.xml`,
-  `${PRODUCTION_SITE_URL}/sitemap-en.xml`,
 ] as const
