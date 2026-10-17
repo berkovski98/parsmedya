@@ -19,10 +19,10 @@ export default async function BlogPage() {
       />
 
       <section aria-label="Blog yazıları" className="bg-background">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-          {posts.length > 0 ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <BlogCard key={post.slug} post={post} />
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+          {posts.length > 0 ? <div className="grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post, index) => (
+              <BlogCard key={post.slug} post={post} index={index} />
             ))}
           </div> : <p className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">Henüz yayınlanmış bir blog yazısı bulunmuyor.</p>}
         </div>

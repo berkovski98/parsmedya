@@ -1,34 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle2 } from 'lucide-react'
+import { MapPin, Send, CheckCircle2 } from 'lucide-react'
+import { ContactChannels } from '@/components/contact-channels'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-const details = [
-  {
-    icon: Mail,
-    label: 'E-posta',
-    value: 'info@parsmedya.net',
-    href: 'mailto:info@parsmedya.net',
-  },
-  {
-    icon: Phone,
-    label: 'Telefon',
-    value: '0212 963 77 77',
-    href: 'tel:+902129637777',
-  },
-  {
-    icon: MapPin,
-    label: 'Adres',
-    value: 'İstanbul, Türkiye',
-  },
-  {
-    icon: Clock,
-    label: 'Çalışma Saatleri',
-    value: 'Hafta içi 09:00 – 18:00',
-  },
-]
 
 export function ContactSection() {
   const [sent, setSent] = useState(false)
@@ -62,12 +39,12 @@ export function ContactSection() {
 
   return (
     <section className="bg-background py-16 sm:py-24">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-2">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+          <p className="eyebrow">
             Bize Ulaşın
           </p>
-          <h2 className="mt-3 text-balance font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-display mt-5 text-balance text-[2.1rem] text-foreground sm:text-5xl">
             Projenizi konuşalım
           </h2>
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
@@ -75,33 +52,10 @@ export function ContactSection() {
             hazırlayalım. Uzman ekibimiz en geç 24 saat içinde geri dönüş yapar.
           </p>
 
-          <dl className="mt-10 grid gap-5 sm:grid-cols-2">
-            {details.map((d) => (
-              <div
-                key={d.label}
-                className="flex gap-4 rounded-xl border border-border bg-card p-5"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <d.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">{d.label}</dt>
-                  <dd className="mt-0.5 font-medium text-foreground">
-                    {d.href ? (
-                      <a href={d.href} className="transition-colors hover:text-accent">
-                        {d.value}
-                      </a>
-                    ) : (
-                      d.value
-                    )}
-                  </dd>
-                </div>
-              </div>
-            ))}
-          </dl>
+          <ContactChannels locale="tr" />
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+        <div data-reveal="scale" className="h-fit rounded-3xl border border-border bg-card p-6 shadow-[0_30px_80px_-40px_rgb(10_20_50/0.35)] sm:p-10">
           {sent ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 text-accent">
@@ -132,7 +86,7 @@ export function ContactSection() {
                     required
                     maxLength={120}
                     placeholder="Adınız Soyadınız"
-                    className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
+                    className="rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -146,7 +100,7 @@ export function ContactSection() {
                     required
                     maxLength={254}
                     placeholder="ornek@eposta.com"
-                    className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
+                    className="rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15"
                   />
                 </div>
               </div>
@@ -154,11 +108,11 @@ export function ContactSection() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label htmlFor="phone" className="text-sm font-medium text-foreground">Telefon</label>
-                  <input id="phone" name="phone" type="tel" maxLength={40} placeholder="05xx xxx xx xx" className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40" />
+                  <input id="phone" name="phone" type="tel" maxLength={40} placeholder="05xx xxx xx xx" className="rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label htmlFor="company" className="text-sm font-medium text-foreground">Firma</label>
-                  <input id="company" name="company" type="text" maxLength={150} placeholder="Firma adı" className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40" />
+                  <input id="company" name="company" type="text" maxLength={150} placeholder="Firma adı" className="rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15" />
                 </div>
               </div>
 
@@ -172,7 +126,7 @@ export function ContactSection() {
                   type="text"
                   maxLength={200}
                   placeholder="Örn. Web sitesi projesi"
-                  className="rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  className="rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15"
                 />
               </div>
 
@@ -187,7 +141,7 @@ export function ContactSection() {
                   maxLength={5000}
                   rows={5}
                   placeholder="Projenizden kısaca bahsedin..."
-                  className="resize-none rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  className="resize-none rounded-xl border border-input bg-background px-4 py-3 text-[0.9375rem] text-foreground outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-muted-foreground/80 hover:border-foreground/25 focus:border-accent focus:ring-4 focus:ring-accent/15"
                 />
               </div>
 
@@ -195,19 +149,19 @@ export function ContactSection() {
               <button
                 type="submit"
                 disabled={submitting}
-                className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
+                className={cn(buttonVariants({ size: 'lg' }), 'group h-12 w-full rounded-xl bg-ink text-[0.9375rem] font-semibold text-ink-foreground hover:bg-primary')}
               >
                 {submitting ? 'Gönderiliyor…' : 'Mesaj Gönder'}
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </button>
             </form>
           )}
         </div>
       </div>
 
-      <div className="mx-auto mt-16 max-w-6xl border-t border-border px-4 pt-16 sm:px-6 sm:pt-20">
+      <div className="mx-auto mt-16 max-w-7xl border-t border-border px-4 pt-16 sm:px-6 sm:pt-20">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-accent">
+          <p className="eyebrow">
             Uluslararası Hizmet Ağı
           </p>
           <h2 className="mt-3 text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -220,7 +174,7 @@ export function ContactSection() {
           </p>
         </div>
 
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-reveal>
           {['İstanbul', 'Dubai', 'Moskova', 'İsviçre'].map((location) => (
             <li
               key={location}

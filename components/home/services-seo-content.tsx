@@ -3,6 +3,7 @@ import { ArrowRight, Check, Globe2 } from 'lucide-react'
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 import type { Locale } from '@/lib/i18n'
+import { GuideIndex } from '@/components/home/guide-index'
 
 type GuideSection = { serviceKey: string; title: string; paragraphs: string[]; points?: string[]; anchor: string }
 
@@ -77,15 +78,19 @@ export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
     ? ['SMEs', 'Enterprise', 'E-Commerce', 'Manufacturing', 'Logistics', 'Services', 'Foreign Trade', 'Field Operations', 'Startups']
     : ['KOBİ', 'Kurumsal Şirketler', 'E-Ticaret', 'Üretim', 'Lojistik', 'Hizmet', 'Dış Ticaret', 'Saha Operasyonları', 'Girişimler']
 
-  return <section aria-labelledby="services-guide-heading" className="overflow-hidden border-b border-border bg-background">
-    <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-      <header className="max-w-4xl">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{english ? 'Digital Transformation & Software Solutions' : 'Dijital Dönüşüm ve Yazılım Çözümleri'}</p>
-        <h2 id="services-guide-heading" className="mt-3 text-balance font-display text-3xl font-bold sm:text-4xl">{english ? 'Web, Software and Digital Solutions Built for Your Business' : 'İşletmenize Özel Web, Yazılım ve Dijital Çözümler'}</h2>
+  const indexItems = sections.map((item) => ({ id: `rehber-${item.serviceKey}`, title: item.title }))
+
+  return <section aria-labelledby="services-guide-heading" className="border-t border-border bg-background">
+    <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 md:py-28">
+      <header className="max-w-4xl" data-reveal>
+        <p className="eyebrow">{english ? 'Digital Transformation & Software Solutions' : 'Dijital Dönüşüm ve Yazılım Çözümleri'}</p>
+        <h2 id="services-guide-heading" className="text-display mt-5 text-balance text-[2.1rem] sm:text-5xl">{english ? 'Web, Software and Digital Solutions Built for Your Business' : 'İşletmenize Özel Web, Yazılım ve Dijital Çözümler'}</h2>
         <div className="mt-6 space-y-4 text-lg leading-8 text-muted-foreground"><p>{english ? 'Pars Medya is more than a team that builds corporate websites. We examine business goals, users, data and daily operations before connecting product design, software engineering and measurable digital growth. This integrated approach covers web software, custom development, CRM and ERP platforms, SaaS products, mobile applications, e-commerce and API integrations.' : 'Pars Medya yalnızca kurumsal web sitesi hazırlayan bir ajans değildir. İşletmenin hedeflerini, kullanıcılarını, verisini ve günlük operasyonlarını analiz ederek tasarım, yazılım geliştirme ve ölçülebilir dijital büyüme süreçlerini bütüncül biçimde ele alırız. Web yazılım, özel yazılım geliştirme, CRM ve ERP yazılımı, SaaS, mobil uygulama, e-ticaret ve API entegrasyonu aynı iş hedefi çevresinde planlanır.'}</p><p>{english ? 'We use process automation and responsible AI where they create a clear operational advantage, while performance, security, maintainability and user experience guide every technical decision. SEO and digital marketing help the resulting product reach the right audience and turn attention into measurable action.' : 'İş süreçleri otomasyonu ve yapay zekayı yalnız açık bir operasyonel fayda sağladığı yerde kullanırız. Performans, güvenlik, sürdürülebilir bakım ve kullanıcı deneyimi her teknik kararın parçasıdır. SEO ve dijital pazarlama ise geliştirilen dijital ürünün doğru kitleye ulaşmasını ve görünürlüğün ölçülebilir aksiyona dönüşmesini destekler.'}</p></div>
       </header>
 
-      <div className="mt-16 space-y-8 md:mt-24 md:space-y-12">
+      <div className="mt-16 grid gap-12 md:mt-24 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16">
+        <GuideIndex items={indexItems} label={english ? 'Contents' : 'İçindekiler'} />
+        <div className="space-y-8 md:space-y-10">
         {sections.map((item, index) => {
           const service = source.find((candidate) => english ? 'trSlug' in candidate && candidate.trSlug === item.serviceKey : candidate.slug === item.serviceKey)
           if (!service) return null
@@ -95,11 +100,11 @@ export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
           const benefits = service.benefits?.slice(0, 4) ?? []
           const number = String(index + 1).padStart(2, '0')
 
-          return <article key={item.serviceKey} className={`relative isolate overflow-hidden rounded-3xl border border-border px-5 py-12 shadow-sm sm:px-8 md:px-12 md:py-20 ${index % 2 === 0 ? 'bg-card' : 'bg-secondary/35'}`}>
+          return <article key={item.serviceKey} id={`rehber-${item.serviceKey}`} data-reveal className={`relative isolate scroll-mt-28 overflow-hidden rounded-3xl border border-border px-5 py-12 sm:px-8 md:px-12 md:py-16 ${index % 2 === 0 ? 'bg-card' : 'bg-secondary/35'}`}>
             <div aria-hidden="true" className="absolute -right-2 -top-10 -z-10 font-display text-[8rem] font-bold leading-none text-primary/[0.035] sm:right-8 sm:text-[11rem]">{number}</div>
             <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-accent/35 to-transparent" />
             <div className="max-w-4xl">
-              <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm">
+              <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-accent-strong sm:text-sm">
                 <span>{number}</span><span className="h-px w-8 bg-accent/50" /><span>{categories[index]}</span>
               </div>
               <div className="mt-6 flex items-start gap-4">
@@ -119,20 +124,21 @@ export function ServicesSeoContent({ locale = 'tr' }: { locale?: Locale }) {
               {benefits.length > 0 && <><h4 className={`${highlight ? 'mt-5' : ''} text-sm font-semibold uppercase tracking-wider text-muted-foreground`}>{english ? 'Value for Your Business' : 'İşletmenize Ne Kazandırır?'}</h4><ul className="mt-3 flex flex-wrap gap-2">{benefits.map((benefit) => <li key={benefit} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground/80">{benefit}</li>)}</ul></>}
             </div>}
 
-            <Link href={`${prefix}/${service.slug}`} className="group mt-9 inline-flex items-center gap-2 font-semibold text-accent transition-colors hover:text-accent/80">{item.anchor}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></Link>
+            <Link href={`${prefix}/${service.slug}`} className="group mt-9 inline-flex items-center gap-2 font-semibold text-accent-strong transition-colors hover:text-foreground">{item.anchor}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" /></Link>
           </article>
         })}
+        </div>
       </div>
 
-      <section className="mt-20 overflow-hidden rounded-3xl border border-border bg-primary px-5 py-10 text-primary-foreground sm:px-8 md:mt-28 md:px-12 md:py-16">
+      <section data-reveal="scale" className="relative mt-20 overflow-hidden rounded-3xl bg-ink px-5 py-10 text-primary-foreground sm:px-8 md:mt-28 md:px-12 md:py-16">
         <p className="text-sm font-semibold uppercase tracking-widest text-accent">{english ? 'Delivery Model' : 'Çalışma Süreci'}</p>
         <h3 className="mt-3 max-w-2xl font-display text-3xl font-bold sm:text-4xl">{english ? 'How We Bring a Software Project to Life' : 'Bir Yazılım Projesini Nasıl Hayata Geçiriyoruz?'}</h3>
         <ol className="relative mt-10 ml-3 border-l border-accent/40 sm:ml-4">{processes.map((step,index) => <li key={step} className="relative pb-9 pl-8 last:pb-0 sm:pl-12"><span className="absolute -left-[17px] top-0 flex h-8 w-8 items-center justify-center rounded-full border border-accent/50 bg-primary text-xs font-bold text-accent">{String(index + 1).padStart(2,'0')}</span><h4 className="font-display text-lg font-semibold">{step}</h4><p className="mt-2 max-w-2xl text-sm leading-6 text-primary-foreground/70">{english ? 'We define decisions, responsibilities and measurable review points for this stage before moving forward.' : 'Bu aşamanın kararlarını, sorumlularını ve ölçülebilir kontrol noktalarını şeffaf biçimde belirleriz.'}</p></li>)}</ol>
       </section>
 
-      <section className="mt-16 md:mt-24"><h3 className="font-display text-2xl font-bold sm:text-3xl">{english ? 'Who Are Pars Medya Software Solutions For?' : 'Pars Medya Yazılım Çözümleri Kimler İçin Uygun?'}</h3><p className="mt-4 max-w-3xl leading-7 text-muted-foreground">{english ? 'Our approach can support SMEs, enterprise organizations, startups, e-commerce businesses and teams in manufacturing, logistics, services, foreign trade, field operations and professional services. Suitability depends on the workflow and objective—not an unverified claim of sector experience.' : 'Yaklaşımımız KOBİ’ler, kurumsal şirketler, girişimler, e-ticaret işletmeleri ile üretim, lojistik, hizmet, dış ticaret, saha operasyonları ve profesyonel hizmet ekiplerinin farklı ihtiyaçlarına uyarlanabilir. Uygunluğu doğrulanmamış sektör referanslarıyla değil, gerçek süreç ve hedef analiziyle değerlendiririz.'}</p><ul className="mt-7 flex flex-wrap gap-3">{industries.map((industry) => <li key={industry} className="rounded-full border border-border bg-secondary/40 px-4 py-2 text-sm font-semibold">{industry}</li>)}</ul></section>
+      <section className="mt-16 md:mt-24" data-reveal><h3 className="font-display text-2xl font-bold sm:text-3xl">{english ? 'Who Are Pars Medya Software Solutions For?' : 'Pars Medya Yazılım Çözümleri Kimler İçin Uygun?'}</h3><p className="mt-4 max-w-3xl leading-7 text-muted-foreground">{english ? 'Our approach can support SMEs, enterprise organizations, startups, e-commerce businesses and teams in manufacturing, logistics, services, foreign trade, field operations and professional services. Suitability depends on the workflow and objective—not an unverified claim of sector experience.' : 'Yaklaşımımız KOBİ’ler, kurumsal şirketler, girişimler, e-ticaret işletmeleri ile üretim, lojistik, hizmet, dış ticaret, saha operasyonları ve profesyonel hizmet ekiplerinin farklı ihtiyaçlarına uyarlanabilir. Uygunluğu doğrulanmamış sektör referanslarıyla değil, gerçek süreç ve hedef analiziyle değerlendiririz.'}</p><ul className="mt-7 flex flex-wrap gap-3">{industries.map((industry) => <li key={industry} className="rounded-full border border-border bg-secondary/40 px-4 py-2 text-sm font-semibold">{industry}</li>)}</ul></section>
 
-      <section className="relative mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-primary/90 p-7 text-primary-foreground sm:p-10 md:mt-24 md:p-14"><Globe2 className="h-8 w-8 text-accent" aria-hidden="true" /><h3 className="mt-5 max-w-2xl font-display text-3xl font-bold sm:text-4xl">{english ? 'From Türkiye to Global Digital Projects' : 'Türkiye’den Global Dijital Projelere'}</h3><p className="mt-5 max-w-3xl leading-7 text-primary-foreground/75">{english ? 'Our Istanbul-based perspective is enriched by business connections and project experience linked to Dubai, Moscow and Switzerland. We design multilingual, scalable products that can adapt to different markets without making unverified physical-office claims.' : 'İstanbul merkezli bakış açımızı Dubai, Moskova ve İsviçre bağlantılı iş ağları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel ofis iddiası oluşturmadan, farklı pazarların diline ve operasyon ihtiyacına uyarlanabilen çok dilli ve ölçeklenebilir yazılımlar geliştiriyoruz.'}</p><ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-4">{['İstanbul', 'Dubai', 'Moskova', english ? 'Switzerland' : 'İsviçre'].map((location) => <li key={location} className="bg-primary/80 px-4 py-5 text-center font-display text-lg font-semibold">{location}</li>)}</ul></section>
+      <section data-reveal="scale" className="relative mt-16 overflow-hidden rounded-3xl bg-ink p-7 text-primary-foreground sm:p-10 md:mt-24 md:p-14"><Globe2 className="h-8 w-8 text-accent" aria-hidden="true" /><h3 className="mt-5 max-w-2xl font-display text-3xl font-bold sm:text-4xl">{english ? 'From Türkiye to Global Digital Projects' : 'Türkiye’den Global Dijital Projelere'}</h3><p className="mt-5 max-w-3xl leading-7 text-primary-foreground/75">{english ? 'Our Istanbul-based perspective is enriched by business connections and project experience linked to Dubai, Moscow and Switzerland. We design multilingual, scalable products that can adapt to different markets without making unverified physical-office claims.' : 'İstanbul merkezli bakış açımızı Dubai, Moskova ve İsviçre bağlantılı iş ağları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel ofis iddiası oluşturmadan, farklı pazarların diline ve operasyon ihtiyacına uyarlanabilen çok dilli ve ölçeklenebilir yazılımlar geliştiriyoruz.'}</p><ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-4">{['İstanbul', 'Dubai', 'Moskova', english ? 'Switzerland' : 'İsviçre'].map((location) => <li key={location} className="bg-ink px-4 py-5 text-center font-display text-lg font-semibold">{location}</li>)}</ul></section>
     </div>
   </section>
 }
