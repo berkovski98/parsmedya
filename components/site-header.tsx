@@ -11,6 +11,7 @@ import { alternatePath, localeHomePath, type Locale } from '@/lib/i18n'
 import { CONTACT_LABELS, phoneDisplay } from '@/lib/contact-info'
 import { stagger } from '@/lib/motion'
 import { getRegionLinks, getCorporateLinks, getServiceGroups } from '@/lib/navigation'
+import { EDI_COPY, EDI_PATHS } from '@/lib/edi'
 
 type Dropdown = 'corporate' | 'services' | 'regions'
 
@@ -30,7 +31,7 @@ function languageSwitchHref(pathname: string, target: 'tr' | 'en') {
   }
 }
 
-const topLink = 'relative inline-flex items-center gap-1 py-2 text-[0.875rem] font-medium transition-colors duration-300 after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-accent after:transition-transform after:duration-500 after:ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+const topLink = 'relative inline-flex items-center gap-1 whitespace-nowrap py-2 text-[0.875rem] font-medium transition-colors duration-300 after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-accent after:transition-transform after:duration-500 after:ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
 const topLinkState = (active: boolean) => active ? 'text-white after:scale-x-100' : 'text-white/70 after:scale-x-0 hover:text-white hover:after:scale-x-100'
 const panel = 'invisible absolute top-full origin-top translate-y-2 scale-[0.98] rounded-2xl border border-border/80 bg-popover p-2 text-popover-foreground opacity-0 shadow-[0_30px_70px_-25px_rgb(10_20_50/0.45)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:visible group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:scale-100 group-focus-within:opacity-100'
 const panelItem = 'block rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:bg-secondary focus-visible:text-foreground focus-visible:outline-none'
@@ -133,7 +134,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
         <Image src="/parsmedya-logo.png" alt="ParsMedya" width={196} height={40} sizes="196px" className="h-7 w-auto transition-opacity duration-300 group-hover/logo:opacity-90 lg:h-8" />
       </Link>
 
-      <nav className="relative hidden items-center gap-5 md:flex lg:gap-7" aria-label={english ? 'Main menu' : 'Ana menü'}>
+      <nav className="relative hidden items-center gap-5 lg:flex xl:gap-7" aria-label={english ? 'Main menu' : 'Ana menü'}>
         <Link href={simpleLinks[0].href} className={cn(topLink, topLinkState(isActive(simpleLinks[0].href)))}>{simpleLinks[0].label}</Link>
 
         <div className="group relative py-4">
@@ -146,6 +147,16 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
         <div className="group static py-4">
           {dropdownTrigger('services', english ? 'Services' : 'Hizmetlerimiz', isActive(servicesHref))}
           <div className={cn(panel, 'fixed left-4 right-4 top-16 w-auto p-6 lg:left-1/2 lg:right-auto lg:top-[4.5rem] lg:w-[940px] lg:-translate-x-1/2 lg:group-hover:-translate-x-1/2 lg:group-focus-within:-translate-x-1/2', dismissed('services'))}>
+            <Link href={EDI_PATHS[locale]} onClick={(event) => closeDesktop('services', event.currentTarget)} className="group/edi mb-6 flex items-center justify-between gap-4 rounded-xl bg-ink px-5 py-4 text-ink-foreground transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+              <span className="flex items-center gap-3">
+                <span className="rounded-md bg-accent px-2 py-1 font-mono text-[0.6875rem] font-bold tracking-wider text-ink">EDI</span>
+                <span>
+                  <span className="block text-sm font-semibold text-white">{EDI_COPY[locale].label}</span>
+                  <span className="block text-xs text-white/60">{EDI_COPY[locale].spotlight.points.slice(0, 3).join(' · ')}</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-accent">{EDI_COPY[locale].badge}<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/edi:translate-x-1" aria-hidden="true" /></span>
+            </Link>
             <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
               {serviceGroups.map((group) => <div key={group.label}>
                 <p className="mb-2 px-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-accent-strong">{group.label}</p>
@@ -177,18 +188,18 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
         {simpleLinks.slice(1).map((item) => <Link key={item.href} href={item.href} className={cn(topLink, topLinkState(isActive(item.href)))}>{item.label}</Link>)}
       </nav>
 
-      <div className="hidden items-center gap-2 md:flex lg:gap-3">
+      <div className="hidden items-center gap-2 lg:flex xl:gap-3">
         <Link href={switchHref} className="inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-white/15 px-2.5 text-xs font-bold tracking-wider text-white/80 transition-colors hover:border-white/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label={english ? 'Türkçe sürüm' : 'English version'} hrefLang={switchTarget} lang={switchTarget}>{english ? 'TR' : 'EN'}</Link>
         <PhoneLink locale={locale} className="group inline-flex h-9 items-center gap-2 rounded-full px-2 text-sm font-medium text-white/80 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent xl:px-3">
           <span className="flex size-7 items-center justify-center rounded-full bg-white/10 transition-colors group-hover:bg-accent group-hover:text-ink"><Phone className="h-3.5 w-3.5" aria-hidden="true" /></span>
           <span className="hidden tabular-nums xl:inline">{phoneDisplay(locale)}</span>
         </PhoneLink>
-        <Link href={contactHref} className="group inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-ink transition-all duration-300 hover:-translate-y-px hover:bg-[color-mix(in_oklab,var(--accent)_88%,white)] hover:shadow-[0_10px_30px_-12px_var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+        <Link href={contactHref} className="group inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg bg-accent px-4 text-sm font-semibold text-ink transition-all duration-300 hover:-translate-y-px hover:bg-[color-mix(in_oklab,var(--accent)_88%,white)] hover:shadow-[0_10px_30px_-12px_var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
           {text.quote}<ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden="true" />
         </Link>
       </div>
 
-      <div className="flex items-center gap-1 md:hidden">
+      <div className="flex items-center gap-1 lg:hidden">
         <PhoneLink locale={locale} className="inline-flex h-11 w-11 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10">
           <Phone className="h-5 w-5" aria-hidden="true" />
         </PhoneLink>
@@ -205,7 +216,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
       </div>
     </div>
 
-    {open && <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-16 z-50 flex flex-col overflow-y-auto overscroll-contain bg-ink text-ink-foreground md:hidden">
+    {open && <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-16 z-50 flex flex-col overflow-y-auto overscroll-contain bg-ink text-ink-foreground lg:hidden">
       <nav className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-1 px-4 pb-6 pt-4" aria-label={english ? 'Mobile menu' : 'Mobil menü'}>
         <div className="pop-in" style={stagger(0)}><Link href={simpleLinks[0].href} onClick={closeMobile} className="flex min-h-12 items-center rounded-xl px-3 font-display text-lg font-semibold hover:bg-white/5">{simpleLinks[0].label}</Link></div>
         <div className="pop-in" style={stagger(1)}>
@@ -214,7 +225,7 @@ export function SiteHeader({ locale = 'tr' }: { locale?: Locale }) {
         </div>
         <div className="pop-in" style={stagger(2)}>
           {mobileToggle('services', english ? 'Services' : 'Hizmetlerimiz')}
-          {mobileSection === 'services' && <div className="ml-3 space-y-4 border-l border-white/10 py-2 pl-3">{serviceGroups.map((group) => <div key={group.label}><p className="px-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-accent">{group.label}</p><div className="mt-1">{group.links.map((item) => <Link key={item.href} href={item.href} onClick={closeMobile} className="block rounded-lg px-2 py-2.5 text-[0.9375rem] text-white/70 hover:bg-white/5 hover:text-white">{item.label}</Link>)}</div></div>)}<Link href={servicesHref} onClick={closeMobile} className="block px-2 py-2 text-sm font-semibold text-accent">{english ? 'View All Services' : 'Tüm Hizmetlerimizi İnceleyin'} →</Link></div>}
+          {mobileSection === 'services' && <div className="ml-3 space-y-4 border-l border-white/10 py-2 pl-3"><Link href={EDI_PATHS[locale]} onClick={closeMobile} className="flex items-center gap-2.5 rounded-lg bg-white/5 px-2 py-2.5 text-[0.9375rem] font-semibold text-white"><span className="rounded bg-accent px-1.5 py-0.5 font-mono text-[0.625rem] font-bold text-ink">EDI</span>{EDI_COPY[locale].label}</Link>{serviceGroups.map((group) => <div key={group.label}><p className="px-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-accent">{group.label}</p><div className="mt-1">{group.links.map((item) => <Link key={item.href} href={item.href} onClick={closeMobile} className="block rounded-lg px-2 py-2.5 text-[0.9375rem] text-white/70 hover:bg-white/5 hover:text-white">{item.label}</Link>)}</div></div>)}<Link href={servicesHref} onClick={closeMobile} className="block px-2 py-2 text-sm font-semibold text-accent">{english ? 'View All Services' : 'Tüm Hizmetlerimizi İnceleyin'} →</Link></div>}
         </div>
         <div className="pop-in" style={stagger(3)}>
           {mobileToggle('regions', english ? 'Service Areas' : 'Bölgelerimiz')}

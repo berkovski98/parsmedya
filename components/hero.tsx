@@ -8,6 +8,7 @@ import { PointerParallax } from '@/components/motion/pointer-parallax'
 import { CONTACT_LABELS } from '@/lib/contact-info'
 import type { Locale } from '@/lib/i18n'
 import { depthStyle, stagger } from '@/lib/motion'
+import { EDI_COPY } from '@/lib/edi'
 import { services } from '@/lib/services'
 import { englishServices } from '@/lib/services-en'
 
@@ -40,7 +41,7 @@ const copy = {
 
 export function Hero({ locale = 'tr' }: { locale?: Locale }) {
   const t = copy[locale]
-  const capabilities = (locale === 'en' ? englishServices : services).slice(0, 14).map((service) => service.title)
+  const capabilities = [EDI_COPY[locale].label, ...(locale === 'en' ? englishServices : services).slice(0, 13).map((service) => service.title)]
 
   return (
     <section className="relative isolate overflow-hidden bg-ink text-ink-foreground">

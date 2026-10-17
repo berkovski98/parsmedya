@@ -6,6 +6,7 @@ import { WhyUs } from '@/components/why-us'
 import { ContactCta } from '@/components/contact-cta'
 import { createPageMetadata } from '@/lib/seo'
 import { ServicesSeoContent } from '@/components/home/services-seo-content'
+import { EdiSpotlight } from '@/components/edi/edi-spotlight'
 
 export const metadata: Metadata = createPageMetadata({ title: 'Pars Medya | Web, Yazılım ve Dijital Dönüşüm', description: 'Web yazılım, özel yazılım, CRM, ERP, SaaS, e-ticaret ve dijital büyüme çözümleriyle işletmenizin süreçlerini güvenle dönüştürün.', canonical: '/', tr: '/', en: '/en', locale: 'tr' })
 
@@ -14,6 +15,7 @@ export default function Home() {
     <>
       <Hero />
       <Services home />
+      <EdiSpotlight />
       <WhyUs />
       <LatestBlogPosts />
       <ServicesSeoContent />
