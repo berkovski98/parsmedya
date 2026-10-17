@@ -1,17 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-import { MapPin, Send, CheckCircle2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { topicSubject } from '@/lib/engagement'
+import { Send, CheckCircle2 } from 'lucide-react'
 import { ContactChannels } from '@/components/contact-channels'
+import { INTERNATIONAL_STATEMENT } from '@/lib/company-claims'
 import { LegalConsentNote } from '@/components/legal-consent-note'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { trackSiteEvent } from '@/lib/analytics-events-client'
+import { readAttribution } from '@/lib/attribution-client'
 
 
 export function ContactSection() {
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const subject = topicSubject(window.location.search, 'tr')
+    const input = document.getElementById('subject') as HTMLInputElement | null
+    if (subject && input && !input.value) input.value = subject
+  }, [])
   const [startedAt, setStartedAt] = useState(() => Date.now())
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,12 +34,13 @@ export function ContactSection() {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, startedAt }),
+        body: JSON.stringify({ ...payload, startedAt, sourcePath: window.location.pathname, ...readAttribution() }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error)
       form.reset()
       setSent(true)
+      trackSiteEvent('form_submit', 'contact_form')
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : 'Mesajınız gönderilemedi. Lütfen tekrar deneyin.')
       setStartedAt(Date.now())
@@ -164,33 +175,15 @@ export function ContactSection() {
       <div className="mx-auto mt-16 max-w-7xl border-t border-border px-4 pt-16 sm:px-6 sm:pt-20">
         <div className="max-w-3xl">
           <p className="eyebrow">
-            Uluslararası Hizmet Ağı
+            Uluslararası Projeler
           </p>
           <h2 className="mt-3 text-balance font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Faaliyet Noktalarımız
+            Türkiye ve ötesinde
           </h2>
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Pars Medya, İstanbul merkezli yapısıyla birlikte Dubai, Moskova ve
-            İsviçre&apos;deki iş ağlarıyla markalara uluslararası ölçekte dijital
-            çözümler sunmaktadır.
+            {INTERNATIONAL_STATEMENT.tr} Görüşmeleri Türkçe ve İngilizce yürütüyoruz.
           </p>
         </div>
-
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-reveal>
-          {['İstanbul', 'Dubai', 'Moskova', 'İsviçre'].map((location) => (
-            <li
-              key={location}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-5"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                <MapPin className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <span className="font-display font-semibold text-foreground">
-                {location}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   )

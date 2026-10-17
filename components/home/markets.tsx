@@ -1,5 +1,6 @@
 import { Globe2 } from 'lucide-react'
 import type { Locale } from '@/lib/i18n'
+import { INTERNATIONAL_STATEMENT } from '@/lib/company-claims'
 import { stagger } from '@/lib/motion'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
@@ -18,9 +19,8 @@ const content = {
     stackTitle: 'Kullandığımız Teknolojiler',
     stackText: 'Teknoloji seçimini projenin ölçeğine, ekibinize ve bakım ihtiyacına göre yapıyoruz.',
     globalTitle: 'Türkiye’den Global Dijital Projelere',
-    globalText: 'İstanbul merkezli bakış açımızı Dubai, Moskova ve İsviçre bağlantılı iş ağları ve proje deneyimleriyle zenginleştiriyoruz. Fiziksel ofis iddiası oluşturmadan, farklı pazarların diline ve operasyon ihtiyacına uyarlanabilen çok dilli ve ölçeklenebilir yazılımlar geliştiriyoruz.',
+    globalText: 'Çok dilli, farklı pazarların diline ve operasyon ihtiyacına uyarlanabilen ölçeklenebilir ürünler geliştiriyoruz.',
     languages: 'Türkçe ve İngilizce iletişim',
-    locations: ['İstanbul', 'Dubai', 'Moskova', 'İsviçre'],
   },
   en: {
     eyebrow: 'Industries & Markets',
@@ -30,9 +30,8 @@ const content = {
     stackTitle: 'Technologies We Work With',
     stackText: 'We choose the stack according to the project’s scale, your team and long-term maintenance needs.',
     globalTitle: 'From Türkiye to Global Digital Projects',
-    globalText: 'Our Istanbul-based perspective is enriched by business connections and project experience linked to Dubai, Moscow and Switzerland. We design multilingual, scalable products that can adapt to different markets without making unverified physical-office claims.',
+    globalText: 'We build multilingual, scalable products that adapt to the language and operational needs of different markets.',
     languages: 'Communication in English and Turkish',
-    locations: ['Istanbul', 'Dubai', 'Moscow', 'Switzerland'],
   },
 } as const
 
@@ -71,10 +70,8 @@ export function HomeMarkets({ locale = 'tr' }: { locale?: Locale }) {
           <div aria-hidden="true" className="bg-grid absolute inset-0 -z-10 text-white opacity-60 [mask-image:radial-gradient(ellipse_80%_80%_at_100%_0%,#000,transparent_70%)]" />
           <Globe2 className="h-8 w-8 text-accent" aria-hidden="true" />
           <h3 className="mt-5 text-balance font-display text-2xl font-bold text-white sm:text-3xl">{t.globalTitle}</h3>
-          <p className="mt-5 text-pretty leading-7 text-white/70">{t.globalText}</p>
-          <ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
-            {t.locations.map((location) => <li key={location} className="bg-ink px-4 py-4 text-center font-display text-base font-semibold text-white sm:text-lg">{location}</li>)}
-          </ul>
+          <p className="mt-5 text-pretty leading-7 text-white/80">{INTERNATIONAL_STATEMENT[locale]}</p>
+          <p className="mt-3 text-pretty leading-7 text-white/70">{t.globalText}</p>
           <p className="mt-6 text-sm font-medium text-white/60">{t.languages}</p>
           <nav aria-label={locale === 'en' ? 'Service areas in Türkiye' : 'Türkiye hizmet bölgeleri'} className="mt-8 border-t border-white/10 pt-6">
             <p className="text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-white/45">{locale === 'en' ? 'Service areas in Türkiye' : 'Türkiye’deki hizmet bölgelerimiz'}</p>

@@ -13,11 +13,13 @@ const corporate: Record<Locale, NavigationLink[]> = {
     { label: 'Hakkımızda', href: '/hakkimizda' },
     { label: 'Vizyonumuz', href: '/vizyonumuz' },
     { label: 'Misyonumuz', href: '/misyonumuz' },
+    { label: 'Referanslar', href: '/referanslar' },
   ],
   en: [
     { label: 'About Us', href: '/en/about' },
     { label: 'Our Vision', href: '/en/vision' },
     { label: 'Our Mission', href: '/en/mission' },
+    { label: 'References', href: '/en/references' },
   ],
 }
 

@@ -103,7 +103,7 @@ export function SiteFooter({ locale = 'tr' }: { locale?: Locale }) {
           )}
           <p className="flex items-center gap-2">
             <span className="inline-block size-1.5 rounded-full bg-accent" aria-hidden="true" />
-            {english ? 'Istanbul · Dubai · Moscow · Switzerland' : 'İstanbul · Dubai · Moskova · İsviçre'}
+            {english ? 'Istanbul, Türkiye · English / Türkçe' : 'İstanbul, Türkiye · Türkçe / English'}
           </p>
         </div>
       </div>
