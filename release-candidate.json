@@ -1,15 +1,10 @@
 {
-  "version": "1.1.16",
-  "title": "Referanslar, talep ölçümü ve çalışma modeli",
-  "releaseTitle": "Referanslar, talep ölçümü ve çalışma modeli",
-  "summary": "Referanslar sayfası yayına alındı, kanıtsız rakamlar kaldırıldı; WhatsApp, telefon ve form talepleri kaynaklarıyla ölçülüyor; hizmet sayfalarına çalışma modeli eklendi.",
+  "version": "1.1.17",
+  "title": "Swiss Sales Partners referansı",
+  "releaseTitle": "Swiss Sales Partners referansı",
+  "summary": "Referanslar sayfasına Swiss Sales Partners projesi adı ve site bağlantısıyla eklendi.",
   "releaseNotes": [
-    "Referanslar sayfası dört gerçek projeyle yayında; projeler müşteri adı yerine sektörüyle anlatılır.",
-    "Sitedeki doğrulanamayan proje sayısı, yıl ve memnuniyet oranları kaldırıldı.",
-    "Uluslararası çalışmalar tek ve ölçülü bir cümleyle anlatılır.",
-    "WhatsApp, telefon ve e-posta tıklamaları ile form gönderimleri, ziyaretçinin geldiği kaynakla birlikte kaydedilir (veritabanı güncellemesi uygulandıktan sonra).",
-    "Yönetim panelinde yeni talepler için uyarı ve son 30 günün dönüşüm özeti gösterilir; her talebin geldiği sayfa ve kaynak görünür.",
-    "Hizmet sayfalarında Keşif Atölyesi, sabit kapsamlı pilot ve aylık destek aşamaları anlatılır; fiyatlar ihtiyaca göre teklif edilir.",
-    "Şehir ve ilçe sayfalarına WhatsApp ve arama butonları eklendi."
+    "Swiss Sales Partners için geliştirilen beş dilli kurumsal site ve saha CRM'i referanslarda yer alıyor.",
+    "Adını paylaşma izni olan müşteriler adıyla, diğer projeler sektörüyle gösteriliyor."
   ]
 }
