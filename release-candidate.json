@@ -1,10 +1,14 @@
 {
-  "version": "1.1.13",
-  "title": "Production build düzeltmesi",
-  "releaseTitle": "Production build düzeltmesi",
-  "summary": "Blog önbelleği production build sırasında hata vermez; yayınlanan yazılar güvenle derlenir.",
+  "version": "1.1.14",
+  "title": "Yeni tasarım ve WhatsApp iletişimi",
+  "releaseTitle": "Yeni tasarım ve WhatsApp iletişimi",
+  "summary": "Site daha modern bir görünüme kavuştu; telefon ve WhatsApp ile tek dokunuşla iletişim eklendi.",
   "releaseNotes": [
-    "Production build adımı blog sayfalarında cookies hatası vermeden tamamlanır.",
-    "Blog listesi ve detay önbelleği önceki sürümdeki gibi çalışmaya devam eder."
+    "Üst menü, ana sayfa girişi, hizmet kartları, blog ve alt bilgi alanı yenilendi.",
+    "Sayfa kaydırıldıkça bölümler yumuşak geçişlerle görünür; hareket azaltma tercihi olan ziyaretçilerde animasyonlar kapanır.",
+    "0539 840 18 98 numarası menüde, alt bilgide ve iletişim sayfasında tıklanabilir olarak gösterilir.",
+    "WhatsApp butonları Türkçe ve İngilizce hazır mesajla yeni sekmede açılır; sağ altta sabit WhatsApp butonu bulunur.",
+    "Mevcut 0212 963 77 77 ofis hattı korunur ve ikinci iletişim seçeneği olarak gösterilir.",
+    "Mobil menü tam ekran açılır; arama ve WhatsApp butonları menünün altında yer alır."
   ]
 }
