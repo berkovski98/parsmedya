@@ -1,5 +1,6 @@
 import { services, type Service } from '@/lib/services'
 import { toEnglishServiceSlug } from '@/lib/i18n'
+import { englishServiceCopy } from '@/lib/services-en-content'
 
 type EnglishSeed = { title: string; description: string; hero: string; features: string[]; seoTitle: string; seoDescription: string }
 
@@ -31,9 +32,51 @@ const seeds: Record<string, EnglishSeed> = {
 export type EnglishService = Service & { trSlug: string }
 const process = ['Discovery and needs analysis','Business process analysis','Technical architecture','UI/UX design','Iterative development','Testing and security','Controlled launch','Continuous support']
 
+const GENERIC_PARAGRAPHS: [string, string] = [
+  'We examine users, roles, data and integrations before defining a maintainable solution. The result is designed for everyday operations rather than a generic feature checklist.',
+  'Security, performance, accessibility and scalability are considered from the beginning so the product can evolve safely as your organization grows.',
+]
+
+const GENERIC_FAQS = [
+  { question: 'Can the solution integrate with our existing systems?', answer: 'Yes. We assess available APIs and secure data-transfer options before defining the integration approach.' },
+  { question: 'How do you approach security?', answer: 'We apply least-privilege access, validation, auditability and secure delivery practices according to the project’s risk profile.' },
+]
+
+function englishFaqs(title: string, specific: { question: string; answer: string }[]) {
+  const timing = { question: `How long does a ${title.toLowerCase()} project take?`, answer: 'Timing depends on scope, roles, integrations and migration needs. After discovery we provide a realistic phased plan.' }
+  const support = { question: 'Do you provide support after launch?', answer: 'Yes. Monitoring, maintenance and further development can continue under an agreed support model.' }
+  const base = specific.length ? specific : GENERIC_FAQS
+  // At least four questions; service-specific ones first, generic ones only to fill the gap.
+  return [...base, timing, support, ...GENERIC_FAQS].filter((faq, index, list) => list.findIndex((item) => item.question === faq.question) === index).slice(0, Math.max(4, base.length + 2))
+}
+
 export const englishServices: EnglishService[] = services.map((service) => {
   const seed = seeds[service.slug]
-  return { ...service, trSlug: service.slug, slug: toEnglishServiceSlug(service.slug), title: seed.title, description: seed.description, tagline: seed.hero, intro: seed.description, longDescription: [seed.description, `We examine users, roles, data and integrations before defining a maintainable solution. The result is designed for everyday operations rather than a generic feature checklist.`, `Security, performance, accessibility and scalability are considered from the beginning so the product can evolve safely as your organization grows.`], features: seed.features.map((title) => ({ title, description: `${title} is designed around your users, operational rules and measurable business objectives.` })), benefits: ['Reduce manual work and avoidable errors','Create one reliable source of operational data','Improve visibility and accountability','Support secure role-based collaboration','Scale with new users, locations and integrations'], useCases: [{ title: 'Growing organizations', description: 'Teams replacing spreadsheets and disconnected tools with managed workflows.' }, { title: 'Multi-team operations', description: 'Processes requiring shared data, approvals and clear responsibilities.' }, { title: 'Digital products', description: 'Customer-facing services that need secure and scalable technology.' }], process: process.map((title) => ({ title, description: `We complete the ${title.toLowerCase()} stage transparently with clear decisions and review points.` })), whyParsMedya: 'Pars Medya combines business analysis, product design and software engineering in one accountable team. We communicate clearly, avoid unnecessary complexity and build maintainable systems that can grow with your organization and international ambitions.', faqs: [{ question: `How long does a ${seed.title.toLowerCase()} project take?`, answer: 'Timing depends on scope, roles, integrations and migration needs. After discovery we provide a realistic phased plan.' }, { question: 'Can the solution integrate with our existing systems?', answer: 'Yes. We assess available APIs and secure data-transfer options before defining the integration approach.' }, { question: 'Do you provide support after launch?', answer: 'Yes. Monitoring, maintenance and further development can continue under an agreed support model.' }, { question: 'How do you approach security?', answer: 'We apply least-privilege access, validation, auditability and secure delivery practices according to the project’s risk profile.' }], seoTitle: seed.seoTitle, seoDescription: seed.seoDescription }
+  const copy = englishServiceCopy(service.slug)
+  return {
+    ...service,
+    trSlug: service.slug,
+    slug: toEnglishServiceSlug(service.slug),
+    title: seed.title,
+    description: seed.description,
+    tagline: seed.hero,
+    intro: seed.description,
+    longDescription: [seed.description, ...(copy?.paragraphs ?? GENERIC_PARAGRAPHS)],
+    // Turkish-only fields must not leak into English pages (Ö6): packages are Turkish copy
+    // ("Talebe göre" prices), so the English page hides that section.
+    packages: [],
+    highlights: [],
+    stats: [],
+    deliverables: [],
+    features: seed.features.map((title) => ({ title, description: `${title} is designed around your users, operational rules and measurable business objectives.` })),
+    benefits: ['Reduce manual work and avoidable errors', 'Create one reliable source of operational data', 'Improve visibility and accountability', 'Support secure role-based collaboration', 'Scale with new users, locations and integrations'],
+    useCases: [{ title: 'Growing organizations', description: 'Teams replacing spreadsheets and disconnected tools with managed workflows.' }, { title: 'Multi-team operations', description: 'Processes requiring shared data, approvals and clear responsibilities.' }, { title: 'Digital products', description: 'Customer-facing services that need secure and scalable technology.' }],
+    process: process.map((title) => ({ title, description: `We complete the ${title.toLowerCase()} stage transparently with clear decisions and review points.` })),
+    whyParsMedya: 'Pars Medya combines business analysis, product design and software engineering in one accountable team. We communicate clearly, avoid unnecessary complexity and build maintainable systems that can grow with your organization and international ambitions.',
+    faqs: englishFaqs(seed.title, copy?.faqs ?? []),
+    seoTitle: seed.seoTitle,
+    seoDescription: seed.seoDescription,
+  }
 })
 
 export const getEnglishService = (slug: string) => englishServices.find((service) => service.slug === slug)
