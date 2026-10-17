@@ -8,6 +8,8 @@ export async function LatestBlogPosts({ locale = 'tr' }: { locale?: 'tr' | 'en' 
   const latestPosts = await getPublishedPosts(3, locale)
   const href = isEnglish ? '/en/blog' : '/blog'
   const allLabel = isEnglish ? 'View All Articles' : 'Tüm Yazıları Gör'
+  // The English blog has no posts yet; an empty "coming soon" block is thin content (Ö16).
+  if (isEnglish && latestPosts.length === 0) return null
 
   return (
     <section

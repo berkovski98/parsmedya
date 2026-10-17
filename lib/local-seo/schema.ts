@@ -1,17 +1,7 @@
 import { safeJsonLd } from '@/lib/seo'
+import { orgRef, websiteRef } from '@/lib/schema/organization'
 import { canonicalAbsoluteUrl } from '@/lib/site-url'
 import type { LocalBreadcrumb, LocalHubModel, LocalServicePageModel } from '@/lib/local-seo/content'
-
-const ORGANIZATION_ID = `${canonicalAbsoluteUrl('/')}#organization`
-
-function organizationNode() {
-  return {
-    '@type': 'Organization',
-    '@id': ORGANIZATION_ID,
-    name: 'Pars Medya',
-    url: canonicalAbsoluteUrl('/'),
-  }
-}
 
 function breadcrumbNode(items: LocalBreadcrumb[]) {
   return {
@@ -39,7 +29,6 @@ function faqNode(faqs: LocalHubModel['faqs']) {
 export function localServiceJsonLd(model: LocalServicePageModel) {
   const pageUrl = canonicalAbsoluteUrl(model.canonicalPath)
   const graph = [
-    organizationNode(),
     {
       '@type': 'WebPage',
       '@id': `${pageUrl}#webpage`,
@@ -47,14 +36,15 @@ export function localServiceJsonLd(model: LocalServicePageModel) {
       name: model.title,
       description: model.description,
       inLanguage: 'tr-TR',
-      isPartOf: { '@type': 'WebSite', url: canonicalAbsoluteUrl('/') },
+      isPartOf: websiteRef(),
     },
     {
       '@type': 'Service',
+      '@id': `${pageUrl}#service`,
       name: `${model.district?.name || model.city.name} ${model.service.title}`,
       description: model.description,
       url: pageUrl,
-      provider: { '@id': ORGANIZATION_ID },
+      provider: orgRef(),
       areaServed: model.areaServed.map((name) => ({ '@type': 'AdministrativeArea', name })),
       serviceType: model.service.title,
     },
@@ -67,7 +57,6 @@ export function localServiceJsonLd(model: LocalServicePageModel) {
 export function localHubJsonLd(model: LocalHubModel) {
   const pageUrl = canonicalAbsoluteUrl(model.canonicalPath)
   const graph = [
-    organizationNode(),
     {
       '@type': 'WebPage',
       '@id': `${pageUrl}#webpage`,
@@ -75,6 +64,7 @@ export function localHubJsonLd(model: LocalHubModel) {
       name: model.title,
       description: model.description,
       inLanguage: 'tr-TR',
+      isPartOf: websiteRef(),
     },
     breadcrumbNode(model.breadcrumbs),
     faqNode(model.faqs),
