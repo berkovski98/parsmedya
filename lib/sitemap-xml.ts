@@ -14,8 +14,8 @@ export type SitemapEntry = {
   lastModified: Date | string
 }
 
-export const TURKISH_STATIC_PATHS = ['/', '/hakkimizda', '/vizyonumuz', '/misyonumuz', '/hizmetler', '/hizmet-bolgeleri', '/blog', '/iletisim'] as const
-export const ENGLISH_STATIC_PATHS = ['/en', '/en/about', '/en/vision', '/en/mission', '/en/services', '/en/blog', '/en/contact'] as const
+export const TURKISH_STATIC_PATHS = ['/', '/hakkimizda', '/vizyonumuz', '/misyonumuz', '/hizmetler', '/hizmetler/edi-entegrasyonu', '/hizmet-bolgeleri', '/blog', '/iletisim'] as const
+export const ENGLISH_STATIC_PATHS = ['/en', '/en/about', '/en/vision', '/en/mission', '/en/services', '/en/services/edi-integration', '/en/blog', '/en/contact'] as const
 
 const UNPREFIXED_TURKISH_MARKERS = ['/hakkimizda', '/vizyonumuz', '/vizyon', '/misyonumuz', '/misyon', '/hizmetler', '/iletisim', '/hizmet-bolgeleri']
 const FORBIDDEN_PATH_PREFIXES = ['/admin', '/api', '/sitemaps']
